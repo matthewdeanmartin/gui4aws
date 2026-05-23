@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 __all__ = [
     "AlbSummary",
+    "SecurityGroupRuleSummary",
     "SecurityGroupSummary",
     "SubnetSummary",
     "TargetGroupSummary",
@@ -39,6 +40,17 @@ class SecurityGroupSummary:
     group_name: str
     vpc_id: str | None
     description: str
+
+
+@dataclass(frozen=True)
+class SecurityGroupRuleSummary:
+    rule_id: str
+    direction: str  # "inbound" or "outbound"
+    protocol: str
+    from_port: str
+    to_port: str
+    cidr: str
+    description: str | None
 
 
 @dataclass(frozen=True)

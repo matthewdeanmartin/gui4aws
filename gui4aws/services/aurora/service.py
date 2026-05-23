@@ -77,6 +77,16 @@ SERVICE = ServiceDefinition(
                     button_label="Delete Cluster",
                     prefill={"cluster_identifier": "cluster_identifier"},
                 ),
+                RowAction(
+                    action_id="backup.start_backup_job",
+                    button_label="Back Up (AWS Backup)",
+                    prefill={"resource_arn": "arn"},
+                ),
+                RowAction(
+                    action_id="kms.describe_key",
+                    button_label="View KMS Key",
+                    prefill={"key_id": "kms_key_id"},
+                ),
             ),
             sub_action=SubAction(
                 action_id=DESCRIBE_DB_INSTANCES.action_id,

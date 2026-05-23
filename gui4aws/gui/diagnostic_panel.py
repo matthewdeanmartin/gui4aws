@@ -262,6 +262,7 @@ class RobotocorePanel(ttk.Frame):
         on_start: Any | None = None,
         on_stop: Any | None = None,
         on_restart: Any | None = None,
+        on_reset: Any | None = None,
         on_pull: Any | None = None,
         on_use_moto_changed: Any | None = None,
         **kwargs: Any,
@@ -286,6 +287,10 @@ class RobotocorePanel(ttk.Frame):
         self.restart_btn = ttk.Button(controls, text="Restart", width=10,
                                       command=on_restart or (lambda: None))
         self.restart_btn.pack(side="left", padx=2)
+
+        self.reset_btn = ttk.Button(controls, text="Reset State", width=12,
+                                    command=on_reset or (lambda: None))
+        self.reset_btn.pack(side="left", padx=2)
 
         self.pull_btn = ttk.Button(controls, text="Pull Docker Image", width=16,
                                    command=on_pull or (lambda: None))
@@ -341,11 +346,13 @@ class RobotocorePanel(ttk.Frame):
             self.start_btn.configure(state="disabled")
             self.stop_btn.configure(state="normal")
             self.restart_btn.configure(state="normal")
+            self.reset_btn.configure(state="normal")
             self._status_var.set("Running")
         else:
             self.start_btn.configure(state="normal")
             self.stop_btn.configure(state="disabled")
             self.restart_btn.configure(state="disabled")
+            self.reset_btn.configure(state="disabled")
             self._status_var.set("Not running")
 
     @property

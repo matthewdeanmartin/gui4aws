@@ -13,7 +13,10 @@ from gui4aws.services.backup.actions import (
     LIST_BACKUP_PLANS,
     LIST_BACKUP_VAULTS,
     LIST_RECOVERY_POINTS_BY_BACKUP_VAULT,
+    LIST_RECOVERY_POINTS_BY_JOB,
     LIST_RESTORE_JOBS,
+    START_BACKUP_JOB,
+    START_RESTORE_JOB,
     UPDATE_BACKUP_PLAN,
 )
 
@@ -34,6 +37,11 @@ SERVICE = ServiceDefinition(
                 RowAction(
                     action_id=LIST_RECOVERY_POINTS_BY_BACKUP_VAULT.action_id,
                     button_label="View Recovery Points",
+                    prefill={"vault_name": "vault_name"},
+                ),
+                RowAction(
+                    action_id=START_BACKUP_JOB.action_id,
+                    button_label="Back Up Resource",
                     prefill={"vault_name": "vault_name"},
                 ),
                 RowAction(
@@ -74,14 +82,62 @@ SERVICE = ServiceDefinition(
             ),
         ),
         NavigationItem(
+            item_id="recovery_points",
+            display_name="Recovery Points",
+            default_action_id=LIST_RECOVERY_POINTS_BY_JOB.action_id,
+            filter_fields=(
+                InputField(
+                    name="by_state",
+                    label="Filter by state",
+                    kind="choice",
+                    choices=("", "CREATED", "PENDING", "RUNNING", "ABORTED", "COMPLETED", "FAILED", "EXPIRED"),
+                    default="COMPLETED",
+                ),
+            ),
+            row_actions=(
+                RowAction(
+                    action_id=START_RESTORE_JOB.action_id,
+                    button_label="Restore",
+                    prefill={"recovery_point_arn": "recovery_point_arn"},
+                ),
+                RowAction(
+                    action_id=START_BACKUP_JOB.action_id,
+                    button_label="Back Up Again",
+                    prefill={"vault_name": "vault_name", "resource_arn": "resource_arn"},
+                ),
+            ),
+        ),
+        NavigationItem(
             item_id="jobs",
-            display_name="Jobs",
+            display_name="Backup Jobs",
             default_action_id=LIST_BACKUP_JOBS.action_id,
+            filter_fields=(
+                InputField(
+                    name="by_state",
+                    label="Filter by state",
+                    kind="choice",
+                    choices=("", "CREATED", "PENDING", "RUNNING", "ABORTING", "ABORTED", "COMPLETED", "FAILED", "EXPIRED"),
+                ),
+            ),
+            row_actions=(
+                RowAction(
+                    action_id=START_BACKUP_JOB.action_id,
+                    button_label="New Backup",
+                    prefill={},
+                ),
+            ),
         ),
         NavigationItem(
             item_id="restore_jobs",
             display_name="Restore Jobs",
             default_action_id=LIST_RESTORE_JOBS.action_id,
+            row_actions=(
+                RowAction(
+                    action_id=START_RESTORE_JOB.action_id,
+                    button_label="New Restore",
+                    prefill={},
+                ),
+            ),
         ),
     ),
     actions=ALL_ACTIONS,

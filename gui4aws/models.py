@@ -27,6 +27,7 @@ __all__ = [
     "RowAction",
     "ServiceDefinition",
     "SubAction",
+    "TextGenerator",
 ]
 
 
@@ -125,6 +126,7 @@ class ResultViewDefinition:
 ViewFunction = Callable[[Mapping[str, Any]], list[Any]]
 CliArgsBuilder = Callable[[Mapping[str, str]], list[str]]
 Boto3ParamsBuilder = Callable[[Mapping[str, str]], dict[str, Any]]
+TextGenerator = Callable[[Mapping[str, str]], str]
 
 
 @dataclass(frozen=True)
@@ -146,6 +148,9 @@ class ActionDefinition:
     view: ViewFunction | None = field(default=None, compare=False, repr=False)
     cli_args_builder: CliArgsBuilder | None = field(default=None, compare=False, repr=False)
     boto3_params_builder: Boto3ParamsBuilder | None = field(default=None, compare=False, repr=False)
+    # When set, the action result is shown as generated text (ignoring boto3 response).
+    # Receives the user's input values and returns a formatted string to display.
+    text_generator: TextGenerator | None = field(default=None, compare=False, repr=False)
 
 
 @dataclass(frozen=True)

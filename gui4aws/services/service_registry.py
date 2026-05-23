@@ -81,4 +81,64 @@ def default_registry() -> ServiceRegistry:
         registry.register(NETWORKING_SERVICE)
     except ImportError:
         pass
+    try:
+        from gui4aws.services.kms.service import SERVICE as KMS_SERVICE
+
+        registry.register(KMS_SERVICE)
+    except ImportError:
+        pass
+    try:
+        from gui4aws.services.athena.service import SERVICE as ATHENA_SERVICE
+
+        registry.register(ATHENA_SERVICE)
+    except ImportError:
+        pass
+    try:
+        from gui4aws.services.s3.service import SERVICE as S3_SERVICE
+
+        registry.register(S3_SERVICE)
+    except ImportError:
+        pass
+    try:
+        from gui4aws.services.sqs.service import SERVICE as SQS_SERVICE
+
+        registry.register(SQS_SERVICE)
+    except ImportError:
+        pass
+    try:
+        from gui4aws.services.lambdas.service import SERVICE as LAMBDA_SERVICE
+
+        registry.register(LAMBDA_SERVICE)
+    except ImportError:
+        pass
+    try:
+        from gui4aws.services.cloudwatch.service import SERVICE as CLOUDWATCH_SERVICE
+
+        registry.register(CLOUDWATCH_SERVICE)
+    except ImportError:
+        pass
+    try:
+        from gui4aws.services.cloudformation.service import SERVICE as CLOUDFORMATION_SERVICE
+
+        registry.register(CLOUDFORMATION_SERVICE)
+    except ImportError:
+        pass
+    try:
+        from gui4aws.services.sns.service import SERVICE as SNS_SERVICE
+
+        registry.register(SNS_SERVICE)
+    except ImportError:
+        pass
+    try:
+        from gui4aws.services.ses.service import SERVICE as SES_SERVICE
+
+        registry.register(SES_SERVICE)
+    except ImportError:
+        pass
+    try:
+        from gui4aws.services.iam.service import SERVICE as IAM_SERVICE
+
+        registry.register(IAM_SERVICE)
+    except ImportError:
+        pass
     return registry

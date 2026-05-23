@@ -147,6 +147,24 @@ class RobotocoreManager:
         self.stop()
         self.start(endpoint_url=endpoint_url, timeout=timeout)
 
+    def reset_state(self) -> None:
+        """POST /_localstack/state/reset to wipe all state without restarting the container.
+
+        Raises RuntimeError if robotocore is not running or the request fails.
+        """
+        if not self._running:
+            raise RuntimeError("Robotocore is not running")
+        url = f"{self._endpoint_url}/_localstack/state/reset"
+        req = urllib.request.Request(url, method="POST", data=b"")
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                body = resp.read()
+                self._append_output(f"=== robotocore state reset: {resp.status} {body!r} ===")
+        except urllib.error.HTTPError as exc:
+            raise RuntimeError(f"Robotocore reset failed: HTTP {exc.code}") from exc
+        except OSError as exc:
+            raise RuntimeError(f"Robotocore reset failed: {exc}") from exc
+
     def pull(self) -> None:
         """Pull the latest robotocore Docker image in the background.
 

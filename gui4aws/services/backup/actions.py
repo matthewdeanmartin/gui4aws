@@ -19,6 +19,7 @@ from gui4aws.services.backup.views import (
     to_backup_job_summaries,
     to_backup_plan_summaries,
     to_backup_vault_summaries,
+    to_recovery_point_by_job_summaries,
     to_recovery_point_summaries,
     to_restore_job_summaries,
 )
@@ -33,7 +34,10 @@ __all__ = [
     "LIST_BACKUP_PLANS",
     "LIST_BACKUP_VAULTS",
     "LIST_RECOVERY_POINTS_BY_BACKUP_VAULT",
+    "LIST_RECOVERY_POINTS_BY_JOB",
     "LIST_RESTORE_JOBS",
+    "START_BACKUP_JOB",
+    "START_RESTORE_JOB",
     "UPDATE_BACKUP_PLAN",
 ]
 
@@ -215,11 +219,11 @@ LIST_BACKUP_JOBS = ActionDefinition(
     ),
     result_view=ResultViewDefinition(
         kind=ResultViewKind.TABLE,
-        columns=("job_id", "state", "resource_type", "vault_name", "creation_date"),
+        columns=("job_id", "state", "resource_type", "vault_name", "recovery_point_arn", "creation_date"),
         title="Backup jobs",
     ),
     iam_permissions=("backup:ListBackupJobs",),
-    description="List recent AWS Backup jobs. (Moto: not implemented.)",
+    description="List recent AWS Backup jobs.",
     view=to_backup_job_summaries,
 )
 
@@ -234,11 +238,11 @@ LIST_RESTORE_JOBS = ActionDefinition(
     boto3_template=Boto3Template(service="backup", operation="list_restore_jobs"),
     result_view=ResultViewDefinition(
         kind=ResultViewKind.TABLE,
-        columns=("job_id", "status", "resource_type", "creation_date"),
+        columns=("job_id", "status", "resource_type", "created_resource_arn", "creation_date"),
         title="Restore jobs",
     ),
     iam_permissions=("backup:ListRestoreJobs",),
-    description="List recent AWS Backup restore jobs. (Moto: not implemented.)",
+    description="List recent AWS Backup restore jobs.",
     view=to_restore_job_summaries,
 )
 
@@ -393,12 +397,192 @@ DELETE_BACKUP_PLAN = ActionDefinition(
 )
 
 
+def _start_backup_job_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+    params: dict[str, Any] = {
+        "BackupVaultName": inputs["vault_name"],
+        "ResourceArn": inputs["resource_arn"],
+        "IamRoleArn": inputs.get("iam_role_arn") or "arn:aws:iam::123456789012:role/DemoBackupRole",
+    }
+    if inputs.get("lifecycle_delete_after_days"):
+        params["Lifecycle"] = {"DeleteAfterDays": int(inputs["lifecycle_delete_after_days"])}
+    return params
+
+
+def _start_backup_job_cli_args(inputs: Mapping[str, str]) -> list[str]:
+    args = [
+        "--backup-vault-name", inputs["vault_name"],
+        "--resource-arn", inputs["resource_arn"],
+        "--iam-role-arn", inputs.get("iam_role_arn") or "arn:aws:iam::123456789012:role/DemoBackupRole",
+    ]
+    if inputs.get("lifecycle_delete_after_days"):
+        args += ["--lifecycle", f"DeleteAfterDays={inputs['lifecycle_delete_after_days']}"]
+    return args
+
+
+LIST_RECOVERY_POINTS_BY_JOB = ActionDefinition(
+    action_id="backup.list_recovery_points_by_job",
+    display_name="List recovery points (via jobs)",
+    service_id="backup",
+    risk_level=RiskLevel.READ_ONLY,
+    input_fields=(
+        InputField(
+            name="by_state",
+            label="Filter by state",
+            kind="choice",
+            choices=("", "CREATED", "PENDING", "RUNNING", "ABORTED", "COMPLETED", "FAILED", "EXPIRED"),
+        ),
+    ),
+    cli_template=CliTemplate(
+        service="backup",
+        command="list-backup-jobs",
+        arg_map={"by_state": "by-state"},
+    ),
+    boto3_template=Boto3Template(
+        service="backup",
+        operation="list_backup_jobs",
+        param_map={"by_state": "ByState"},
+    ),
+    result_view=ResultViewDefinition(
+        kind=ResultViewKind.TABLE,
+        columns=("recovery_point_arn", "resource_type", "vault_name", "state", "creation_date"),
+        title="Recovery points (via completed backup jobs)",
+    ),
+    iam_permissions=("backup:ListBackupJobs",),
+    description=(
+        "Surface recovery points from completed backup jobs. "
+        "Workaround for robotocore: list_recovery_points_by_backup_vault returns empty "
+        "even after successful on-demand backup jobs."
+    ),
+    view=to_recovery_point_by_job_summaries,
+)
+
+
+START_BACKUP_JOB = ActionDefinition(
+    action_id="backup.start_backup_job",
+    display_name="Start on-demand backup job",
+    service_id="backup",
+    risk_level=RiskLevel.SAFE_WRITE,
+    input_fields=(
+        InputField(name="vault_name", label="Target vault name", required=True),
+        InputField(
+            name="resource_arn",
+            label="Resource ARN to back up",
+            required=True,
+            help_text="e.g. arn:aws:rds:us-east-1:123456789012:cluster:my-cluster",
+        ),
+        InputField(
+            name="iam_role_arn",
+            label="IAM role ARN",
+            help_text="Defaults to the demo role if blank.",
+        ),
+        InputField(
+            name="lifecycle_delete_after_days",
+            label="Delete recovery point after days",
+            kind="int",
+            help_text="Leave blank for no lifecycle rule.",
+        ),
+    ),
+    cli_template=CliTemplate(service="backup", command="start-backup-job"),
+    boto3_template=Boto3Template(service="backup", operation="start_backup_job"),
+    result_view=ResultViewDefinition(kind=ResultViewKind.RAW_JSON, title="Start backup job result"),
+    iam_permissions=("backup:StartBackupJob",),
+    description="Trigger an on-demand AWS Backup job for any supported resource.",
+    cache_refresh_nav_ids=("jobs", "recovery_points"),
+    cli_args_builder=_start_backup_job_cli_args,
+    boto3_params_builder=_start_backup_job_boto3_params,
+)
+
+
+def _start_restore_job_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+    metadata: dict[str, str] = {}
+    if inputs.get("new_cluster_identifier"):
+        metadata["DBClusterIdentifier"] = inputs["new_cluster_identifier"]
+    if inputs.get("engine"):
+        metadata["Engine"] = inputs["engine"]
+    return {
+        "RecoveryPointArn": inputs["recovery_point_arn"],
+        "Metadata": metadata,
+        "IamRoleArn": inputs.get("iam_role_arn") or "arn:aws:iam::123456789012:role/DemoBackupRole",
+        "ResourceType": inputs.get("resource_type") or "RDS",
+    }
+
+
+def _start_restore_job_cli_args(inputs: Mapping[str, str]) -> list[str]:
+    meta_parts: list[str] = []
+    if inputs.get("new_cluster_identifier"):
+        meta_parts.append(f"DBClusterIdentifier={inputs['new_cluster_identifier']}")
+    if inputs.get("engine"):
+        meta_parts.append(f"Engine={inputs['engine']}")
+    args = [
+        "--recovery-point-arn", inputs["recovery_point_arn"],
+        "--iam-role-arn", inputs.get("iam_role_arn") or "arn:aws:iam::123456789012:role/DemoBackupRole",
+        "--resource-type", inputs.get("resource_type") or "RDS",
+    ]
+    if meta_parts:
+        args += ["--metadata", ",".join(meta_parts)]
+    return args
+
+
+START_RESTORE_JOB = ActionDefinition(
+    action_id="backup.start_restore_job",
+    display_name="Start restore job",
+    service_id="backup",
+    risk_level=RiskLevel.COST_AFFECTING,
+    input_fields=(
+        InputField(
+            name="recovery_point_arn",
+            label="Recovery point ARN",
+            required=True,
+            help_text="ARN of the recovery point to restore from.",
+        ),
+        InputField(
+            name="new_cluster_identifier",
+            label="New cluster identifier",
+            help_text="For RDS/Aurora: the name for the restored cluster.",
+        ),
+        InputField(
+            name="engine",
+            label="Engine",
+            kind="choice",
+            choices=("", "aurora-mysql", "aurora-postgresql", "mysql", "postgres"),
+            help_text="Required for RDS/Aurora restores.",
+        ),
+        InputField(
+            name="resource_type",
+            label="Resource type",
+            kind="choice",
+            choices=("RDS", "S3", "DynamoDB", "EFS", "EC2", "Aurora"),
+            default="RDS",
+        ),
+        InputField(
+            name="iam_role_arn",
+            label="IAM role ARN",
+            help_text="Defaults to the demo role if blank.",
+        ),
+    ),
+    cli_template=CliTemplate(service="backup", command="start-restore-job"),
+    boto3_template=Boto3Template(service="backup", operation="start_restore_job"),
+    result_view=ResultViewDefinition(kind=ResultViewKind.RAW_JSON, title="Start restore job result"),
+    iam_permissions=("backup:StartRestoreJob",),
+    description=(
+        "Restore a resource from an AWS Backup recovery point. "
+        "The recovery point ARN is prefilled when launched from the Recovery Points tab."
+    ),
+    cache_refresh_nav_ids=("restore_jobs",),
+    cli_args_builder=_start_restore_job_cli_args,
+    boto3_params_builder=_start_restore_job_boto3_params,
+)
+
+
 ALL_ACTIONS = (
     LIST_BACKUP_VAULTS,
     LIST_BACKUP_PLANS,
     LIST_RECOVERY_POINTS_BY_BACKUP_VAULT,
+    LIST_RECOVERY_POINTS_BY_JOB,
     LIST_BACKUP_JOBS,
     LIST_RESTORE_JOBS,
+    START_BACKUP_JOB,
+    START_RESTORE_JOB,
     CREATE_BACKUP_VAULT,
     DELETE_BACKUP_VAULT,
     CREATE_BACKUP_PLAN,

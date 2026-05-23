@@ -17,6 +17,10 @@ class ResourceTable(ttk.Frame):
     table reads ``getattr(obj, column)`` for each column.
 
     Selecting a row calls ``on_select(row_object)`` if provided.
+
+    Rows with a truthy ``deleted`` attribute are displayed greyed-out using the
+    ``deleted`` Treeview tag so users can see them without confusing them for
+    active resources.
     """
 
     def __init__(
@@ -39,6 +43,10 @@ class ResourceTable(ttk.Frame):
                 command=lambda col=column: self.sort_by(col, False),
             )
             self.tree.column(column, anchor="w", width=160, stretch=True)
+
+        # Style for deleted / pending-deletion rows: dimmed foreground.
+        self.tree.tag_configure("deleted", foreground="#999999")
+
         scroll_y = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=scroll_y.set)
         self.tree.grid(row=0, column=0, sticky="nsew")
@@ -55,11 +63,11 @@ class ResourceTable(ttk.Frame):
             self.tree.delete(child)
         for idx, row in enumerate(rows):
             values = tuple(format_cell(getattr(row, column, "")) for column in self.columns)
-            self.tree.insert("", "end", iid=str(idx), values=values)
+            tags = ("deleted",) if getattr(row, "deleted", False) else ()
+            self.tree.insert("", "end", iid=str(idx), values=values, tags=tags)
         if self._rows:
             self.tree.selection_set("0")
             self.tree.focus("0")
-            # Fire on_select immediately so the detail panel is populated.
             if self.on_select is not None:
                 self.on_select(self._rows[0])
 

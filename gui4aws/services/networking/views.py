@@ -7,6 +7,7 @@ from typing import Any
 
 from gui4aws.services.networking.models import (
     AlbSummary,
+    SecurityGroupRuleSummary,
     SecurityGroupSummary,
     SubnetSummary,
     TargetGroupSummary,
@@ -15,6 +16,7 @@ from gui4aws.services.networking.models import (
 
 __all__ = [
     "to_alb_summaries",
+    "to_security_group_rule_summaries",
     "to_security_group_summaries",
     "to_subnet_summaries",
     "to_target_group_summaries",
@@ -82,6 +84,74 @@ def to_security_group_summaries(response: Mapping[str, Any]) -> list[SecurityGro
                 description=str(g.get("Description", "")),
             )
         )
+    return summaries
+
+
+def to_security_group_rule_summaries(response: Mapping[str, Any]) -> list[SecurityGroupRuleSummary]:
+    """Parse describe_security_group_rules or describe_security_groups into rule rows."""
+    summaries: list[SecurityGroupRuleSummary] = []
+
+    # Path 1: from describe_security_group_rules (SecurityGroupRules key)
+    rules = response.get("SecurityGroupRules")
+    if rules is not None:
+        for r in rules:
+            is_egress = bool(r.get("IsEgress", False))
+            from_port = r.get("FromPort")
+            to_port = r.get("ToPort")
+            cidr = (
+                r.get("CidrIpv4")
+                or r.get("CidrIpv6")
+                or r.get("ReferencedGroupInfo", {}).get("GroupId")
+                or "0.0.0.0/0"
+            )
+            summaries.append(SecurityGroupRuleSummary(
+                rule_id=str(r.get("SecurityGroupRuleId", "")),
+                direction="outbound" if is_egress else "inbound",
+                protocol=str(r.get("IpProtocol", "-1")),
+                from_port=str(from_port) if from_port is not None else "All",
+                to_port=str(to_port) if to_port is not None else "All",
+                cidr=str(cidr),
+                description=r.get("Description") or None,
+            ))
+        return summaries
+
+    # Path 2: flattened from describe_security_groups (for SubAction use)
+    for sg in response.get("SecurityGroups", []):
+        for r in sg.get("IpPermissions", []):
+            protocol = str(r.get("IpProtocol", "-1"))
+            from_port = r.get("FromPort")
+            to_port = r.get("ToPort")
+            cidrs = [ip.get("CidrIp", "") for ip in r.get("IpRanges", [])]
+            cidrs += [ip.get("CidrIpv6", "") for ip in r.get("Ipv6Ranges", [])]
+            if not cidrs:
+                cidrs = [g.get("GroupId", "") for g in r.get("UserIdGroupPairs", [])] or ["0.0.0.0/0"]
+            for cidr in cidrs:
+                summaries.append(SecurityGroupRuleSummary(
+                    rule_id="",
+                    direction="inbound",
+                    protocol=protocol,
+                    from_port=str(from_port) if from_port is not None else "All",
+                    to_port=str(to_port) if to_port is not None else "All",
+                    cidr=cidr,
+                    description=None,
+                ))
+        for r in sg.get("IpPermissionsEgress", []):
+            protocol = str(r.get("IpProtocol", "-1"))
+            from_port = r.get("FromPort")
+            to_port = r.get("ToPort")
+            cidrs = [ip.get("CidrIp", "") for ip in r.get("IpRanges", [])]
+            if not cidrs:
+                cidrs = ["0.0.0.0/0"]
+            for cidr in cidrs:
+                summaries.append(SecurityGroupRuleSummary(
+                    rule_id="",
+                    direction="outbound",
+                    protocol=protocol,
+                    from_port=str(from_port) if from_port is not None else "All",
+                    to_port=str(to_port) if to_port is not None else "All",
+                    cidr=cidr,
+                    description=None,
+                ))
     return summaries
 
 

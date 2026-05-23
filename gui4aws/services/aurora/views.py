@@ -41,6 +41,7 @@ def to_cluster_summaries(response: Mapping[str, Any]) -> list[AuroraClusterSumma
                 multi_az=bool(cluster.get("MultiAZ", False)),
                 member_count=len(members),
                 arn=optional_str(cluster.get("DBClusterArn")),
+                kms_key_id=optional_str(cluster.get("KmsKeyId")),
             )
         )
     return summaries

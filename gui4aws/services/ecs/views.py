@@ -5,11 +5,17 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from gui4aws.services.ecs.models import EcsClusterSummary, EcsServiceSummary, EcsTaskSummary
+from gui4aws.services.ecs.models import (
+    EcsClusterSummary,
+    EcsServiceSummary,
+    EcsTaskDefinitionSummary,
+    EcsTaskSummary,
+)
 
 __all__ = [
     "to_cluster_summaries",
     "to_service_summaries",
+    "to_task_definition_summaries",
     "to_task_summaries",
 ]
 
@@ -22,8 +28,18 @@ def _optional_str(value: Any) -> str | None:
 
 
 def _arn_to_name(arn: str) -> str:
-    """Extract the last path segment from an ARN, e.g. cluster name from cluster ARN."""
+    """Extract the last path segment from an ARN."""
     return arn.split("/")[-1] if "/" in arn else arn
+
+
+def _arn_to_family_revision(arn: str) -> tuple[str, str]:
+    """Extract family and revision from a task definition ARN or family:revision string."""
+    # arn:aws:ecs:...:task-definition/family:revision  OR  family:revision  OR  family
+    name = _arn_to_name(arn)
+    if ":" in name:
+        parts = name.rsplit(":", 1)
+        return parts[0], parts[1]
+    return name, ""
 
 
 def to_cluster_summaries(response: Mapping[str, Any]) -> list[EcsClusterSummary]:
@@ -125,6 +141,35 @@ def to_task_summaries(response: Mapping[str, Any]) -> list[EcsTaskSummary]:
                 desired_status="",
                 launch_type=None,
                 arn=arn,
+            )
+        )
+    return summaries
+
+
+def to_task_definition_summaries(response: Mapping[str, Any]) -> list[EcsTaskDefinitionSummary]:
+    # list_task_definitions returns {"taskDefinitionArns": [...]}
+    # describe_task_definition returns {"taskDefinition": {...}}
+    arns = response.get("taskDefinitionArns", []) or []
+    summaries: list[EcsTaskDefinitionSummary] = []
+    for arn in arns:
+        family, revision = _arn_to_family_revision(arn)
+        summaries.append(
+            EcsTaskDefinitionSummary(
+                task_definition_arn=arn,
+                family=family,
+                revision=revision,
+                status=None,
+            )
+        )
+    td = response.get("taskDefinition")
+    if td:
+        arn = str(td.get("taskDefinitionArn", ""))
+        summaries.append(
+            EcsTaskDefinitionSummary(
+                task_definition_arn=arn,
+                family=str(td.get("family", _arn_to_family_revision(arn)[0])),
+                revision=str(td.get("revision", _arn_to_family_revision(arn)[1])),
+                status=_optional_str(td.get("status")),
             )
         )
     return summaries

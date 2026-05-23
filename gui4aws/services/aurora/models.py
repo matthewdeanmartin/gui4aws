@@ -32,6 +32,7 @@ class AuroraClusterSummary:
     multi_az: bool
     member_count: int
     arn: str | None
+    kms_key_id: str | None
 
 
 @dataclass(frozen=True)

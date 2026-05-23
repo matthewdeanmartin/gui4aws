@@ -14,4 +14,7 @@ class SecretSummary:
     last_changed_date: str | None
     last_accessed_date: str | None
     rotation_enabled: bool
+    deleted: bool
+    deletion_date: str | None
     arn: str | None
+    kms_key_id: str | None

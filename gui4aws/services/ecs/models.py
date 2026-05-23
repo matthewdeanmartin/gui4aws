@@ -7,6 +7,7 @@ from dataclasses import dataclass
 __all__ = [
     "EcsClusterSummary",
     "EcsServiceSummary",
+    "EcsTaskDefinitionSummary",
     "EcsTaskSummary",
 ]
 
@@ -43,3 +44,11 @@ class EcsTaskSummary:
     desired_status: str
     launch_type: str | None
     arn: str | None
+
+
+@dataclass(frozen=True)
+class EcsTaskDefinitionSummary:
+    task_definition_arn: str
+    family: str
+    revision: str
+    status: str | None

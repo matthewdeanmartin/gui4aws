@@ -151,6 +151,24 @@ class MotoServerManager:
         self.stop()
         self.start(timeout=timeout)
 
+    def reset_state(self) -> None:
+        """POST /moto-api/reset to wipe all moto state without restarting the server.
+
+        Raises RuntimeError if moto is not running or the request fails.
+        """
+        if not self.running:
+            raise RuntimeError("Moto server is not running")
+        url = f"{self.endpoint_url}/moto-api/reset"
+        req = urllib.request.Request(url, method="POST", data=b"")
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                body = resp.read()
+                self._append_output(f"=== moto state reset: {resp.status} {body!r} ===")
+        except urllib.error.HTTPError as exc:
+            raise RuntimeError(f"Moto reset failed: HTTP {exc.code}") from exc
+        except OSError as exc:
+            raise RuntimeError(f"Moto reset failed: {exc}") from exc
+
     def output_text(self, *, max_lines: int | None = None) -> str:
         """Return collected Moto stdout/stderr."""
         with self._output_lock:

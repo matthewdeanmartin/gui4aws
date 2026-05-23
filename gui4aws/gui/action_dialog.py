@@ -18,41 +18,12 @@ __all__ = ["ActionDialog"]
 logger = logging.getLogger(__name__)
 
 
-class _ScrollableBody(ttk.Frame):
-    """Canvas-backed body frame for tall dialogs."""
-
-    def __init__(self, parent: tk.Misc) -> None:
-        super().__init__(parent)
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(0, weight=1)
-
-        self.canvas = tk.Canvas(self, highlightthickness=0, borderwidth=0)
-        self.canvas.grid(row=0, column=0, sticky="nsew")
-
-        scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
-        scrollbar.grid(row=0, column=1, sticky="ns")
-        self.canvas.configure(yscrollcommand=scrollbar.set)
-
-        self.content = ttk.Frame(self)
-        self._window_id = self.canvas.create_window((0, 0), window=self.content, anchor="nw")
-
-        self.content.bind("<Configure>", self._sync_scroll_region)
-        self.canvas.bind("<Configure>", self._stretch_content)
-
-    def _sync_scroll_region(self, _event: tk.Event[tk.Misc]) -> None:
-        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-
-    def _stretch_content(self, event: tk.Event[tk.Misc]) -> None:
-        self.canvas.itemconfigure(self._window_id, width=event.width)
-
-
 def _size_and_center(win: tk.Toplevel) -> None:
     """Size the dialog to 80% of its parent root window and center it on screen."""
     win.update_idletasks()
     root = win.winfo_toplevel() if win.master is None else win.master.winfo_toplevel()
     rw = root.winfo_width()
     rh = root.winfo_height()
-    # Fall back to screen size if root reports 1x1 (before first map).
     if rw < 100:
         rw = win.winfo_screenwidth()
     if rh < 100:
@@ -69,9 +40,9 @@ def _size_and_center(win: tk.Toplevel) -> None:
 class ActionDialog(tk.Toplevel):
     """Single-popup dialog: form → live script preview → result panel.
 
-    Replaces the old two-popup (ActionDialog + ReviewDialog) flow.
-    The caller supplies an ``on_run`` callback that receives ``(action, inputs)``
-    and later calls ``set_status`` / ``set_result`` to update the result panel.
+    Layout uses a vertical PanedWindow so the result panel grows with the window:
+      Top pane  — scrollable form + scripts
+      Bottom pane — result text (grows to fill remaining space)
 
     Keyboard shortcuts:
       Enter  — Run (when form is focused)
@@ -99,57 +70,81 @@ class ActionDialog(tk.Toplevel):
         self.protocol("WM_DELETE_WINDOW", self._on_cancel)
         self.bind("<Escape>", lambda _e: self._on_cancel())
 
+        # Root grid: paned area grows, then status bar and button bar are fixed.
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        body = _ScrollableBody(self)
-        body.grid(row=0, column=0, sticky="nsew", padx=4, pady=(4, 0))
-        self._body = body.content
-        self._body_canvas = body.canvas
-        self._body.grid_columnconfigure(0, weight=1)
+        # ── Vertical PanedWindow: top=form+scripts, bottom=result ─────────────
+        paned = ttk.PanedWindow(self, orient="vertical")
+        paned.grid(row=0, column=0, sticky="nsew", padx=4, pady=(4, 0))
 
-        row = 0
+        # ── Top pane: scrollable form area ────────────────────────────────────
+        top_canvas_frame = ttk.Frame(paned)
+        top_canvas_frame.grid_columnconfigure(0, weight=1)
+        top_canvas_frame.grid_rowconfigure(0, weight=1)
 
-        # ── Risk banner ──────────────────────────────────────────────────────
+        canvas = tk.Canvas(top_canvas_frame, highlightthickness=0, borderwidth=0)
+        canvas.grid(row=0, column=0, sticky="nsew")
+        top_scroll = ttk.Scrollbar(top_canvas_frame, orient="vertical", command=canvas.yview)
+        top_scroll.grid(row=0, column=1, sticky="ns")
+        canvas.configure(yscrollcommand=top_scroll.set)
+
+        form_container = ttk.Frame(canvas)
+        form_container.grid_columnconfigure(0, weight=1)
+        _win_id = canvas.create_window((0, 0), window=form_container, anchor="nw")
+
+        def _sync_scroll(_e: Any) -> None:
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        def _stretch(_e: Any) -> None:
+            canvas.itemconfigure(_win_id, width=_e.width)
+
+        form_container.bind("<Configure>", _sync_scroll)
+        canvas.bind("<Configure>", _stretch)
+
+        paned.add(top_canvas_frame, weight=1)
+
+        form_row = 0
+
+        # Risk banner
         banner = warning_banner(action)
         if banner:
             ttk.Label(
-                self._body,
+                form_container,
                 text=banner,
                 foreground="#a04000",
                 wraplength=680,
                 justify="left",
-            ).grid(row=row, column=0, sticky="ew", padx=12, pady=(8, 0))
-            row += 1
+            ).grid(row=form_row, column=0, sticky="ew", padx=12, pady=(8, 0))
+            form_row += 1
 
-        # ── Form ─────────────────────────────────────────────────────────────
-        self.form = ActionForm(self._body, action, prefill=prefill, on_change=self._refresh_scripts)
-        self.form.grid(row=row, column=0, sticky="nsew", padx=8, pady=4)
-        row += 1
+        # Form
+        self.form = ActionForm(form_container, action, prefill=prefill, on_change=self._refresh_scripts)
+        self.form.grid(row=form_row, column=0, sticky="nsew", padx=8, pady=4)
+        form_row += 1
 
-        # ── Description ──────────────────────────────────────────────────────
+        # Description
         if action.description:
             ttk.Label(
-                self._body,
+                form_container,
                 text=action.description,
                 wraplength=680,
                 foreground="gray",
                 justify="left",
-            ).grid(row=row, column=0, sticky="ew", padx=12, pady=(0, 4))
-            row += 1
+            ).grid(row=form_row, column=0, sticky="ew", padx=12, pady=(0, 4))
+            form_row += 1
 
-        # ── Live script preview (for non-read-only actions) ──────────────────
-        self._script_frame: ttk.LabelFrame | None = None
+        # Live script preview (for non-read-only actions)
         self._cli_text: tk.Text | None = None
         self._python_text: tk.Text | None = None
         if needs_review(action):
-            self._script_frame = ttk.LabelFrame(self._body, text="Generated scripts")
-            self._script_frame.grid(row=row, column=0, sticky="nsew", padx=8, pady=4)
-            self._script_frame.grid_columnconfigure(0, weight=1)
-            self._script_frame.grid_columnconfigure(1, weight=1)
-            self._body.grid_rowconfigure(row, weight=2)
+            script_frame = ttk.LabelFrame(form_container, text="Generated scripts")
+            script_frame.grid(row=form_row, column=0, sticky="nsew", padx=8, pady=4)
+            script_frame.grid_columnconfigure(0, weight=1)
+            script_frame.grid_columnconfigure(1, weight=1)
+            form_container.grid_rowconfigure(form_row, weight=1)
 
-            cli_lf = ttk.LabelFrame(self._script_frame, text="AWS CLI")
+            cli_lf = ttk.LabelFrame(script_frame, text="AWS CLI")
             cli_lf.grid(row=0, column=0, sticky="nsew", padx=4, pady=4)
             cli_lf.grid_columnconfigure(0, weight=1)
             cli_lf.grid_rowconfigure(0, weight=1)
@@ -160,7 +155,7 @@ class ActionDialog(tk.Toplevel):
             self._cli_text.grid(row=0, column=0, sticky="nsew")
             cli_scroll.grid(row=0, column=1, sticky="ns")
 
-            py_lf = ttk.LabelFrame(self._script_frame, text="Python (boto3)")
+            py_lf = ttk.LabelFrame(script_frame, text="Python (boto3)")
             py_lf.grid(row=0, column=1, sticky="nsew", padx=4, pady=4)
             py_lf.grid_columnconfigure(0, weight=1)
             py_lf.grid_rowconfigure(0, weight=1)
@@ -171,29 +166,29 @@ class ActionDialog(tk.Toplevel):
             self._python_text.grid(row=0, column=0, sticky="nsew")
             py_scroll.grid(row=0, column=1, sticky="ns")
 
-            copy_bar = ttk.Frame(self._script_frame)
+            copy_bar = ttk.Frame(script_frame)
             copy_bar.grid(row=1, column=0, columnspan=2, sticky="e", padx=4, pady=2)
             ttk.Button(copy_bar, text="Copy CLI", command=self._copy_cli).grid(row=0, column=0, padx=2)
             ttk.Button(copy_bar, text="Copy Python", command=self._copy_python).grid(row=0, column=1, padx=2)
 
-            row += 1
-
+            form_row += 1
             self._refresh_scripts()
 
-        # ── Result panel ─────────────────────────────────────────────────────
-        result_lf = ttk.LabelFrame(self._body, text="Result")
-        result_lf.grid(row=row, column=0, sticky="nsew", padx=8, pady=4)
+        # ── Bottom pane: result — fills remaining dialog height ───────────────
+        result_lf = ttk.LabelFrame(paned, text="Result")
         result_lf.grid_columnconfigure(0, weight=1)
         result_lf.grid_rowconfigure(0, weight=1)
-        self._body.grid_rowconfigure(row, weight=1)
-        row += 1
 
-        self.result_text = tk.Text(result_lf, height=6, wrap="word", font=("Courier", 9))
+        self.result_text = tk.Text(result_lf, wrap="word", font=("Courier", 9))
         self.result_text.configure(state="disabled")
         result_scroll = ttk.Scrollbar(result_lf, orient="vertical", command=self.result_text.yview)
-        self.result_text.configure(yscrollcommand=result_scroll.set)
+        result_hscroll = ttk.Scrollbar(result_lf, orient="horizontal", command=self.result_text.xview)
+        self.result_text.configure(yscrollcommand=result_scroll.set, xscrollcommand=result_hscroll.set)
         self.result_text.grid(row=0, column=0, sticky="nsew")
         result_scroll.grid(row=0, column=1, sticky="ns")
+        result_hscroll.grid(row=1, column=0, sticky="ew")
+
+        paned.add(result_lf, weight=2)
 
         # ── Status label ──────────────────────────────────────────────────────
         self.status_var = tk.StringVar(value="Fill in the form and click Run.")
@@ -201,7 +196,7 @@ class ActionDialog(tk.Toplevel):
             row=1, column=0, sticky="w", padx=12, pady=(4, 2)
         )
 
-        # ── Button bar: [Cancel (Esc)]  [Run (Enter)]  [Close] ───────────────
+        # ── Button bar ────────────────────────────────────────────────────────
         btn_frame = ttk.Frame(self)
         btn_frame.grid(row=2, column=0, sticky="e", padx=8, pady=8)
 

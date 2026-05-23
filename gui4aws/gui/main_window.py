@@ -185,6 +185,7 @@ class MainWindow:
             on_change=self.on_toolbar_changed,
             on_moto_toggle=self.on_moto_toggle,
             on_robotocore_toggle=self.on_robotocore_toggle,
+            on_clear_cache=self.clear_all_cache_entries,
         )
         self.toolbar.grid(row=0, column=0, columnspan=2, sticky="ew")
 
@@ -199,6 +200,7 @@ class MainWindow:
             self.content_tabs,
             actions=(
                 ("Restart Moto", self.restart_moto),
+                ("Reset Moto State", self.reset_moto_state),
                 ("Open Dashboard", self.open_moto_dashboard),
             ),
         )
@@ -207,6 +209,7 @@ class MainWindow:
             on_start=self._robotocore_start,
             on_stop=self._robotocore_stop,
             on_restart=self._robotocore_restart,
+            on_reset=self._robotocore_reset_state,
             on_pull=self._robotocore_pull,
             on_use_moto_changed=self._robotocore_use_moto_changed,
         )
@@ -326,7 +329,9 @@ class MainWindow:
         from gui4aws.demo_resources import seed_demo_resources
 
         endpoint_url = self.context.endpoint_config.resolved_url()
-        self.status_bar.set_status("Seeding demo resources…")
+        is_robotocore = self.robotocore_manager.running
+        backend = "robotocore" if is_robotocore else ("moto" if self.moto_manager.running else "aws")
+        self.status_bar.set_status(f"Seeding demo resources via {backend}…")
 
         def worker() -> None:
             try:
@@ -334,6 +339,7 @@ class MainWindow:
                     region_name=self.context.region_name,
                     endpoint_url=endpoint_url,
                     profile_name=self.context.profile_name,
+                    is_robotocore=is_robotocore,
                 )
                 self.results_queue.put(("demo_ok", None, report))
             except Exception as exc:
@@ -353,6 +359,22 @@ class MainWindow:
                 self.results_queue.put(("moto_error", None, str(exc)))
 
         threading.Thread(target=restart_worker, daemon=True).start()
+
+    def reset_moto_state(self) -> None:
+        """POST /moto-api/reset to wipe all moto state without restarting the server."""
+        if not self.moto_manager.running:
+            self.status_bar.set_status("Moto is not running")
+            return
+        self.status_bar.set_status("Resetting moto state…")
+
+        def worker() -> None:
+            try:
+                self.moto_manager.reset_state()
+                self.results_queue.put(("moto_state_reset", None, None))
+            except Exception as exc:
+                self.results_queue.put(("moto_error", None, str(exc)))
+
+        threading.Thread(target=worker, daemon=True).start()
 
     def open_moto_dashboard(self) -> None:
         """Open Moto's dashboard in the default browser."""
@@ -444,6 +466,22 @@ class MainWindow:
             try:
                 self.robotocore_manager.pull()
                 self.results_queue.put(("robotocore_pulled", None, None))
+            except Exception as exc:
+                self.results_queue.put(("robotocore_error", None, str(exc)))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _robotocore_reset_state(self) -> None:
+        """POST /_localstack/state/reset to wipe robotocore state without restarting."""
+        if not self.robotocore_manager.running:
+            self.status_bar.set_status("Robotocore is not running")
+            return
+        self.status_bar.set_status("Resetting robotocore state…")
+
+        def worker() -> None:
+            try:
+                self.robotocore_manager.reset_state()
+                self.results_queue.put(("robotocore_state_reset", None, None))
             except Exception as exc:
                 self.results_queue.put(("robotocore_error", None, str(exc)))
 
@@ -916,7 +954,32 @@ class MainWindow:
         )
 
     def _on_row_action(self, service_id: str, row_action: RowAction, row: Any) -> None:
-        """Open an ActionDialog pre-filled from the selected row."""
+        """Open an ActionDialog pre-filled from the selected row.
+
+        First applies the row's own attributes (via row_action.prefill), then
+        falls back to current filter-bar values for any action fields that are
+        still empty. This ensures context fields like 'cluster' are populated
+        even when the row itself doesn't carry them (e.g. a service row in a
+        cluster-scoped list).
+
+        Sentinel action IDs (``cdk://launch``, ``terraform://launch``) open
+        their respective specialist dialogs instead of a generic ActionDialog.
+        """
+        # ── Sentinel: CDK launcher ────────────────────────────────────────────
+        if row_action.action_id == "cdk://launch":
+            from gui4aws.gui.cdk_dialog import CdkDialog
+
+            stack_name = str(getattr(row, "name", "") or "") if row is not None else ""
+            CdkDialog(self.root, stack_name=stack_name)
+            return
+
+        # ── Sentinel: Terraform launcher (stub) ───────────────────────────────
+        if row_action.action_id == "terraform://launch":
+            from gui4aws.gui.terraform_dialog import TerraformDialog
+
+            TerraformDialog(self.root)
+            return
+
         try:
             service = self.context.registry.get(service_id)
             action = service.action(row_action.action_id)
@@ -933,6 +996,13 @@ class MainWindow:
                     value = getattr(row, attr_name)
                 if value is not None:
                     prefill[field_name] = str(value)
+        # Back-fill from the active filter bar for any action input field that
+        # is still unset. This covers context fields (e.g. "cluster") that live
+        # on the filter bar but not on individual service/task row objects.
+        filter_values = self.main_panel.filter_values()
+        for field in action.input_fields:
+            if field.name not in prefill and field.name in filter_values and filter_values[field.name]:
+                prefill[field.name] = filter_values[field.name]
         self.open_action_dialog(action, prefill=prefill)
 
     def _on_sub_row_action(self, service_id: str, row_action: RowAction, row: Any) -> None:
@@ -996,11 +1066,28 @@ class MainWindow:
     def run_action(self, action: ActionDefinition, inputs: dict[str, str]) -> None:
         """Execute an action via the single-worker queue.
 
-        Rapid nav switching just replaces the pending job — at most one HTTP
-        call is in flight at any time.
+        Actions with a ``text_generator`` are handled synchronously — no boto3
+        call is made; the text is generated immediately from the input values.
+
+        For all other actions, rapid nav switching just replaces the pending
+        job — at most one HTTP call is in flight at any time.
         """
         self.current_action = action
         self.current_inputs = dict(inputs)
+
+        # Text-generator actions: produce output purely from inputs, no network call.
+        if action.text_generator is not None:
+            self.status_bar.set_last_action(action.action_id)
+            try:
+                generated = action.text_generator(inputs)
+            except Exception as exc:
+                logger.exception("text_generator failed for %s", action.action_id)
+                self.main_panel.output_panel.set_error(f"Text generation failed: {exc}")
+                return
+            self.main_panel.show_output(generated, None)
+            self.status_bar.set_status("Ready")
+            return
+
         cli = generate_cli_script(
             action,
             inputs,
@@ -1192,6 +1279,14 @@ class MainWindow:
             self.status_bar.set_status("Robotocore image pull complete")
             self.robotocore_panel.set_status("Image up to date")
             return
+        if kind == "moto_state_reset":
+            self.context.invalidate_read_cache()
+            self.status_bar.set_status("Moto state reset — cache cleared")
+            return
+        if kind == "robotocore_state_reset":
+            self.context.invalidate_read_cache()
+            self.status_bar.set_status("Robotocore state reset — cache cleared")
+            return
         if kind == "robotocore_error":
             self.status_bar.set_status("Robotocore error")
             messagebox.showerror("Robotocore error", str(payload))
@@ -1288,6 +1383,16 @@ class MainWindow:
         if action.risk_level is not RiskLevel.READ_ONLY:
             self._schedule_cache_refreshes_for_action(action)
             self._refresh_visible_data_after_write(action)
+
+        if action.text_generator is not None:
+            try:
+                generated = action.text_generator(self.current_inputs)
+            except Exception as exc:
+                logger.exception("text_generator failed for %s", action.action_id)
+                self.main_panel.output_panel.set_error(f"Text generation failed: {exc}")
+                return
+            self.main_panel.show_output(generated, raw_response)
+            return
 
         if view is not None and raw_response is not None:
             try:

@@ -12,10 +12,18 @@ from gui4aws.models import (
 )
 from gui4aws.services.ecs.actions import (
     ALL_ACTIONS,
+    CREATE_CLUSTER,
+    CREATE_SERVICE,
+    DELETE_CLUSTER,
+    DELETE_SERVICE,
+    DEREGISTER_TASK_DEFINITION,
+    DESCRIBE_TASK_DEFINITION,
     DESCRIBE_TASKS,
     LIST_CLUSTERS,
     LIST_SERVICES,
+    LIST_TASK_DEFINITIONS,
     LIST_TASKS,
+    RUN_TASK,
     STOP_TASK,
     UPDATE_SERVICE,
 )
@@ -23,9 +31,6 @@ from gui4aws.services.ecs.actions import (
 __all__ = ["SERVICE"]
 
 
-# Eager choice source: list clusters and project their names. ECS list_clusters
-# returns {"clusterArns": [...]}, so the JMESPath grabs ARNs and the filter bar
-# normalises them to short names.
 _CLUSTERS_SOURCE = EagerChoiceSource(
     action_id=LIST_CLUSTERS.action_id,
     jmespath="clusterArns[]",
@@ -39,9 +44,6 @@ SERVICE = ServiceDefinition(
     cli_service_name="ecs",
     navigation_items=(
         # ── Clusters ──────────────────────────────────────────────────────────
-        # Selecting a cluster row shows its services in the sub-panel below,
-        # which is how grandchild rows (services, tasks) become reachable
-        # without making them top-level sidebar entries.
         NavigationItem(
             item_id="clusters",
             display_name="Clusters",
@@ -51,6 +53,18 @@ SERVICE = ServiceDefinition(
                 panel_label="Services in cluster",
                 prefill={"cluster": "cluster_name"},
                 columns=("service_name", "status", "desired_count", "running_count", "launch_type"),
+            ),
+            row_actions=(
+                RowAction(
+                    action_id=CREATE_CLUSTER.action_id,
+                    button_label="Create Cluster",
+                    prefill={},
+                ),
+                RowAction(
+                    action_id=DELETE_CLUSTER.action_id,
+                    button_label="Delete Cluster",
+                    prefill={"cluster": "cluster_name"},
+                ),
             ),
         ),
         # ── Services ──────────────────────────────────────────────────────────
@@ -72,6 +86,16 @@ SERVICE = ServiceDefinition(
                 RowAction(
                     action_id=UPDATE_SERVICE.action_id,
                     button_label="Update Service",
+                    prefill={"service": "service_name", "cluster": "cluster_name"},
+                ),
+                RowAction(
+                    action_id=CREATE_SERVICE.action_id,
+                    button_label="Create Service",
+                    prefill={"cluster": "cluster_name"},
+                ),
+                RowAction(
+                    action_id=DELETE_SERVICE.action_id,
+                    button_label="Delete Service",
                     prefill={"service": "service_name", "cluster": "cluster_name"},
                 ),
             ),
@@ -98,8 +122,6 @@ SERVICE = ServiceDefinition(
             ),
             eager_choices={
                 "cluster": _CLUSTERS_SOURCE,
-                # service_name depends on cluster — re-fetched whenever the
-                # cluster dropdown changes value.
                 "service_name": EagerChoiceSource(
                     action_id=LIST_SERVICES.action_id,
                     jmespath="serviceArns[]",
@@ -113,9 +135,47 @@ SERVICE = ServiceDefinition(
                     prefill={"tasks": "arn", "cluster": "cluster_name"},
                 ),
                 RowAction(
+                    action_id=RUN_TASK.action_id,
+                    button_label="Run Task",
+                    prefill={"cluster": "cluster_name", "task_definition": "task_definition"},
+                ),
+                RowAction(
                     action_id=STOP_TASK.action_id,
                     button_label="Stop Task",
                     prefill={"task": "arn", "cluster": "cluster_name"},
+                ),
+            ),
+        ),
+        # ── Task Definitions ──────────────────────────────────────────────────
+        NavigationItem(
+            item_id="task_definitions",
+            display_name="Task Definitions",
+            default_action_id=LIST_TASK_DEFINITIONS.action_id,
+            filter_fields=(
+                InputField(
+                    name="family_prefix",
+                    label="Family prefix",
+                    required=False,
+                    help_text="Optional filter by task family prefix.",
+                ),
+                InputField(
+                    name="status",
+                    label="Status",
+                    kind="choice",
+                    choices=("", "ACTIVE", "INACTIVE"),
+                    required=False,
+                ),
+            ),
+            row_actions=(
+                RowAction(
+                    action_id=DESCRIBE_TASK_DEFINITION.action_id,
+                    button_label="Describe",
+                    prefill={"task_definition": "task_definition_arn"},
+                ),
+                RowAction(
+                    action_id=DEREGISTER_TASK_DEFINITION.action_id,
+                    button_label="Deregister",
+                    prefill={"task_definition": "task_definition_arn"},
                 ),
             ),
         ),

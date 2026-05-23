@@ -49,8 +49,8 @@ def test_action_form_requires_multiline_content(tk_root: tk.Tk) -> None:
     assert "Value is required" not in form.validate()
 
 
-def test_action_dialog_uses_scrollable_body_and_refreshes_multiline_scripts(tk_root: tk.Tk) -> None:
-    """Scrollable dialogs still refresh generated scripts from multiline fields."""
+def test_action_dialog_refreshes_multiline_scripts(tk_root: tk.Tk) -> None:
+    """Editing a multiline field live-updates the generated script preview."""
     dialog: ActionDialog | None = None
     try:
         dialog = ActionDialog(
@@ -60,16 +60,20 @@ def test_action_dialog_uses_scrollable_body_and_refreshes_multiline_scripts(tk_r
         )
         tk_root.update_idletasks()
 
-        assert hasattr(dialog, "_body_canvas")
-        assert dialog._body_canvas.cget("yscrollcommand")
-        assert dialog.form.master is dialog._body
+        # Dialog must expose the CLI text widget (script preview for write actions).
+        cli_text = cast(tk.Text, dialog._cli_text)
+        assert cli_text is not None
 
+        # Editing the multiline field should refresh the script preview.
         widget = dialog.form._text_widgets["secret_string"]
         widget.insert("1.0", "updated secret")
         tk_root.update()
 
-        cli_text = cast(tk.Text, dialog._cli_text)
         assert cli_text.get("1.0", "end-1c") == "updated secret"
+
+        # The result text widget must exist and be scrollable.
+        assert hasattr(dialog, "result_text")
+        assert dialog.result_text.cget("yscrollcommand")
     finally:
         if dialog is not None:
             dialog.destroy()

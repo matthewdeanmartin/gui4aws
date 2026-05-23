@@ -27,6 +27,7 @@ class Toolbar(ttk.Frame):
         on_change: Callable[[], None] | None = None,
         on_moto_toggle: Callable[[bool], None] | None = None,
         on_robotocore_toggle: Callable[[bool], None] | None = None,
+        on_clear_cache: Callable[[], None] | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(parent, **kwargs)
@@ -34,6 +35,7 @@ class Toolbar(ttk.Frame):
         self.on_change = on_change or (lambda: None)
         self.on_moto_toggle = on_moto_toggle or (lambda running: None)
         self.on_robotocore_toggle = on_robotocore_toggle or (lambda running: None)
+        self.on_clear_cache = on_clear_cache or (lambda: None)
         self.moto_running = False
         self.robotocore_running = False
 
@@ -116,7 +118,11 @@ class Toolbar(ttk.Frame):
         col += 1
 
         self.robotocore_btn = ttk.Button(self, text="Start Robotocore", command=self.toggle_robotocore, width=17)
-        self.robotocore_btn.grid(row=0, column=col, padx=(4, 8), pady=4)
+        self.robotocore_btn.grid(row=0, column=col, padx=(4, 4), pady=4)
+        col += 1
+
+        clear_cache_btn = ttk.Button(self, text="Clear Cache", command=self.on_clear_cache, width=11)
+        clear_cache_btn.grid(row=0, column=col, padx=(4, 8), pady=4)
 
     def on_mode_changed(self, event: object = None) -> None:
         """Push the mode selector value into AppContext."""

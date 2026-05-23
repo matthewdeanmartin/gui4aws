@@ -10,6 +10,7 @@ from gui4aws.services.backup.models import (
     BackupJobSummary,
     BackupPlanSummary,
     BackupVaultSummary,
+    RecoveryPointByJobSummary,
     RecoveryPointSummary,
     RestoreJobSummary,
 )
@@ -18,6 +19,7 @@ __all__ = [
     "to_backup_job_summaries",
     "to_backup_plan_summaries",
     "to_backup_vault_summaries",
+    "to_recovery_point_by_job_summaries",
     "to_recovery_point_summaries",
     "to_restore_job_summaries",
 ]
@@ -84,9 +86,37 @@ def to_backup_job_summaries(response: Mapping[str, Any]) -> list[BackupJobSummar
             state=str(job.get("State", "")),
             percent_done=optional_str(job.get("PercentDone")),
             creation_date=optional_datetime(job.get("CreationDate")),
+            recovery_point_arn=optional_str(job.get("RecoveryPointArn")),
         )
         for job in jobs
     ]
+
+
+def to_recovery_point_by_job_summaries(response: Mapping[str, Any]) -> list[RecoveryPointByJobSummary]:
+    """``list_backup_jobs`` -> list[RecoveryPointByJobSummary].
+
+    Workaround for robotocore: list_recovery_points_by_backup_vault returns empty
+    even after successful backup jobs.  We surface recovery points from completed
+    backup jobs instead so the UI has something to restore from.
+    """
+    jobs = response.get("BackupJobs", []) or []
+    results: list[RecoveryPointByJobSummary] = []
+    for job in jobs:
+        rp_arn = optional_str(job.get("RecoveryPointArn"))
+        if not rp_arn:
+            continue
+        results.append(
+            RecoveryPointByJobSummary(
+                recovery_point_arn=rp_arn,
+                job_id=str(job.get("BackupJobId", "")),
+                vault_name=optional_str(job.get("BackupVaultName")),
+                resource_arn=optional_str(job.get("ResourceArn")),
+                resource_type=optional_str(job.get("ResourceType")),
+                state=str(job.get("State", "")),
+                creation_date=optional_datetime(job.get("CreationDate")),
+            )
+        )
+    return results
 
 
 def to_restore_job_summaries(response: Mapping[str, Any]) -> list[RestoreJobSummary]:
@@ -99,6 +129,7 @@ def to_restore_job_summaries(response: Mapping[str, Any]) -> list[RestoreJobSumm
             resource_type=optional_str(job.get("ResourceType")),
             status=str(job.get("Status", "")),
             percent_done=optional_str(job.get("PercentDone")),
+            created_resource_arn=optional_str(job.get("CreatedResourceArn")),
             creation_date=optional_datetime(job.get("CreationDate")),
         )
         for job in jobs

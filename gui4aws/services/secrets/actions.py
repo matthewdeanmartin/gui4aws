@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from typing import Any
+
 from gui4aws.models import (
     ActionDefinition,
     Boto3Template,
@@ -20,7 +23,28 @@ __all__ = [
     "DESCRIBE_SECRET",
     "LIST_SECRETS",
     "PUT_SECRET_VALUE",
+    "RESTORE_SECRET",
 ]
+
+
+def _list_secrets_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+    params: dict[str, Any] = {}
+    include_deleted = inputs.get("include_deleted", "false").lower() == "true"
+    if include_deleted:
+        # IncludePlannedDeletion shows secrets scheduled for deletion
+        params["IncludePlannedDeletion"] = True
+    if inputs.get("name_prefix"):
+        params["Filters"] = [{"Key": "name", "Values": [inputs["name_prefix"]]}]
+    return params
+
+
+def _list_secrets_cli_args(inputs: Mapping[str, str]) -> list[str]:
+    args: list[str] = []
+    if inputs.get("include_deleted", "false").lower() == "true":
+        args += ["--include-planned-deletion"]
+    if inputs.get("name_prefix"):
+        args += ["--filters", f"Key=name,Values={inputs['name_prefix']}"]
+    return args
 
 
 LIST_SECRETS = ActionDefinition(
@@ -30,30 +54,31 @@ LIST_SECRETS = ActionDefinition(
     risk_level=RiskLevel.READ_ONLY,
     input_fields=(
         InputField(
-            name="filters",
+            name="name_prefix",
             label="Name prefix filter (optional)",
             required=False,
             help_text="Partial secret name to filter by.",
         ),
+        InputField(
+            name="include_deleted",
+            label="Include deleted (pending deletion)",
+            kind="bool",
+            default="true",
+            help_text="Show secrets scheduled for deletion alongside active ones.",
+        ),
     ),
-    cli_template=CliTemplate(
-        service="secretsmanager",
-        command="list-secrets",
-        arg_map={},
-    ),
-    boto3_template=Boto3Template(
-        service="secretsmanager",
-        operation="list_secrets",
-        param_map={},
-    ),
+    cli_template=CliTemplate(service="secretsmanager", command="list-secrets"),
+    boto3_template=Boto3Template(service="secretsmanager", operation="list_secrets"),
     result_view=ResultViewDefinition(
         kind=ResultViewKind.TABLE,
-        columns=("name", "description", "rotation_enabled", "last_changed_date", "last_accessed_date"),
+        columns=("name", "description", "deleted", "deletion_date", "rotation_enabled", "last_changed_date"),
         title="Secrets",
     ),
     iam_permissions=("secretsmanager:ListSecrets",),
-    description="List all secrets in Secrets Manager.",
+    description="List secrets. Enable 'Include deleted' to also show secrets pending deletion.",
     view=to_secret_summaries,
+    cli_args_builder=_list_secrets_cli_args,
+    boto3_params_builder=_list_secrets_boto3_params,
 )
 
 
@@ -162,7 +187,7 @@ DELETE_SECRET = ActionDefinition(
             kind="int",
             required=False,
             default="30",
-            help_text="Omit to use force-delete with no recovery window.",
+            help_text="Sets a soft-delete window. Leave blank to force-delete immediately with no recovery.",
         ),
     ),
     cli_template=CliTemplate(
@@ -183,7 +208,44 @@ DELETE_SECRET = ActionDefinition(
     ),
     result_view=ResultViewDefinition(kind=ResultViewKind.RAW_JSON, title="Delete secret result"),
     iam_permissions=("secretsmanager:DeleteSecret",),
-    description="Schedule a secret for deletion (soft-delete with recovery window).",
+    description=(
+        "Schedule a secret for deletion. With a recovery window the secret is soft-deleted and "
+        "can be restored before the window expires. Deleted secrets remain visible in the list "
+        "with 'deleted=yes' until the window passes."
+    ),
+    cache_refresh_nav_ids=("secrets",),
+)
+
+
+RESTORE_SECRET = ActionDefinition(
+    action_id="secrets.restore_secret",
+    display_name="Restore secret",
+    service_id="secrets",
+    risk_level=RiskLevel.SAFE_WRITE,
+    input_fields=(
+        InputField(
+            name="secret_id",
+            label="Secret name or ARN",
+            required=True,
+            help_text="Name or ARN of the secret pending deletion to restore.",
+        ),
+    ),
+    cli_template=CliTemplate(
+        service="secretsmanager",
+        command="restore-secret",
+        arg_map={"secret_id": "secret-id"},
+    ),
+    boto3_template=Boto3Template(
+        service="secretsmanager",
+        operation="restore_secret",
+        param_map={"secret_id": "SecretId"},
+    ),
+    result_view=ResultViewDefinition(kind=ResultViewKind.RAW_JSON, title="Restore secret result"),
+    iam_permissions=("secretsmanager:RestoreSecret",),
+    description=(
+        "Cancel a pending deletion and restore the secret to active status. "
+        "Only works while the secret is still within its recovery window."
+    ),
     cache_refresh_nav_ids=("secrets",),
 )
 
@@ -194,4 +256,5 @@ ALL_ACTIONS = (
     CREATE_SECRET,
     PUT_SECRET_VALUE,
     DELETE_SECRET,
+    RESTORE_SECRET,
 )
