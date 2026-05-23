@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import tkinter as tk
+from collections.abc import Callable
 from tkinter import ttk
 from typing import Any
 
@@ -25,11 +26,13 @@ class ActionForm(ttk.Frame):
         action: ActionDefinition,
         *,
         prefill: dict[str, str] | None = None,
+        on_change: Callable[[], None] | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(parent, **kwargs)
         self.action = action
         self.variables: dict[str, tk.StringVar] = {}
+        self._text_widgets: dict[str, tk.Text] = {}
         effective_prefill = prefill or {}
 
         ttk.Label(self, text=action.display_name, font=("TkDefaultFont", 10, "bold")).grid(
@@ -50,9 +53,17 @@ class ActionForm(ttk.Frame):
             elif field.kind == "bool":
                 widget = ttk.Combobox(self, textvariable=var, values=["true", "false"], state="readonly")
             elif field.kind == "multiline":
-                widget = tk.Text(self, height=4, width=40)
+                widget = tk.Text(self, height=4, width=40, wrap="word")
+                if initial:
+                    widget.insert("1.0", initial)
+                widget.edit_modified(False)
+                self._text_widgets[field.name] = widget
+                if on_change is not None:
+                    widget.bind("<<Modified>>", self._on_text_modified(widget, on_change), add="+")
             else:
                 widget = ttk.Entry(self, textvariable=var, width=40)
+            if field.kind != "multiline" and on_change is not None:
+                var.trace_add("write", lambda *_args, callback=on_change: callback())
             widget.grid(row=row_index, column=1, sticky="ew", padx=8, pady=2)
             if field.help_text:
                 ttk.Label(self, text=field.help_text, foreground="gray").grid(
@@ -63,7 +74,9 @@ class ActionForm(ttk.Frame):
 
     def values(self) -> dict[str, str]:
         """Snapshot of current input values."""
-        return {name: var.get() for name, var in self.variables.items()}
+        values = {name: var.get() for name, var in self.variables.items()}
+        values.update({name: widget.get("1.0", "end-1c") for name, widget in self._text_widgets.items()})
+        return values
 
     def validate(self) -> list[str]:
         """Return a list of human-readable validation errors (empty if valid)."""
@@ -73,3 +86,15 @@ class ActionForm(ttk.Frame):
             if field.required and not values.get(field.name, "").strip():
                 errors.append(f"{field.label} is required")
         return errors
+
+    @staticmethod
+    def _on_text_modified(widget: tk.Text, callback: Callable[[], None]) -> Callable[[Any], None]:
+        """Notify the dialog when a multiline field changes."""
+
+        def handle(_event: Any) -> None:
+            if not widget.edit_modified():
+                return
+            widget.edit_modified(False)
+            callback()
+
+        return handle

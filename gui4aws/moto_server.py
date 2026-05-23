@@ -15,9 +15,12 @@ import os
 import socket
 import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
+from collections import deque
+from typing import Any
 
 __all__ = ["MotoServerManager"]
 
@@ -62,9 +65,12 @@ class MotoServerManager:
     """
 
     def __init__(self) -> None:
-        self.process: subprocess.Popen[bytes] | None = None
+        self.process: subprocess.Popen[str] | None = None
         self.saved_env: dict[str, str | None] = {}
         self.port: int = 0
+        self._output_lock = threading.RLock()
+        self._output_lines: deque[str] = deque(maxlen=2000)
+        self._reader_thread: threading.Thread | None = None
 
     @property
     def running(self) -> bool:
@@ -75,6 +81,11 @@ class MotoServerManager:
     def endpoint_url(self) -> str:
         """The HTTP URL the moto server listens on."""
         return f"http://{MOTO_HOST}:{self.port}"
+
+    @property
+    def dashboard_url(self) -> str:
+        """Moto dashboard URL."""
+        return f"{self.endpoint_url}/moto-api/"
 
     def start(self, timeout: float = 10.0) -> None:
         """Launch the moto server subprocess and block until it is ready.
@@ -92,30 +103,33 @@ class MotoServerManager:
         self.port = _find_free_port()
         cmd = [sys.executable, "-m", "moto.server", "-H", MOTO_HOST, "-p", str(self.port)]
         logger.info("starting moto server: %s", " ".join(cmd))
+        self._clear_output()
+        self._append_output(f"=== starting moto on {self.endpoint_url} ===")
 
         self.process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            bufsize=1,
         )
+        if self.process.stdout is not None:
+            self._reader_thread = threading.Thread(target=self._capture_output, name="moto-output", daemon=True)
+            self._reader_thread.start()
 
         self._inject_credentials()
 
         try:
             self._wait_ready(timeout)
-        except RuntimeError:
-            # Collect whatever output the server produced before dying.
-            stderr_output = ""
-            if self.process.stdout:
-                try:
-                    stderr_output = self.process.stdout.read(4096).decode(errors="replace")
-                except Exception:
-                    pass
+        except RuntimeError as exc:
+            stderr_output = self.output_text(max_lines=80)
             self.stop()
             raise RuntimeError(
                 f"moto server did not come up within {timeout}s on port {self.port}.\n"
                 f"Server output:\n{stderr_output or '(none)'}"
-            )
+            ) from exc
 
         logger.info("moto server ready at %s", self.endpoint_url)
 
@@ -129,7 +143,33 @@ class MotoServerManager:
             except subprocess.TimeoutExpired:
                 self.process.kill()
             self.process = None
+        self._append_output("=== moto stopped ===")
         self._restore_credentials()
+
+    def restart(self, timeout: float = 10.0) -> None:
+        """Restart Moto, preserving the fake credential wiring."""
+        self.stop()
+        self.start(timeout=timeout)
+
+    def output_text(self, *, max_lines: int | None = None) -> str:
+        """Return collected Moto stdout/stderr."""
+        with self._output_lock:
+            lines = list(self._output_lines)
+        if max_lines is not None:
+            lines = lines[-max_lines:]
+        return "\n".join(lines)
+
+    def snapshot(self) -> dict[str, Any]:
+        """Return process state and output summary for diagnostics."""
+        with self._output_lock:
+            lines = list(self._output_lines)
+        return {
+            "running": self.running,
+            "port": self.port,
+            "endpoint_url": self.endpoint_url if self.port else None,
+            "output_line_count": len(lines),
+            "recent_output": lines[-50:],
+        }
 
     def _inject_credentials(self) -> None:
         for key, value in _ENV_VARS.items():
@@ -156,3 +196,20 @@ class MotoServerManager:
             except (urllib.error.URLError, OSError):
                 time.sleep(0.25)
         raise RuntimeError(f"moto server did not respond within {timeout}s")
+
+    def _capture_output(self) -> None:
+        process = self.process
+        if process is None or process.stdout is None:
+            return
+        for line in process.stdout:
+            text = line.rstrip()
+            if text:
+                self._append_output(text)
+
+    def _append_output(self, line: str) -> None:
+        with self._output_lock:
+            self._output_lines.append(line)
+
+    def _clear_output(self) -> None:
+        with self._output_lock:
+            self._output_lines.clear()

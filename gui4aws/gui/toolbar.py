@@ -1,4 +1,4 @@
-"""Global toolbar: mode / profile / region / endpoint selectors + moto toggle."""
+"""Global toolbar: mode / profile / region / endpoint selectors + moto/robotocore toggles."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ __all__ = ["Toolbar"]
 
 
 class Toolbar(ttk.Frame):
-    """Always-visible bar with mode, profile, region, partition, endpoint pickers and moto toggle."""
+    """Always-visible bar with mode, profile, region, partition, endpoint pickers and moto/robotocore toggles."""
 
     def __init__(
         self,
@@ -26,13 +26,16 @@ class Toolbar(ttk.Frame):
         regions: Sequence[str] = (),
         on_change: Callable[[], None] | None = None,
         on_moto_toggle: Callable[[bool], None] | None = None,
+        on_robotocore_toggle: Callable[[bool], None] | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(parent, **kwargs)
         self.context = context
         self.on_change = on_change or (lambda: None)
         self.on_moto_toggle = on_moto_toggle or (lambda running: None)
+        self.on_robotocore_toggle = on_robotocore_toggle or (lambda running: None)
         self.moto_running = False
+        self.robotocore_running = False
 
         col = 0
 
@@ -59,34 +62,34 @@ class Toolbar(ttk.Frame):
         profile_combo.bind("<FocusOut>", self.on_profile_changed)
         col += 1
 
-        self.region_var = tk.StringVar(value=context.region_name)
-        ttk.Label(self, text="Region:").grid(row=0, column=col, padx=(16, 4))
-        col += 1
-        region_combo = ttk.Combobox(self, textvariable=self.region_var, values=list(regions), width=18)
-        region_combo.grid(row=0, column=col, padx=4)
-        region_combo.bind("<<ComboboxSelected>>", self.on_region_changed)
-        region_combo.bind("<FocusOut>", self.on_region_changed)
+        # ── Partition / Region compound group ────────────────────────────────
+        pr_frame = ttk.Frame(self)
+        pr_frame.grid(row=0, column=col, padx=(16, 4), pady=4)
         col += 1
 
         self.partition_var = tk.StringVar(value=context.partition)
-        ttk.Label(self, text="Partition:").grid(row=0, column=col, padx=(16, 4))
-        col += 1
         partition_labels = [f"{pid} ({info[1]})" for pid, info in AWS_PARTITIONS.items()]
         self.partition_ids = list(AWS_PARTITIONS.keys())
         partition_combo = ttk.Combobox(
-            self,
+            pr_frame,
             textvariable=self.partition_var,
             values=partition_labels,
             state="readonly",
-            width=22,
+            width=16,
         )
-        # Show the current partition's label.
         idx = self.partition_ids.index(context.partition) if context.partition in self.partition_ids else 0
         partition_combo.current(idx)
-        partition_combo.grid(row=0, column=col, padx=4)
+        partition_combo.grid(row=0, column=0, padx=(0, 2))
         partition_combo.bind("<<ComboboxSelected>>", self.on_partition_changed)
         self.partition_combo = partition_combo
-        col += 1
+
+        ttk.Label(pr_frame, text="/").grid(row=0, column=1, padx=2)
+
+        self.region_var = tk.StringVar(value=context.region_name)
+        region_combo = ttk.Combobox(pr_frame, textvariable=self.region_var, values=list(regions), width=16)
+        region_combo.grid(row=0, column=2, padx=(2, 0))
+        region_combo.bind("<<ComboboxSelected>>", self.on_region_changed)
+        region_combo.bind("<FocusOut>", self.on_region_changed)
 
         self.endpoint_mode_var = tk.StringVar(value=str(context.endpoint_config.mode))
         ttk.Label(self, text="Endpoint:").grid(row=0, column=col, padx=(16, 4))
@@ -109,7 +112,11 @@ class Toolbar(ttk.Frame):
         col += 1
 
         self.moto_btn = ttk.Button(self, text="Start Moto", command=self.toggle_moto, width=12)
-        self.moto_btn.grid(row=0, column=col, padx=(16, 8), pady=4)
+        self.moto_btn.grid(row=0, column=col, padx=(16, 4), pady=4)
+        col += 1
+
+        self.robotocore_btn = ttk.Button(self, text="Start Robotocore", command=self.toggle_robotocore, width=17)
+        self.robotocore_btn.grid(row=0, column=col, padx=(4, 8), pady=4)
 
     def on_mode_changed(self, event: object = None) -> None:
         """Push the mode selector value into AppContext."""
@@ -169,3 +176,12 @@ class Toolbar(ttk.Frame):
         else:
             self.moto_btn.configure(text="Start Moto")
         self.on_moto_toggle(self.moto_running)
+
+    def toggle_robotocore(self) -> None:
+        """Start or stop robotocore.
+
+        The button label is NOT flipped here — it is updated only when the
+        result arrives via dispatch_result, so a failed or slow start cannot
+        leave the button in the wrong state.
+        """
+        self.on_robotocore_toggle(self.robotocore_running)

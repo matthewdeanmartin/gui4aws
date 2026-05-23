@@ -31,7 +31,7 @@ class ResourceTable(ttk.Frame):
         self.on_select = on_select
         self._rows: list[Any] = []
 
-        self.tree = ttk.Treeview(self, columns=self.columns, show="headings", height=15)
+        self.tree = ttk.Treeview(self, columns=self.columns, show="headings", height=10)
         for column in self.columns:
             self.tree.heading(
                 column,
@@ -62,6 +62,16 @@ class ResourceTable(ttk.Frame):
             # Fire on_select immediately so the detail panel is populated.
             if self.on_select is not None:
                 self.on_select(self._rows[0])
+
+    def set_selected_index(self, index: int) -> None:
+        """Select an existing row by index and fire the selection callback."""
+        if index < 0 or index >= len(self._rows):
+            return
+        iid = str(index)
+        self.tree.selection_set(iid)
+        self.tree.focus(iid)
+        if self.on_select is not None:
+            self.on_select(self._rows[index])
 
     def _on_tree_select(self, event: object = None) -> None:
         del event

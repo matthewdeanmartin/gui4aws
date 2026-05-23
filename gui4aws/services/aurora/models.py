@@ -12,6 +12,9 @@ from dataclasses import dataclass
 __all__ = [
     "AuroraClusterSnapshotSummary",
     "AuroraClusterSummary",
+    "AuroraDbClusterParameterGroupSummary",
+    "AuroraDbParameterGroupSummary",
+    "AuroraDbSubnetGroupSummary",
     "AuroraInstanceSummary",
 ]
 
@@ -53,6 +56,39 @@ class AuroraInstanceSummary:
     cluster_identifier: str | None
     engine: str
     instance_class: str | None
+    running_state: str
     status: str
     is_writer: bool
+    arn: str | None
+
+
+@dataclass(frozen=True)
+class AuroraDbSubnetGroupSummary:
+    """One RDS DB subnet group relevant to Aurora clusters."""
+
+    subnet_group_name: str
+    description: str | None
+    vpc_id: str | None
+    subnet_count: int
+    status: str | None
+    arn: str | None
+
+
+@dataclass(frozen=True)
+class AuroraDbParameterGroupSummary:
+    """One instance-level DB parameter group usable by Aurora DB instances."""
+
+    parameter_group_name: str
+    family: str
+    description: str | None
+    arn: str | None
+
+
+@dataclass(frozen=True)
+class AuroraDbClusterParameterGroupSummary:
+    """One cluster-level parameter group usable by Aurora DB clusters."""
+
+    cluster_parameter_group_name: str
+    family: str
+    description: str | None
     arn: str | None

@@ -51,6 +51,10 @@ def seed_demo_resources(
 
     created.update(_seed_aurora(client("rds")))
     created.update(_seed_backup(client("backup")))
+    created.update(_seed_networking(client("ec2"), client("elbv2")))
+    created.update(_seed_ecs(client("ecs")))
+    created.update(_seed_secrets(client("secretsmanager")))
+    created.update(_seed_ssm(client("ssm")))
 
     return created
 
@@ -127,6 +131,179 @@ def _seed_aurora(rds: Any) -> dict[str, list[str]]:
             created["aurora_snapshots"].append(snap_id)
         except Exception as exc:
             logger.warning("skipped snapshot %s: %s", snap_id, exc)
+
+    return created
+
+
+def _seed_networking(ec2: Any, elbv2: Any) -> dict[str, list[str]]:
+    created: dict[str, list[str]] = {
+        "vpcs": [],
+        "subnets": [],
+        "security_groups": [],
+        "load_balancers": [],
+        "target_groups": [],
+    }
+
+    # VPC
+    vpc_id: str | None = None
+    try:
+        resp = ec2.create_vpc(CidrBlock="10.0.0.0/16", TagSpecifications=[{
+            "ResourceType": "vpc",
+            "Tags": _tags({"Key": "Name", "Value": "demo-vpc"}),
+        }])
+        vpc_id = resp["Vpc"]["VpcId"]
+        logger.info("created VPC %s", vpc_id)
+        created["vpcs"].append(vpc_id)
+    except Exception as exc:
+        logger.warning("skipped VPC: %s", exc)
+
+    # Subnets
+    subnet_ids: list[str] = []
+    if vpc_id:
+        for i, (cidr, az) in enumerate([("10.0.1.0/24", "us-east-1a"), ("10.0.2.0/24", "us-east-1b")]):
+            name = f"demo-subnet-{i + 1}"
+            try:
+                resp = ec2.create_subnet(
+                    VpcId=vpc_id,
+                    CidrBlock=cidr,
+                    AvailabilityZone=az,
+                    TagSpecifications=[{
+                        "ResourceType": "subnet",
+                        "Tags": _tags({"Key": "Name", "Value": name}),
+                    }],
+                )
+                subnet_id = resp["Subnet"]["SubnetId"]
+                subnet_ids.append(subnet_id)
+                logger.info("created subnet %s", subnet_id)
+                created["subnets"].append(subnet_id)
+            except Exception as exc:
+                logger.warning("skipped subnet %s: %s", name, exc)
+
+    # Security group
+    sg_id: str | None = None
+    if vpc_id:
+        try:
+            resp = ec2.create_security_group(
+                GroupName="demo-sg",
+                Description="Demo security group for gui4aws",
+                VpcId=vpc_id,
+                TagSpecifications=[{
+                    "ResourceType": "security-group",
+                    "Tags": _tags({"Key": "Name", "Value": "demo-sg"}),
+                }],
+            )
+            sg_id = resp["GroupId"]
+            logger.info("created security group %s", sg_id)
+            created["security_groups"].append(sg_id)
+        except Exception as exc:
+            logger.warning("skipped security group: %s", exc)
+
+    # ALB
+    alb_arn: str | None = None
+    if subnet_ids:
+        try:
+            resp = elbv2.create_load_balancer(
+                Name="demo-alb",
+                Subnets=subnet_ids,
+                SecurityGroups=[sg_id] if sg_id else [],
+                Scheme="internet-facing",
+                Type="application",
+                Tags=_tags({"Key": "Name", "Value": "demo-alb"}),
+            )
+            alb_arn = resp["LoadBalancers"][0]["LoadBalancerArn"]
+            logger.info("created ALB %s", alb_arn)
+            created["load_balancers"].append(alb_arn)
+        except Exception as exc:
+            logger.warning("skipped ALB: %s", exc)
+
+    # Target group
+    if vpc_id:
+        try:
+            resp = elbv2.create_target_group(
+                Name="demo-tg",
+                Protocol="HTTP",
+                Port=80,
+                VpcId=vpc_id,
+                TargetType="ip",
+                HealthCheckPath="/health",
+                Tags=_tags({"Key": "Name", "Value": "demo-tg"}),
+            )
+            tg_arn = resp["TargetGroups"][0]["TargetGroupArn"]
+            logger.info("created target group %s", tg_arn)
+            created["target_groups"].append(tg_arn)
+        except Exception as exc:
+            logger.warning("skipped target group: %s", exc)
+
+    return created
+
+
+def _seed_ecs(ecs: Any) -> dict[str, list[str]]:
+    created: dict[str, list[str]] = {"ecs_clusters": [], "ecs_services": []}
+
+    cluster_name = "demo-cluster"
+    try:
+        ecs.create_cluster(
+            clusterName=cluster_name,
+            tags=[
+                {"key": "gui4aws:demo", "value": "true"},
+                {"key": "Name", "value": cluster_name},
+            ],
+        )
+        logger.info("created ECS cluster %s", cluster_name)
+        created["ecs_clusters"].append(cluster_name)
+    except Exception as exc:
+        logger.warning("skipped ECS cluster %s: %s", cluster_name, exc)
+
+    return created
+
+
+def _seed_secrets(sm: Any) -> dict[str, list[str]]:
+    created: dict[str, list[str]] = {"secrets": []}
+
+    secrets = [
+        ("demo/db-password", "Demo database password", '{"username":"admin","password":"DemoPass123!"}'),
+        ("demo/api-key", "Demo API key", "demo-api-key-abc123"),
+    ]
+
+    for name, description, value in secrets:
+        try:
+            sm.create_secret(
+                Name=name,
+                Description=description,
+                SecretString=value,
+                Tags=_tags({"Key": "Name", "Value": name}),
+            )
+            logger.info("created secret %s", name)
+            created["secrets"].append(name)
+        except Exception as exc:
+            logger.warning("skipped secret %s: %s", name, exc)
+
+    return created
+
+
+def _seed_ssm(ssm: Any) -> dict[str, list[str]]:
+    created: dict[str, list[str]] = {"ssm_parameters": []}
+
+    params = [
+        ("/demo/app/db-host", "String", "demo-aurora-mysql-prod.cluster-xyz.us-east-1.rds.amazonaws.com"),
+        ("/demo/app/db-port", "String", "3306"),
+        ("/demo/app/log-level", "String", "INFO"),
+        ("/demo/app/feature-flags", "String", '{"new_ui":true,"dark_mode":false}'),
+    ]
+
+    for name, ptype, value in params:
+        try:
+            ssm.put_parameter(
+                Name=name,
+                Value=value,
+                Type=ptype,
+                Description=f"Demo parameter: {name}",
+                Tags=_tags({"Key": "Name", "Value": name}),
+            )
+            logger.info("created SSM parameter %s", name)
+            created["ssm_parameters"].append(name)
+        except Exception as exc:
+            logger.warning("skipped SSM parameter %s: %s", name, exc)
 
     return created
 

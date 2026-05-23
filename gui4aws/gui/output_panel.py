@@ -1,4 +1,4 @@
-"""Output panel: shows a result summary plus a "view raw JSON" button."""
+"""Output panel: copyable text area showing the last action result or error."""
 
 from __future__ import annotations
 
@@ -10,42 +10,57 @@ from typing import Any
 __all__ = ["OutputPanel"]
 
 
-class OutputPanel(ttk.Frame):
-    """Text view of the last action's result with a raw-JSON toggle."""
+class OutputPanel(ttk.LabelFrame):
+    """Copyable text view of the last action's result with a raw-JSON toggle."""
 
     def __init__(self, parent: tk.Misc, **kwargs: Any) -> None:
-        super().__init__(parent, **kwargs)
-        self.summary_var = tk.StringVar(value="(no action run yet)")
-        ttk.Label(self, textvariable=self.summary_var, anchor="w").grid(row=0, column=0, sticky="ew", padx=8, pady=4)
-        button_frame = ttk.Frame(self)
-        button_frame.grid(row=0, column=1, sticky="e")
-        ttk.Button(button_frame, text="View raw JSON", command=self.toggle_raw).grid(row=0, column=0, padx=4)
+        super().__init__(parent, text="Output", **kwargs)
 
-        self.text = tk.Text(self, height=12, wrap="word")
-        self.text.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=8, pady=4)
+        btn_bar = ttk.Frame(self)
+        btn_bar.grid(row=0, column=0, columnspan=2, sticky="ew", padx=4, pady=(4, 0))
+        ttk.Button(btn_bar, text="Copy", command=self._copy_text).pack(side="left", padx=2)
+        ttk.Button(btn_bar, text="View raw JSON", command=self.toggle_raw).pack(side="left", padx=2)
+
+        self.text = tk.Text(self, height=8, wrap="word", font=("Courier", 9))
+        self.text.grid(row=1, column=0, sticky="nsew", padx=4, pady=4)
+        scroll = ttk.Scrollbar(self, orient="vertical", command=self.text.yview)
+        scroll.grid(row=1, column=1, sticky="ns", pady=4)
+        self.text.configure(yscrollcommand=scroll.set)
 
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
 
         self.raw_visible = False
         self._raw_payload: Any = None
-        self._summary_payload: str = ""
+        self._summary_text: str = ""
 
     def set_result(self, summary: str, raw_payload: Any) -> None:
-        """Replace the displayed result."""
-        self.summary_var.set(summary)
-        self._summary_payload = summary
+        """Show a success result — summary in text area, raw available via toggle."""
+        self._summary_text = summary
         self._raw_payload = raw_payload
         self.raw_visible = False
-        self.render()
+        self._render()
+
+    def set_error(self, message: str) -> None:
+        """Show an error message in the text area so it is copyable."""
+        self._summary_text = message
+        self._raw_payload = None
+        self.raw_visible = False
+        self._render()
 
     def toggle_raw(self) -> None:
         """Switch between summary text and raw JSON."""
         self.raw_visible = not self.raw_visible
-        self.render()
+        self._render()
 
-    def render(self) -> None:
-        """Render the current text buffer."""
+    def _copy_text(self) -> None:
+        content = self.text.get("1.0", "end").strip()
+        if content:
+            self.clipboard_clear()
+            self.clipboard_append(content)
+
+    def _render(self) -> None:
+        self.text.configure(state="normal")
         self.text.delete("1.0", "end")
         if self.raw_visible and self._raw_payload is not None:
             try:
@@ -53,4 +68,5 @@ class OutputPanel(ttk.Frame):
             except TypeError:
                 self.text.insert("1.0", repr(self._raw_payload))
         else:
-            self.text.insert("1.0", self._summary_payload)
+            self.text.insert("1.0", self._summary_text)
+        self.text.configure(state="disabled")

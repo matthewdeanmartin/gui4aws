@@ -8,6 +8,15 @@ from pathlib import Path
 __all__ = ["configure_logging"]
 
 
+class _Formatter(logging.Formatter):
+    """Like the standard Formatter but adds %(shortname)s — the last two logger name segments."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        parts = record.name.split(".")
+        record.shortname = ".".join(parts[-2:]) if len(parts) >= 2 else record.name
+        return super().format(record)
+
+
 def configure_logging(level: str = "INFO", log_file: Path | None = None) -> None:
     """Configure root logging for the application.
 
@@ -28,8 +37,8 @@ def configure_logging(level: str = "INFO", log_file: Path | None = None) -> None
         logging.getLogger("boto3").setLevel(logging.WARNING)
         logging.getLogger("urllib3").setLevel(logging.WARNING)
 
-    fmt = "%(asctime)s %(levelname)-7s %(name)s: %(message)s"
-    formatter = logging.Formatter(fmt)
+    fmt = "%(asctime)s %(levelname)-5s %(shortname)s: %(message)s"
+    formatter = _Formatter(fmt, datefmt="%H:%M:%S")
 
     has_stream = any(isinstance(handler, logging.StreamHandler) for handler in root.handlers)
     if not has_stream:

@@ -9,10 +9,22 @@ from dataclasses import dataclass
 from typing import Any
 
 import boto3
+from botocore.config import Config as BotocoreConfig
 from botocore.exceptions import BotoCoreError, ClientError
 
 from gui4aws.execution.endpoint_config import EndpointConfig
 from gui4aws.models import ActionDefinition
+
+# Bound every HTTP call so a wedged endpoint (e.g. an overloaded moto dev
+# server) doesn't permanently block the action-worker thread. Read timeout is
+# generous enough for legitimate slow calls (large list pagination) but short
+# enough that a wedged moto is recovered from quickly. standard retry mode
+# adds ~3 retries with backoff — leave it on for real AWS resilience.
+_BOTOCORE_CONFIG = BotocoreConfig(
+    connect_timeout=5,
+    read_timeout=15,
+    retries={"max_attempts": 3, "mode": "standard"},
+)
 
 __all__ = ["Boto3Executor", "Boto3Failure", "Boto3Result"]
 
@@ -79,10 +91,10 @@ class Boto3Executor:
                 endpoint_url,
                 "moto" if self.endpoint_config.mode.value == "moto" else "custom endpoint",
             )
-            return session.client(service_name, endpoint_url=endpoint_url)
+            return session.client(service_name, endpoint_url=endpoint_url, config=_BOTOCORE_CONFIG)
         profile_hint = f"profile={self.profile_name}" if self.profile_name else "default credentials"
         logger.info("connecting to %s on real AWS (%s, region=%s)", service_name, profile_hint, self.region_name)
-        return session.client(service_name)
+        return session.client(service_name, config=_BOTOCORE_CONFIG)
 
     def render_params(
         self,
@@ -90,6 +102,8 @@ class Boto3Executor:
         inputs: Mapping[str, str],
     ) -> dict[str, Any]:
         """Translate {input_field_name: str_value} into boto3 PascalCase params."""
+        if action.boto3_params_builder is not None:
+            return action.boto3_params_builder(inputs)
         params: dict[str, Any] = {}
         param_map = action.boto3_template.param_map
         for input_field in action.input_fields:
@@ -161,6 +175,10 @@ def coerce_value(raw: str, kind: str) -> Any:
     """Convert a string form value to the type implied by InputField.kind."""
     if kind == "int":
         return int(raw)
+    if kind == "float":
+        return float(raw)
     if kind == "bool":
         return raw.strip().lower() in {"true", "yes", "1", "on"}
+    if kind == "list":
+        return [item.strip() for item in raw.split(",") if item.strip()]
     return raw

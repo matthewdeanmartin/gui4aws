@@ -10,7 +10,6 @@ Generated scripts must be paste-into-a-real-project ready:
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
 
 from gui4aws.execution.aws_cli_executor import quote_for_shell
 from gui4aws.execution.boto3_executor import coerce_value
@@ -38,25 +37,56 @@ def generate_cli_script(
     if endpoint_url is not None:
         argv.extend(["--endpoint-url", endpoint_url])
 
-    arg_map = template.arg_map
-    for input_field in action.input_fields:
-        value = inputs.get(input_field.name)
-        if value is None or value == "":
-            continue
-        flag = arg_map.get(input_field.name)
-        if flag is None:
-            continue
-        if input_field.kind == "bool":
-            if value.strip().lower() in {"true", "yes", "1", "on"}:
-                argv.append(f"--{flag}")
+    if action.cli_args_builder is not None:
+        argv.extend(action.cli_args_builder(inputs))
+    else:
+        arg_map = template.arg_map
+        for input_field in action.input_fields:
+            value = inputs.get(input_field.name)
+            if value is None or value == "":
+                continue
+            flag = arg_map.get(input_field.name)
+            if flag is None:
+                continue
+            if input_field.kind == "bool":
+                if value.strip().lower() in {"true", "yes", "1", "on"}:
+                    argv.append(f"--{flag}")
+                else:
+                    argv.append(f"--no-{flag}")
+            elif input_field.kind == "list":
+                items = [item.strip() for item in value.split(",") if item.strip()]
+                if items:
+                    argv.append(f"--{flag}")
+                    argv.extend(items)
             else:
-                argv.append(f"--no-{flag}")
+                argv.extend([f"--{flag}", value])
+
+    # Render as multi-line with one flag per line so no horizontal scrolling is needed.
+    # "aws rds create-db-cluster-snapshot \" on line 1, then "  --flag value \" per flag.
+    cmd_parts: list[str] = []
+    i = 0
+    while i < len(argv):
+        part = argv[i]
+        if part.startswith("--") and i + 1 < len(argv) and not argv[i + 1].startswith("--"):
+            cmd_parts.append(f"  {quote_for_shell([part, argv[i + 1]])}")
+            i += 2
         else:
-            argv.extend([f"--{flag}", value])
+            cmd_parts.append(f"  {quote_for_shell([part])}" if part.startswith("--") else quote_for_shell([part]))
+            i += 1
+
+    # First element is "aws service command" (3 tokens), rest are flags.
+    base = " ".join(cmd_parts[:3])
+    flag_lines = cmd_parts[3:]
 
     lines = ["#!/usr/bin/env bash", "set -euo pipefail", ""]
     lines.append("# " + action.display_name)
-    lines.append(quote_for_shell(argv))
+    if flag_lines:
+        lines.append(base + " \\")
+        for j, fl in enumerate(flag_lines):
+            suffix = " \\" if j < len(flag_lines) - 1 else ""
+            lines.append(fl + suffix)
+    else:
+        lines.append(base)
     lines.append("")
     return "\n".join(lines)
 
@@ -71,13 +101,16 @@ def generate_python_script(
 ) -> str:
     """Render the action as a standalone boto3 Python script."""
     template = action.boto3_template
-    params: dict[str, Any] = {}
-    for input_field in action.input_fields:
-        value = inputs.get(input_field.name)
-        if value is None or value == "":
-            continue
-        boto_name = template.param_map.get(input_field.name, input_field.name)
-        params[boto_name] = coerce_value(value, input_field.kind)
+    if action.boto3_params_builder is not None:
+        params = action.boto3_params_builder(inputs)
+    else:
+        params = {}
+        for input_field in action.input_fields:
+            value = inputs.get(input_field.name)
+            if value is None or value == "":
+                continue
+            boto_name = template.param_map.get(input_field.name, input_field.name)
+            params[boto_name] = coerce_value(value, input_field.kind)
 
     profile_repr = repr(profile_name) if profile_name else "None"
     region_repr = repr(region_name)

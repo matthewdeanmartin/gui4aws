@@ -13,6 +13,7 @@ class EndpointMode(StrEnum):
 
     AWS = "aws"
     MOTO = "moto"
+    ROBOTOCORE = "robotocore"
     DOCKER = "docker"
     CUSTOM = "custom"
 
@@ -24,6 +25,7 @@ class EndpointConfig:
     Attributes:
         mode: Which endpoint mode is selected.
         endpoint_url: Full URL when mode != AWS. For moto, defaults to http://127.0.0.1:5000.
+                      For robotocore, defaults to http://localhost:4566.
                       Ignored when mode == AWS.
     """
 
@@ -38,6 +40,8 @@ class EndpointConfig:
             return self.endpoint_url
         if self.mode is EndpointMode.MOTO:
             return "http://127.0.0.1:5000"
+        if self.mode is EndpointMode.ROBOTOCORE:
+            return "http://localhost:4566"
         return None
 
     @classmethod

@@ -13,8 +13,11 @@ from typing import Any
 
 __all__ = [
     "ActionDefinition",
+    "Boto3ParamsBuilder",
     "Boto3Template",
+    "CliArgsBuilder",
     "CliTemplate",
+    "EagerChoiceSource",
     "InputField",
     "NavigationItem",
     "ResourceSummary",
@@ -23,6 +26,7 @@ __all__ = [
     "RiskLevel",
     "RowAction",
     "ServiceDefinition",
+    "SubAction",
 ]
 
 
@@ -119,6 +123,8 @@ class ResultViewDefinition:
 # A view function takes a raw boto3 response (or parsed JSON from the CLI) and returns a list
 # of normalized summary dataclasses. The dataclass type is service-specific.
 ViewFunction = Callable[[Mapping[str, Any]], list[Any]]
+CliArgsBuilder = Callable[[Mapping[str, str]], list[str]]
+Boto3ParamsBuilder = Callable[[Mapping[str, str]], dict[str, Any]]
 
 
 @dataclass(frozen=True)
@@ -135,8 +141,11 @@ class ActionDefinition:
     result_view: ResultViewDefinition
     iam_permissions: tuple[str, ...] = ()
     description: str = ""
+    cache_refresh_nav_ids: tuple[str, ...] = ()
     # View function is intentionally not part of __eq__/repr — keep it on a side channel.
     view: ViewFunction | None = field(default=None, compare=False, repr=False)
+    cli_args_builder: CliArgsBuilder | None = field(default=None, compare=False, repr=False)
+    boto3_params_builder: Boto3ParamsBuilder | None = field(default=None, compare=False, repr=False)
 
 
 @dataclass(frozen=True)
@@ -156,6 +165,47 @@ class RowAction:
 
 
 @dataclass(frozen=True)
+class SubAction:
+    """A secondary read-only action run when a row is selected, shown in the sub-panel.
+
+    Attributes:
+        action_id: The ActionDefinition to run (must be READ_ONLY).
+        panel_label: Title for the sub-panel (e.g. "Instances").
+        prefill: Mapping from InputField.name → attribute name on the selected row object.
+        columns: Column names to display in the sub-table.
+        row_actions: Buttons shown for the currently selected sub-row.
+    """
+
+    action_id: str
+    panel_label: str
+    prefill: Mapping[str, str] = field(default_factory=dict)
+    columns: tuple[str, ...] = ()
+    row_actions: tuple[RowAction, ...] = ()
+
+
+@dataclass(frozen=True)
+class EagerChoiceSource:
+    """Populate a filter field's choices from another action's response.
+
+    Attributes:
+        action_id: Read-only action to run when the nav item is opened (and again
+                   whenever any field in ``depends_on`` changes value).
+        jmespath: JMESPath expression that returns a list of strings (the choices).
+                  Evaluated against the raw boto3 response.
+        depends_on: Map of filter-field-name → action-input-name. When the named
+                    filter field has a non-empty value, its value is passed to
+                    the source action as that input. The fetch is deferred until
+                    every depended-on field has a value, and re-fired whenever
+                    any of them changes. Leave empty for an independent source
+                    that loads once at nav-open time.
+    """
+
+    action_id: str
+    jmespath: str
+    depends_on: Mapping[str, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
 class NavigationItem:
     """One sidebar entry under a service.
 
@@ -168,12 +218,20 @@ class NavigationItem:
         display_name: Label shown in the sidebar.
         default_action_id: The read-only action to auto-run when this item is clicked.
         row_actions: Buttons shown below the detail panel when a row is selected.
+        sub_action: Optional secondary action run on row-select to populate the sub-panel.
+        filter_fields: Input fields shown in the filter bar above the resource table.
+                       Their values are passed to ``default_action_id`` on Refresh.
+        eager_choices: Per-field-name source of dropdown choices, fetched once on open.
+                       Keys are filter_field names; values are EagerChoiceSource specs.
     """
 
     item_id: str
     display_name: str
     default_action_id: str | None = None
     row_actions: tuple[RowAction, ...] = ()
+    sub_action: SubAction | None = None
+    filter_fields: tuple[InputField, ...] = ()
+    eager_choices: Mapping[str, EagerChoiceSource] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

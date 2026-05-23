@@ -1,0 +1,197 @@
+"""Secrets Manager action definitions."""
+
+from __future__ import annotations
+
+from gui4aws.models import (
+    ActionDefinition,
+    Boto3Template,
+    CliTemplate,
+    InputField,
+    ResultViewDefinition,
+    ResultViewKind,
+    RiskLevel,
+)
+from gui4aws.services.secrets.views import to_secret_summaries
+
+__all__ = [
+    "ALL_ACTIONS",
+    "CREATE_SECRET",
+    "DELETE_SECRET",
+    "DESCRIBE_SECRET",
+    "LIST_SECRETS",
+    "PUT_SECRET_VALUE",
+]
+
+
+LIST_SECRETS = ActionDefinition(
+    action_id="secrets.list_secrets",
+    display_name="List secrets",
+    service_id="secrets",
+    risk_level=RiskLevel.READ_ONLY,
+    input_fields=(
+        InputField(
+            name="filters",
+            label="Name prefix filter (optional)",
+            required=False,
+            help_text="Partial secret name to filter by.",
+        ),
+    ),
+    cli_template=CliTemplate(
+        service="secretsmanager",
+        command="list-secrets",
+        arg_map={},
+    ),
+    boto3_template=Boto3Template(
+        service="secretsmanager",
+        operation="list_secrets",
+        param_map={},
+    ),
+    result_view=ResultViewDefinition(
+        kind=ResultViewKind.TABLE,
+        columns=("name", "description", "rotation_enabled", "last_changed_date", "last_accessed_date"),
+        title="Secrets",
+    ),
+    iam_permissions=("secretsmanager:ListSecrets",),
+    description="List all secrets in Secrets Manager.",
+    view=to_secret_summaries,
+)
+
+
+DESCRIBE_SECRET = ActionDefinition(
+    action_id="secrets.describe_secret",
+    display_name="Describe secret",
+    service_id="secrets",
+    risk_level=RiskLevel.READ_ONLY,
+    input_fields=(
+        InputField(
+            name="secret_id",
+            label="Secret name or ARN",
+            required=True,
+        ),
+    ),
+    cli_template=CliTemplate(
+        service="secretsmanager",
+        command="describe-secret",
+        arg_map={"secret_id": "secret-id"},
+    ),
+    boto3_template=Boto3Template(
+        service="secretsmanager",
+        operation="describe_secret",
+        param_map={"secret_id": "SecretId"},
+    ),
+    result_view=ResultViewDefinition(kind=ResultViewKind.RAW_JSON, title="Secret details"),
+    iam_permissions=("secretsmanager:DescribeSecret",),
+    description="Describe a single secret (no secret value returned).",
+)
+
+
+CREATE_SECRET = ActionDefinition(
+    action_id="secrets.create_secret",
+    display_name="Create secret",
+    service_id="secrets",
+    risk_level=RiskLevel.SAFE_WRITE,
+    input_fields=(
+        InputField(name="name", label="Secret name", required=True),
+        InputField(name="description", label="Description", required=False),
+        InputField(
+            name="secret_string",
+            label="Secret value",
+            kind="multiline",
+            required=True,
+            help_text="Plain text or JSON string.",
+        ),
+    ),
+    cli_template=CliTemplate(
+        service="secretsmanager",
+        command="create-secret",
+        arg_map={"name": "name", "description": "description", "secret_string": "secret-string"},
+    ),
+    boto3_template=Boto3Template(
+        service="secretsmanager",
+        operation="create_secret",
+        param_map={"name": "Name", "description": "Description", "secret_string": "SecretString"},
+    ),
+    result_view=ResultViewDefinition(kind=ResultViewKind.RAW_JSON, title="Create secret result"),
+    iam_permissions=("secretsmanager:CreateSecret",),
+    description="Create a new secret.",
+    cache_refresh_nav_ids=("secrets",),
+)
+
+
+PUT_SECRET_VALUE = ActionDefinition(
+    action_id="secrets.put_secret_value",
+    display_name="Put secret value",
+    service_id="secrets",
+    risk_level=RiskLevel.SAFE_WRITE,
+    input_fields=(
+        InputField(name="secret_id", label="Secret name or ARN", required=True),
+        InputField(
+            name="secret_string",
+            label="New secret value",
+            kind="multiline",
+            required=True,
+        ),
+    ),
+    cli_template=CliTemplate(
+        service="secretsmanager",
+        command="put-secret-value",
+        arg_map={"secret_id": "secret-id", "secret_string": "secret-string"},
+    ),
+    boto3_template=Boto3Template(
+        service="secretsmanager",
+        operation="put_secret_value",
+        param_map={"secret_id": "SecretId", "secret_string": "SecretString"},
+    ),
+    result_view=ResultViewDefinition(kind=ResultViewKind.RAW_JSON, title="Put secret value result"),
+    iam_permissions=("secretsmanager:PutSecretValue",),
+    description="Update the value of an existing secret.",
+    cache_refresh_nav_ids=("secrets",),
+)
+
+
+DELETE_SECRET = ActionDefinition(
+    action_id="secrets.delete_secret",
+    display_name="Delete secret",
+    service_id="secrets",
+    risk_level=RiskLevel.DESTRUCTIVE,
+    input_fields=(
+        InputField(name="secret_id", label="Secret name or ARN", required=True),
+        InputField(
+            name="recovery_window_in_days",
+            label="Recovery window (days, 7-30)",
+            kind="int",
+            required=False,
+            default="30",
+            help_text="Omit to use force-delete with no recovery window.",
+        ),
+    ),
+    cli_template=CliTemplate(
+        service="secretsmanager",
+        command="delete-secret",
+        arg_map={
+            "secret_id": "secret-id",
+            "recovery_window_in_days": "recovery-window-in-days",
+        },
+    ),
+    boto3_template=Boto3Template(
+        service="secretsmanager",
+        operation="delete_secret",
+        param_map={
+            "secret_id": "SecretId",
+            "recovery_window_in_days": "RecoveryWindowInDays",
+        },
+    ),
+    result_view=ResultViewDefinition(kind=ResultViewKind.RAW_JSON, title="Delete secret result"),
+    iam_permissions=("secretsmanager:DeleteSecret",),
+    description="Schedule a secret for deletion (soft-delete with recovery window).",
+    cache_refresh_nav_ids=("secrets",),
+)
+
+
+ALL_ACTIONS = (
+    LIST_SECRETS,
+    DESCRIBE_SECRET,
+    CREATE_SECRET,
+    PUT_SECRET_VALUE,
+    DELETE_SECRET,
+)

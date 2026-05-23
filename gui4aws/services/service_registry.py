@@ -6,7 +6,7 @@ filesystem scanning or entry-point discovery. This keeps imports predictable.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 
 from gui4aws.models import ServiceDefinition
 
@@ -32,7 +32,7 @@ class ServiceRegistry:
                 return service
         raise KeyError(f"No service {service_id!r} in registry")
 
-    def __iter__(self) -> Iterable[ServiceDefinition]:
+    def __iter__(self) -> Iterator[ServiceDefinition]:
         return iter(self.services)
 
     def __len__(self) -> int:
@@ -55,6 +55,30 @@ def default_registry() -> ServiceRegistry:
         from gui4aws.services.backup.service import SERVICE as BACKUP_SERVICE
 
         registry.register(BACKUP_SERVICE)
+    except ImportError:
+        pass
+    try:
+        from gui4aws.services.ecs.service import SERVICE as ECS_SERVICE
+
+        registry.register(ECS_SERVICE)
+    except ImportError:
+        pass
+    try:
+        from gui4aws.services.secrets.service import SERVICE as SECRETS_SERVICE
+
+        registry.register(SECRETS_SERVICE)
+    except ImportError:
+        pass
+    try:
+        from gui4aws.services.ssm.service import SERVICE as SSM_SERVICE
+
+        registry.register(SSM_SERVICE)
+    except ImportError:
+        pass
+    try:
+        from gui4aws.services.networking.service import SERVICE as NETWORKING_SERVICE
+
+        registry.register(NETWORKING_SERVICE)
     except ImportError:
         pass
     return registry

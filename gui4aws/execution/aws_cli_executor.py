@@ -76,6 +76,10 @@ class AwsCliExecutor:
             argv.extend(["--endpoint-url", endpoint_url])
         argv.extend(["--output", "json"])
 
+        if action.cli_args_builder is not None:
+            argv.extend(action.cli_args_builder(inputs))
+            return tuple(argv)
+
         arg_map = template.arg_map
         for input_field in action.input_fields:
             value = inputs.get(input_field.name)
@@ -89,6 +93,11 @@ class AwsCliExecutor:
                     argv.append(f"--{flag}")
                 else:
                     argv.append(f"--no-{flag}")
+            elif input_field.kind == "list":
+                items = [item.strip() for item in value.split(",") if item.strip()]
+                if items:
+                    argv.append(f"--{flag}")
+                    argv.extend(items)
             else:
                 argv.extend([f"--{flag}", value])
         return tuple(argv)

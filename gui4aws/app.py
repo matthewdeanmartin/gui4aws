@@ -10,13 +10,14 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from gui4aws.execution.action_history import ActionHistory
+from gui4aws.execution.action_cache import ActionCache
 from gui4aws.execution.aws_cli_executor import AwsCliExecutor
 from gui4aws.execution.boto3_executor import Boto3Executor
 from gui4aws.execution.endpoint_config import EndpointConfig, EndpointMode
 from gui4aws.execution.execution_mode import ExecutionMode
 from gui4aws.services.service_registry import ServiceRegistry, default_registry
 
-__all__ = ["AppContext", "AWS_PARTITIONS"]
+__all__ = ["AWS_PARTITIONS", "AppContext"]
 
 logger = logging.getLogger(__name__)
 
@@ -42,31 +43,37 @@ class AppContext:
     endpoint_config: EndpointConfig = field(default_factory=EndpointConfig)
     history: ActionHistory = field(default_factory=ActionHistory)
     registry: ServiceRegistry = field(default_factory=default_registry)
+    action_cache: ActionCache = field(default_factory=ActionCache)
 
     def set_mode(self, mode: ExecutionMode) -> None:
         """Change execution mode (AWS CLI vs boto3)."""
         logger.info("execution mode -> %s", mode)
         self.mode = mode
+        self.action_cache.clear()
 
     def set_region(self, region_name: str) -> None:
         """Change region; resource lists should refresh after this."""
         logger.info("region -> %s", region_name)
         self.region_name = region_name
+        self.action_cache.clear()
 
     def set_partition(self, partition: str) -> None:
         """Change AWS partition (aws, aws-us-gov, aws-cn, aws-iso, aws-iso-b)."""
         logger.info("partition -> %s", partition)
         self.partition = partition
+        self.action_cache.clear()
 
     def set_profile(self, profile_name: str | None) -> None:
         """Change AWS profile (None means rely on environment)."""
         logger.info("profile -> %s", profile_name)
         self.profile_name = profile_name
+        self.action_cache.clear()
 
     def set_endpoint(self, mode: EndpointMode, endpoint_url: str | None = None) -> None:
         """Change endpoint mode + URL."""
         self.endpoint_config = EndpointConfig.for_mode(mode, endpoint_url)
         logger.info("endpoint -> %s url=%s", mode, endpoint_url)
+        self.action_cache.clear()
 
     def boto3_executor(self) -> Boto3Executor:
         """Build a fresh Boto3Executor that reflects current selections."""
@@ -86,6 +93,29 @@ class AppContext:
 
     def execute(self, action: Any, inputs: dict[str, str]) -> Any:
         """Dispatch to whichever executor matches the current mode."""
+        cache_key = self.action_cache.build_key(
+            action,
+            inputs,
+            mode=self.mode,
+            profile_name=self.profile_name,
+            region_name=self.region_name,
+            endpoint_config=self.endpoint_config,
+        )
+        cached = self.action_cache.get(cache_key)
+        if cached is not None:
+            return cached
+        result: Any
         if self.mode is ExecutionMode.BOTO3:
-            return self.boto3_executor().execute(action, inputs)
-        return self.aws_cli_executor().execute(action, inputs)
+            result = self.boto3_executor().execute(action, inputs)
+        else:
+            result = self.aws_cli_executor().execute(action, inputs)
+        if self.action_cache.should_cache(action, result):
+            self.action_cache.put(cache_key, result)
+        return result
+
+    def invalidate_read_cache(self, service_id: str | None = None) -> None:
+        """Drop cached read-only results globally or for one service."""
+        if service_id is None:
+            self.action_cache.clear()
+            return
+        self.action_cache.invalidate_service(service_id)

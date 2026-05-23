@@ -8,12 +8,18 @@ from typing import Any
 from gui4aws.services.aurora.models import (
     AuroraClusterSnapshotSummary,
     AuroraClusterSummary,
+    AuroraDbClusterParameterGroupSummary,
+    AuroraDbParameterGroupSummary,
+    AuroraDbSubnetGroupSummary,
     AuroraInstanceSummary,
 )
 
 __all__ = [
     "to_cluster_snapshot_summaries",
     "to_cluster_summaries",
+    "to_db_cluster_parameter_group_summaries",
+    "to_db_parameter_group_summaries",
+    "to_db_subnet_group_summaries",
     "to_instance_summaries",
 ]
 
@@ -77,12 +83,59 @@ def to_instance_summaries(response: Mapping[str, Any]) -> list[AuroraInstanceSum
                 cluster_identifier=optional_str(cluster_id),
                 engine=str(instance.get("Engine", "")),
                 instance_class=optional_str(instance.get("DBInstanceClass")),
+                running_state=instance_running_state(instance.get("DBInstanceStatus")),
                 status=str(instance.get("DBInstanceStatus", "")),
                 is_writer=is_instance_writer(instance),
                 arn=optional_str(instance.get("DBInstanceArn")),
             )
         )
     return summaries
+
+
+def to_db_subnet_group_summaries(response: Mapping[str, Any]) -> list[AuroraDbSubnetGroupSummary]:
+    """Map ``describe_db_subnet_groups`` response -> list[AuroraDbSubnetGroupSummary]."""
+    subnet_groups = response.get("DBSubnetGroups", []) or []
+    return [
+        AuroraDbSubnetGroupSummary(
+            subnet_group_name=str(group.get("DBSubnetGroupName", "")),
+            description=optional_str(group.get("DBSubnetGroupDescription")),
+            vpc_id=optional_str(group.get("VpcId")),
+            subnet_count=len(group.get("Subnets", []) or []),
+            status=optional_str(group.get("SubnetGroupStatus")),
+            arn=optional_str(group.get("DBSubnetGroupArn")),
+        )
+        for group in subnet_groups
+    ]
+
+
+def to_db_parameter_group_summaries(response: Mapping[str, Any]) -> list[AuroraDbParameterGroupSummary]:
+    """Map ``describe_db_parameter_groups`` response -> Aurora DB parameter groups."""
+    groups = response.get("DBParameterGroups", []) or []
+    return [
+        AuroraDbParameterGroupSummary(
+            parameter_group_name=str(group.get("DBParameterGroupName", "")),
+            family=str(group.get("DBParameterGroupFamily", "")),
+            description=optional_str(group.get("Description")),
+            arn=optional_str(group.get("DBParameterGroupArn")),
+        )
+        for group in groups
+    ]
+
+
+def to_db_cluster_parameter_group_summaries(
+    response: Mapping[str, Any],
+) -> list[AuroraDbClusterParameterGroupSummary]:
+    """Map ``describe_db_cluster_parameter_groups`` response -> Aurora cluster parameter groups."""
+    groups = response.get("DBClusterParameterGroups", []) or []
+    return [
+        AuroraDbClusterParameterGroupSummary(
+            cluster_parameter_group_name=str(group.get("DBClusterParameterGroupName", "")),
+            family=str(group.get("DBParameterGroupFamily", "")),
+            description=optional_str(group.get("Description")),
+            arn=optional_str(group.get("DBClusterParameterGroupArn")),
+        )
+        for group in groups
+    ]
 
 
 def is_instance_writer(instance: Mapping[str, Any]) -> bool:
@@ -95,6 +148,20 @@ def is_instance_writer(instance: Mapping[str, Any]) -> bool:
     # field "PromotionTier" == 0 as writer-eligible. Real writer status comes from the cluster
     # view; the GUI shows it there.
     return False
+
+
+def instance_running_state(status: Any) -> str:
+    """Summarize DBInstanceStatus into a simple running/stopped state."""
+    text = str(status or "").strip().lower()
+    if not text:
+        return "unknown"
+    if text == "stopped":
+        return "stopped"
+    if "stop" in text:
+        return "stopping"
+    if "start" in text:
+        return "starting"
+    return "running"
 
 
 def optional_str(value: Any) -> str | None:
