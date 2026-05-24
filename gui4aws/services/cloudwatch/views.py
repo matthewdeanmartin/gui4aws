@@ -62,7 +62,7 @@ def fmt_ts(ms: Any) -> str | None:
     if ms is None:
         return None
     try:
-        from datetime import datetime, UTC
+        from datetime import UTC, datetime
 
         return datetime.fromtimestamp(int(ms) / 1000, UTC).strftime("%Y-%m-%d %H:%M:%S")
     except Exception:  # pylint: disable=broad-exception-caught

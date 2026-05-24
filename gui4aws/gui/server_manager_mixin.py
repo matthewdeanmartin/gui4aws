@@ -8,14 +8,8 @@ from typing import TYPE_CHECKING, Any
 from gui4aws.execution.endpoint_config import EndpointMode
 
 if TYPE_CHECKING:
-    import queue
 
-    from gui4aws.app import AppContext
-    from gui4aws.gui.diagnostic_panel import RobotocorePanel
-    from gui4aws.gui.status_bar import StatusBar
-    from gui4aws.gui.toolbar import Toolbar
-    from gui4aws.moto_server import MotoServerManager
-    from gui4aws.robotocore_server import RobotocoreManager
+    pass
 
 
 class ServerManagerMixin:

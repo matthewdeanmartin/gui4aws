@@ -16,7 +16,8 @@ disable=
     duplicate-code,
     import-error,
     logging-fstring-interpolation,
-    import-outside-toplevel
+    import-outside-toplevel,
+    implicit-str-concat
 
 [FORMAT]
 max-line-length=120

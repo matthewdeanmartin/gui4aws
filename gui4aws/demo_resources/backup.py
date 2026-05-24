@@ -159,9 +159,7 @@ def _seed_backup_jobs(backup: Any, rds: Any, created: dict[str, list[str]]) -> N
             )
             job_id = resp.get("BackupJobId", "")
             rp_arn = resp.get("RecoveryPointArn", "")
-            logger.info(
-                "started backup job %s for cluster %s -> recovery point %s", job_id, cluster_id, rp_arn
-            )
+            logger.info("started backup job %s for cluster %s -> recovery point %s", job_id, cluster_id, rp_arn)
             created["backup_jobs"].append(job_id)
             if rp_arn:
                 created["recovery_points"].append(rp_arn)

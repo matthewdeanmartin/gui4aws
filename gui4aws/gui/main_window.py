@@ -18,10 +18,10 @@ from gui4aws.execution.script_generator import generate_cli_script, generate_pyt
 from gui4aws.gui.action_dialog import ActionDialog
 from gui4aws.gui.diagnostic_panel import CacheDiagnosticsPanel, DiagnosticPanel, QueueDiagnosticsPanel, RobotocorePanel
 from gui4aws.gui.main_panel import MainPanel
+from gui4aws.gui.server_manager_mixin import ServerManagerMixin
 from gui4aws.gui.sidebar import Sidebar, SidebarSelection
 from gui4aws.gui.status_bar import StatusBar
 from gui4aws.gui.toolbar import Toolbar
-from gui4aws.gui.server_manager_mixin import ServerManagerMixin
 from gui4aws.gui.window_helpers import build_about_text as _build_about_text
 from gui4aws.gui.window_helpers import extract_choices_from_raw as _extract_choices_from_raw
 from gui4aws.gui.window_helpers import filter_rows_by_inputs as _filter_rows_by_inputs
@@ -447,9 +447,7 @@ class MainWindow(ServerManagerMixin):
         resolving: set[str],
     ) -> str | None:
         """Recursively resolve a required filter field by fetching its first choice."""
-        return _resolve_required_filter_value(
-            service, nav, field_name, values, resolving, execute=self.context.execute
-        )
+        return _resolve_required_filter_value(service, nav, field_name, values, resolving, execute=self.context.execute)
 
     def resolved_filter_values(
         self,
@@ -879,17 +877,16 @@ class MainWindow(ServerManagerMixin):
             sub = action  # reusing the action slot for SubAction
             result, sub_inputs = payload
             raw = getattr(result, "response", None) or getattr(result, "parsed_json", None)
-            if raw is not None:
-                if isinstance(sub, SubAction):
-                    try:
-                        service = self.context.registry.get(self.current_service_id or "")
-                        act = service.action(sub.action_id)
-                        if act.view is not None:
-                            rows = act.view(raw)
-                            rows = self.filter_rows_by_inputs(rows, sub_inputs)
-                            self.main_panel.show_sub_table(sub.panel_label, rows, list(sub.columns))
-                    except Exception:  # pylint: disable=broad-exception-caught
-                        logger.exception("sub-panel view failed for %s", getattr(sub, "action_id", sub))
+            if raw is not None and isinstance(sub, SubAction):
+                try:
+                    service = self.context.registry.get(self.current_service_id or "")
+                    act = service.action(sub.action_id)
+                    if act.view is not None:
+                        rows = act.view(raw)
+                        rows = self.filter_rows_by_inputs(rows, sub_inputs)
+                        self.main_panel.show_sub_table(sub.panel_label, rows, list(sub.columns))
+                except Exception:  # pylint: disable=broad-exception-caught
+                    logger.exception("sub-panel view failed for %s", getattr(sub, "action_id", sub))
             return
 
         if kind == "sub_error":

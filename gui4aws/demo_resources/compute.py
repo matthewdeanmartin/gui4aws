@@ -14,8 +14,7 @@ def _make_lambda_zip() -> bytes:
     import zipfile
 
     handler_code = (
-        "def handler(event, context):\n"
-        '    return {"statusCode": 200, "body": "Hello from gui4aws demo"}\n'
+        "def handler(event, context):\n" '    return {"statusCode": 200, "body": "Hello from gui4aws demo"}\n'
     )
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:

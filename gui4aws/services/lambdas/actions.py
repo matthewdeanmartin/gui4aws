@@ -180,8 +180,7 @@ DELETE_FUNCTION = ActionDefinition(
             label="Version or alias (optional)",
             required=False,
             help_text=(
-                "Leave blank to delete the whole function. "
-                "Specify a version or alias to delete only that qualifier."
+                "Leave blank to delete the whole function. " "Specify a version or alias to delete only that qualifier."
             ),
         ),
     ),

@@ -262,6 +262,7 @@ class RobotocoreManager:
 
     def start_log_reader(self) -> None:
         """Start a background thread that streams `docker logs -f` into the buffer."""
+
         def read_logs() -> None:
             try:
                 # pylint: disable=consider-using-with
