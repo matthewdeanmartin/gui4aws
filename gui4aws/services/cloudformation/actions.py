@@ -75,9 +75,7 @@ DESCRIBE_STACK = ActionDefinition(
     display_name="Describe stack",
     service_id="cloudformation",
     risk_level=RiskLevel.READ_ONLY,
-    input_fields=(
-        InputField(name="stack_name", label="Stack name or ARN", required=True),
-    ),
+    input_fields=(InputField(name="stack_name", label="Stack name or ARN", required=True),),
     cli_template=CliTemplate(
         service="cloudformation",
         command="describe-stacks",
@@ -219,18 +217,20 @@ cdk diff           # compare deployed stack with local template
 cdk deploy         # deploy (requires bootstrap if using assets)
 cdk destroy        # tear down"""
 
-    return "\n\n".join([
-        "=== Shell Environment Variables ===",
-        env_block,
-        "=== cdk.json snippet ===",
-        cdk_json_block,
-        "=== Python CDK app env ===",
-        python_env_block,
-        "=== Bootstrap ===",
-        bootstrap_note.strip(),
-        "=== Workflow ===",
-        workflow,
-    ])
+    return "\n\n".join(
+        [
+            "=== Shell Environment Variables ===",
+            env_block,
+            "=== cdk.json snippet ===",
+            cdk_json_block,
+            "=== Python CDK app env ===",
+            python_env_block,
+            "=== Bootstrap ===",
+            bootstrap_note.strip(),
+            "=== Workflow ===",
+            workflow,
+        ]
+    )
 
 
 CDK_CONFIG = ActionDefinition(

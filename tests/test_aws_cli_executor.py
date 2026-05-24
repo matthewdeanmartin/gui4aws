@@ -5,7 +5,6 @@ from __future__ import annotations
 import subprocess
 from unittest.mock import MagicMock, patch
 
-
 from gui4aws.execution.aws_cli_executor import (
     AwsCliExecutor,
     AwsCliFailure,
@@ -30,9 +29,12 @@ def test_parse_aws_cli_error():
 
 def test_build_argv():
     config = EndpointConfig(mode=EndpointMode.MOTO)
-    executor = AwsCliExecutor(profile_name="p1", region_name="us-west-2", endpoint_config=config, aws_binary="/usr/bin/aws")
+    executor = AwsCliExecutor(
+        profile_name="p1", region_name="us-west-2", endpoint_config=config, aws_binary="/usr/bin/aws"
+    )
 
     from gui4aws.models import RiskLevel
+
     action = ActionDefinition(
         action_id="test.act",
         display_name="Test",
@@ -44,9 +46,7 @@ def test_build_argv():
             InputField(name="f3", label="L3", kind="list"),
         ),
         cli_template=CliTemplate(
-            service="s3",
-            command="ls",
-            arg_map={"f1": "bucket", "f2": "recursive", "f3": "include"}
+            service="s3", command="ls", arg_map={"f1": "bucket", "f2": "recursive", "f3": "include"}
         ),
         boto3_template=MagicMock(),
         result_view=MagicMock(),
@@ -82,11 +82,7 @@ def test_execute_success():
     action.input_fields = []
 
     with patch("subprocess.run") as mock_run:
-        mock_run.return_value = MagicMock(
-            returncode=0,
-            stdout='{"Buckets": []}',
-            stderr=""
-        )
+        mock_run.return_value = MagicMock(returncode=0, stdout='{"Buckets": []}', stderr="")
 
         result = executor.execute(action, {})
 
@@ -105,11 +101,7 @@ def test_execute_failure():
     action.input_fields = []
 
     with patch("subprocess.run") as mock_run:
-        mock_run.return_value = MagicMock(
-            returncode=255,
-            stdout="",
-            stderr="An error occurred"
-        )
+        mock_run.return_value = MagicMock(returncode=255, stdout="", stderr="An error occurred")
 
         result = executor.execute(action, {})
 

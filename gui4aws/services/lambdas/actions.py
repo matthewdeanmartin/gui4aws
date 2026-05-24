@@ -51,10 +51,14 @@ def _create_function_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
 
 def _create_function_cli_args(inputs: Mapping[str, str]) -> list[str]:
     args = [
-        "--function-name", inputs["function_name"],
-        "--runtime", inputs.get("runtime", "python3.11"),
-        "--role", inputs["role_arn"],
-        "--handler", inputs.get("handler", "handler.handler"),
+        "--function-name",
+        inputs["function_name"],
+        "--runtime",
+        inputs.get("runtime", "python3.11"),
+        "--role",
+        inputs["role_arn"],
+        "--handler",
+        inputs.get("handler", "handler.handler"),
     ]
     zip_path = inputs.get("zip_file_path", "")
     if zip_path:
@@ -109,9 +113,7 @@ GET_FUNCTION = ActionDefinition(
     display_name="Get function",
     service_id="lambda",
     risk_level=RiskLevel.READ_ONLY,
-    input_fields=(
-        InputField(name="function_name", label="Function name or ARN", required=True),
-    ),
+    input_fields=(InputField(name="function_name", label="Function name or ARN", required=True),),
     cli_template=CliTemplate(
         service="lambda",
         command="get-function",
@@ -145,7 +147,12 @@ CREATE_FUNCTION = ActionDefinition(
         ),
         InputField(name="role_arn", label="Execution role ARN", required=True),
         InputField(name="handler", label="Handler", required=False, default="handler.handler"),
-        InputField(name="zip_file_path", label="Zip file path (local)", required=False, help_text="Absolute path to the deployment zip."),
+        InputField(
+            name="zip_file_path",
+            label="Zip file path (local)",
+            required=False,
+            help_text="Absolute path to the deployment zip.",
+        ),
         InputField(name="description", label="Description", required=False),
     ),
     cli_template=CliTemplate(service="lambda", command="create-function"),

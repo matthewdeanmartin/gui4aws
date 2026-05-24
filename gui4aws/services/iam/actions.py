@@ -1,12 +1,20 @@
 """IAM action definitions."""
+
 from __future__ import annotations
+
 from collections.abc import Mapping
 from typing import Any
+
 from gui4aws.models import (
-    ActionDefinition, Boto3Template, CliTemplate, InputField,
-    ResultViewDefinition, ResultViewKind, RiskLevel,
+    ActionDefinition,
+    Boto3Template,
+    CliTemplate,
+    InputField,
+    ResultViewDefinition,
+    ResultViewKind,
+    RiskLevel,
 )
-from gui4aws.services.iam.views import to_user_summaries, to_group_summaries, to_role_summaries, to_policy_summaries
+from gui4aws.services.iam.views import to_group_summaries, to_policy_summaries, to_role_summaries, to_user_summaries
 
 __all__ = [
     "ALL_ACTIONS",
@@ -25,6 +33,7 @@ __all__ = [
     "LIST_USERS",
 ]
 
+
 def _list_policies_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
     params: dict[str, Any] = {}
     scope = inputs.get("scope", "Local").strip()
@@ -32,12 +41,14 @@ def _list_policies_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
         params["Scope"] = scope
     return params
 
+
 def _list_policies_cli_args(inputs: Mapping[str, str]) -> list[str]:
     args: list[str] = []
     scope = inputs.get("scope", "Local").strip()
     if scope:
         args += ["--scope", scope]
     return args
+
 
 LIST_USERS = ActionDefinition(
     action_id="iam.list_users",
@@ -62,9 +73,7 @@ GET_USER = ActionDefinition(
     display_name="Get user",
     service_id="iam",
     risk_level=RiskLevel.READ_ONLY,
-    input_fields=(
-        InputField(name="user_name", label="User name", required=True),
-    ),
+    input_fields=(InputField(name="user_name", label="User name", required=True),),
     cli_template=CliTemplate(service="iam", command="get-user", arg_map={"user_name": "user-name"}),
     boto3_template=Boto3Template(service="iam", operation="get_user", param_map={"user_name": "UserName"}),
     result_view=ResultViewDefinition(kind=ResultViewKind.RAW_JSON, title="User detail"),
@@ -79,11 +88,18 @@ CREATE_USER = ActionDefinition(
     risk_level=RiskLevel.SAFE_WRITE,
     input_fields=(
         InputField(name="user_name", label="User name", required=True),
-        InputField(name="path", label="Path (optional)", required=False, default="/",
-                   help_text="IAM path prefix, e.g. /engineering/"),
+        InputField(
+            name="path",
+            label="Path (optional)",
+            required=False,
+            default="/",
+            help_text="IAM path prefix, e.g. /engineering/",
+        ),
     ),
     cli_template=CliTemplate(service="iam", command="create-user", arg_map={"user_name": "user-name", "path": "path"}),
-    boto3_template=Boto3Template(service="iam", operation="create_user", param_map={"user_name": "UserName", "path": "Path"}),
+    boto3_template=Boto3Template(
+        service="iam", operation="create_user", param_map={"user_name": "UserName", "path": "Path"}
+    ),
     result_view=ResultViewDefinition(kind=ResultViewKind.RAW_JSON, title="Create user result"),
     iam_permissions=("iam:CreateUser",),
     description="Create a new IAM user.",
@@ -95,9 +111,7 @@ DELETE_USER = ActionDefinition(
     display_name="Delete user",
     service_id="iam",
     risk_level=RiskLevel.DESTRUCTIVE,
-    input_fields=(
-        InputField(name="user_name", label="User name", required=True),
-    ),
+    input_fields=(InputField(name="user_name", label="User name", required=True),),
     cli_template=CliTemplate(service="iam", command="delete-user", arg_map={"user_name": "user-name"}),
     boto3_template=Boto3Template(service="iam", operation="delete_user", param_map={"user_name": "UserName"}),
     result_view=ResultViewDefinition(kind=ResultViewKind.RAW_JSON, title="Delete user result"),
@@ -133,8 +147,12 @@ CREATE_GROUP = ActionDefinition(
         InputField(name="group_name", label="Group name", required=True),
         InputField(name="path", label="Path (optional)", required=False, default="/"),
     ),
-    cli_template=CliTemplate(service="iam", command="create-group", arg_map={"group_name": "group-name", "path": "path"}),
-    boto3_template=Boto3Template(service="iam", operation="create_group", param_map={"group_name": "GroupName", "path": "Path"}),
+    cli_template=CliTemplate(
+        service="iam", command="create-group", arg_map={"group_name": "group-name", "path": "path"}
+    ),
+    boto3_template=Boto3Template(
+        service="iam", operation="create_group", param_map={"group_name": "GroupName", "path": "Path"}
+    ),
     result_view=ResultViewDefinition(kind=ResultViewKind.RAW_JSON, title="Create group result"),
     iam_permissions=("iam:CreateGroup",),
     description="Create a new IAM group.",
@@ -146,9 +164,7 @@ DELETE_GROUP = ActionDefinition(
     display_name="Delete group",
     service_id="iam",
     risk_level=RiskLevel.DESTRUCTIVE,
-    input_fields=(
-        InputField(name="group_name", label="Group name", required=True),
-    ),
+    input_fields=(InputField(name="group_name", label="Group name", required=True),),
     cli_template=CliTemplate(service="iam", command="delete-group", arg_map={"group_name": "group-name"}),
     boto3_template=Boto3Template(service="iam", operation="delete_group", param_map={"group_name": "GroupName"}),
     result_view=ResultViewDefinition(kind=ResultViewKind.RAW_JSON, title="Delete group result"),
@@ -180,9 +196,7 @@ GET_ROLE = ActionDefinition(
     display_name="Get role",
     service_id="iam",
     risk_level=RiskLevel.READ_ONLY,
-    input_fields=(
-        InputField(name="role_name", label="Role name", required=True),
-    ),
+    input_fields=(InputField(name="role_name", label="Role name", required=True),),
     cli_template=CliTemplate(service="iam", command="get-role", arg_map={"role_name": "role-name"}),
     boto3_template=Boto3Template(service="iam", operation="get_role", param_map={"role_name": "RoleName"}),
     result_view=ResultViewDefinition(kind=ResultViewKind.RAW_JSON, title="Role detail"),
@@ -207,12 +221,22 @@ CREATE_ROLE = ActionDefinition(
         InputField(name="description", label="Description", required=False),
     ),
     cli_template=CliTemplate(
-        service="iam", command="create-role",
-        arg_map={"role_name": "role-name", "assume_role_policy": "assume-role-policy-document", "description": "description"},
+        service="iam",
+        command="create-role",
+        arg_map={
+            "role_name": "role-name",
+            "assume_role_policy": "assume-role-policy-document",
+            "description": "description",
+        },
     ),
     boto3_template=Boto3Template(
-        service="iam", operation="create_role",
-        param_map={"role_name": "RoleName", "assume_role_policy": "AssumeRolePolicyDocument", "description": "Description"},
+        service="iam",
+        operation="create_role",
+        param_map={
+            "role_name": "RoleName",
+            "assume_role_policy": "AssumeRolePolicyDocument",
+            "description": "Description",
+        },
     ),
     result_view=ResultViewDefinition(kind=ResultViewKind.RAW_JSON, title="Create role result"),
     iam_permissions=("iam:CreateRole",),
@@ -225,9 +249,7 @@ DELETE_ROLE = ActionDefinition(
     display_name="Delete role",
     service_id="iam",
     risk_level=RiskLevel.DESTRUCTIVE,
-    input_fields=(
-        InputField(name="role_name", label="Role name", required=True),
-    ),
+    input_fields=(InputField(name="role_name", label="Role name", required=True),),
     cli_template=CliTemplate(service="iam", command="delete-role", arg_map={"role_name": "role-name"}),
     boto3_template=Boto3Template(service="iam", operation="delete_role", param_map={"role_name": "RoleName"}),
     result_view=ResultViewDefinition(kind=ResultViewKind.RAW_JSON, title="Delete role result"),
@@ -271,9 +293,7 @@ GET_POLICY = ActionDefinition(
     display_name="Get policy",
     service_id="iam",
     risk_level=RiskLevel.READ_ONLY,
-    input_fields=(
-        InputField(name="policy_arn", label="Policy ARN", required=True),
-    ),
+    input_fields=(InputField(name="policy_arn", label="Policy ARN", required=True),),
     cli_template=CliTemplate(service="iam", command="get-policy", arg_map={"policy_arn": "policy-arn"}),
     boto3_template=Boto3Template(service="iam", operation="get_policy", param_map={"policy_arn": "PolicyArn"}),
     result_view=ResultViewDefinition(kind=ResultViewKind.RAW_JSON, title="Policy detail"),
@@ -282,8 +302,17 @@ GET_POLICY = ActionDefinition(
 )
 
 ALL_ACTIONS = (
-    LIST_USERS, GET_USER, CREATE_USER, DELETE_USER,
-    LIST_GROUPS, CREATE_GROUP, DELETE_GROUP,
-    LIST_ROLES, GET_ROLE, CREATE_ROLE, DELETE_ROLE,
-    LIST_POLICIES, GET_POLICY,
+    LIST_USERS,
+    GET_USER,
+    CREATE_USER,
+    DELETE_USER,
+    LIST_GROUPS,
+    CREATE_GROUP,
+    DELETE_GROUP,
+    LIST_ROLES,
+    GET_ROLE,
+    CREATE_ROLE,
+    DELETE_ROLE,
+    LIST_POLICIES,
+    GET_POLICY,
 )

@@ -151,9 +151,7 @@ LIST_RECOVERY_POINTS_BY_BACKUP_VAULT = ActionDefinition(
     display_name="List recovery points in vault",
     service_id="backup",
     risk_level=RiskLevel.READ_ONLY,
-    input_fields=(
-        InputField(name="vault_name", label="Vault name", required=True),
-    ),
+    input_fields=(InputField(name="vault_name", label="Vault name", required=True),),
     cli_template=CliTemplate(
         service="backup",
         command="list-recovery-points-by-backup-vault",
@@ -288,9 +286,7 @@ DELETE_BACKUP_VAULT = ActionDefinition(
     display_name="Delete backup vault",
     service_id="backup",
     risk_level=RiskLevel.DESTRUCTIVE,
-    input_fields=(
-        InputField(name="vault_name", label="Vault name", required=True),
-    ),
+    input_fields=(InputField(name="vault_name", label="Vault name", required=True),),
     cli_template=CliTemplate(
         service="backup",
         command="delete-backup-vault",
@@ -377,9 +373,7 @@ DELETE_BACKUP_PLAN = ActionDefinition(
     display_name="Delete backup plan",
     service_id="backup",
     risk_level=RiskLevel.DESTRUCTIVE,
-    input_fields=(
-        InputField(name="plan_id", label="Plan ID", required=True),
-    ),
+    input_fields=(InputField(name="plan_id", label="Plan ID", required=True),),
     cli_template=CliTemplate(
         service="backup",
         command="delete-backup-plan",
@@ -410,9 +404,12 @@ def _start_backup_job_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
 
 def _start_backup_job_cli_args(inputs: Mapping[str, str]) -> list[str]:
     args = [
-        "--backup-vault-name", inputs["vault_name"],
-        "--resource-arn", inputs["resource_arn"],
-        "--iam-role-arn", inputs.get("iam_role_arn") or "arn:aws:iam::123456789012:role/DemoBackupRole",
+        "--backup-vault-name",
+        inputs["vault_name"],
+        "--resource-arn",
+        inputs["resource_arn"],
+        "--iam-role-arn",
+        inputs.get("iam_role_arn") or "arn:aws:iam::123456789012:role/DemoBackupRole",
     ]
     if inputs.get("lifecycle_delete_after_days"):
         args += ["--lifecycle", f"DeleteAfterDays={inputs['lifecycle_delete_after_days']}"]
@@ -514,9 +511,12 @@ def _start_restore_job_cli_args(inputs: Mapping[str, str]) -> list[str]:
     if inputs.get("engine"):
         meta_parts.append(f"Engine={inputs['engine']}")
     args = [
-        "--recovery-point-arn", inputs["recovery_point_arn"],
-        "--iam-role-arn", inputs.get("iam_role_arn") or "arn:aws:iam::123456789012:role/DemoBackupRole",
-        "--resource-type", inputs.get("resource_type") or "RDS",
+        "--recovery-point-arn",
+        inputs["recovery_point_arn"],
+        "--iam-role-arn",
+        inputs.get("iam_role_arn") or "arn:aws:iam::123456789012:role/DemoBackupRole",
+        "--resource-type",
+        inputs.get("resource_type") or "RDS",
     ]
     if meta_parts:
         args += ["--metadata", ",".join(meta_parts)]

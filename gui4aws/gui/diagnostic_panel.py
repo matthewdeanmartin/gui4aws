@@ -277,24 +277,19 @@ class RobotocorePanel(ttk.Frame):
         controls = ttk.Frame(self)
         controls.grid(row=0, column=0, sticky="ew", padx=4, pady=4)
 
-        self.start_btn = ttk.Button(controls, text="Start Robotocore", width=18,
-                                    command=on_start or (lambda: None))
+        self.start_btn = ttk.Button(controls, text="Start Robotocore", width=18, command=on_start or (lambda: None))
         self.start_btn.pack(side="left", padx=2)
 
-        self.stop_btn = ttk.Button(controls, text="Stop", width=8,
-                                   command=on_stop or (lambda: None))
+        self.stop_btn = ttk.Button(controls, text="Stop", width=8, command=on_stop or (lambda: None))
         self.stop_btn.pack(side="left", padx=2)
 
-        self.restart_btn = ttk.Button(controls, text="Restart", width=10,
-                                      command=on_restart or (lambda: None))
+        self.restart_btn = ttk.Button(controls, text="Restart", width=10, command=on_restart or (lambda: None))
         self.restart_btn.pack(side="left", padx=2)
 
-        self.reset_btn = ttk.Button(controls, text="Reset State", width=12,
-                                    command=on_reset or (lambda: None))
+        self.reset_btn = ttk.Button(controls, text="Reset State", width=12, command=on_reset or (lambda: None))
         self.reset_btn.pack(side="left", padx=2)
 
-        self.pull_btn = ttk.Button(controls, text="Pull Docker Image", width=16,
-                                   command=on_pull or (lambda: None))
+        self.pull_btn = ttk.Button(controls, text="Pull Docker Image", width=16, command=on_pull or (lambda: None))
         self.pull_btn.pack(side="left", padx=(16, 2))
 
         ttk.Button(controls, text="Copy Log", width=10, command=self._copy).pack(side="left", padx=(16, 2))
@@ -312,9 +307,7 @@ class RobotocorePanel(ttk.Frame):
 
         # ── Status label ──────────────────────────────────────────────────────
         self._status_var = tk.StringVar(value="Not running")
-        ttk.Label(controls, textvariable=self._status_var, foreground="gray").pack(
-            side="right", padx=(4, 16)
-        )
+        ttk.Label(controls, textvariable=self._status_var, foreground="gray").pack(side="right", padx=(4, 16))
 
         # ── Log text area ─────────────────────────────────────────────────────
         self.text = tk.Text(self, wrap="none", font=("Courier", 9))

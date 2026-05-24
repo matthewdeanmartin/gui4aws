@@ -210,6 +210,7 @@ def test_aurora_create_cluster_and_describe(robotocore: RobotocoreManager) -> No
     result = context.execute(DESCRIBE_DB_CLUSTERS, inputs={})
     assert isinstance(result, Boto3Result)
     from gui4aws.services.aurora.views import to_db_cluster_summaries
+
     summaries = to_db_cluster_summaries(result.response)
     assert any(s.cluster_identifier == "rc-cluster-1" for s in summaries)
 

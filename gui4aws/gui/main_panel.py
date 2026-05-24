@@ -10,7 +10,6 @@ from functools import partial
 from tkinter import ttk
 from typing import Any
 
-
 from gui4aws.gui.detail_tree import DetailTree
 from gui4aws.gui.filter_bar import FilterBar
 from gui4aws.gui.output_panel import OutputPanel

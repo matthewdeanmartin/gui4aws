@@ -27,7 +27,9 @@ class ScriptViewer(ttk.Frame):
         python_frame.grid(row=0, column=1, sticky="nsew", padx=4, pady=4)
         self.python_text = tk.Text(python_frame, wrap="none", height=14, width=60)
         self.python_text.grid(row=0, column=0, sticky="nsew")
-        ttk.Button(python_frame, text="Copy", command=self.copy_python).grid(row=1, column=0, sticky="e", padx=4, pady=2)
+        ttk.Button(python_frame, text="Copy", command=self.copy_python).grid(
+            row=1, column=0, sticky="e", padx=4, pady=2
+        )
         python_frame.grid_rowconfigure(0, weight=1)
         python_frame.grid_columnconfigure(0, weight=1)
 

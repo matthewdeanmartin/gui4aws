@@ -100,9 +100,7 @@ class TypedConfirmationDialog:
         button_frame = ttk.Frame(self.window)
         button_frame.grid(row=3, column=0, columnspan=2, sticky="e", padx=12, pady=12)
         ttk.Button(button_frame, text="Cancel", command=self.cancel).grid(row=0, column=0, padx=4)
-        self.confirm_button = ttk.Button(
-            button_frame, text="Confirm", command=self.confirm, state="disabled"
-        )
+        self.confirm_button = ttk.Button(button_frame, text="Confirm", command=self.confirm, state="disabled")
         self.confirm_button.grid(row=0, column=1, padx=4)
 
         self.window.grid_columnconfigure(0, weight=1)

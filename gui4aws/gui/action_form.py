@@ -47,9 +47,7 @@ class ActionForm(ttk.Frame):
             var = tk.StringVar(value=initial)
             self.variables[field.name] = var
             if field.kind == "choice" and field.choices:
-                widget: tk.Widget = ttk.Combobox(
-                    self, textvariable=var, values=list(field.choices), state="readonly"
-                )
+                widget: tk.Widget = ttk.Combobox(self, textvariable=var, values=list(field.choices), state="readonly")
             elif field.kind == "bool":
                 widget = ttk.Combobox(self, textvariable=var, values=["true", "false"], state="readonly")
             elif field.kind == "multiline":

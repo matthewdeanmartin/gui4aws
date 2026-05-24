@@ -1,8 +1,11 @@
 """Normalized IAM summaries."""
+
 from __future__ import annotations
+
 from dataclasses import dataclass
 
 __all__ = ["GroupSummary", "PolicySummary", "RoleSummary", "UserSummary"]
+
 
 @dataclass(frozen=True)
 class UserSummary:
@@ -13,6 +16,7 @@ class UserSummary:
     created: str | None
     password_last_used: str | None
 
+
 @dataclass(frozen=True)
 class GroupSummary:
     name: str
@@ -20,6 +24,7 @@ class GroupSummary:
     arn: str | None
     path: str | None
     created: str | None
+
 
 @dataclass(frozen=True)
 class RoleSummary:
@@ -29,6 +34,7 @@ class RoleSummary:
     path: str | None
     created: str | None
     description: str | None
+
 
 @dataclass(frozen=True)
 class PolicySummary:

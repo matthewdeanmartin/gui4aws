@@ -229,9 +229,13 @@ class RobotocoreManager:
         )
 
         cmd = [
-            "docker", "run", "-d",
-            "--name", self._container_name,
-            "-p", f"{port}:4566",
+            "docker",
+            "run",
+            "-d",
+            "--name",
+            self._container_name,
+            "-p",
+            f"{port}:4566",
             ROBOTOCORE_IMAGE,
         ]
         self._append_output("$ " + " ".join(cmd))
@@ -246,16 +250,13 @@ class RobotocoreManager:
             self._append_output(result.stderr.strip())
 
         if result.returncode != 0:
-            raise RuntimeError(
-                f"docker run failed (exit {result.returncode}):\n{result.stderr.strip()}"
-            )
+            raise RuntimeError(f"docker run failed (exit {result.returncode}):\n{result.stderr.strip()}")
 
         # Stream docker logs in background so the user can see what's happening.
         self._start_log_reader()
 
     def _docker_stop(self) -> None:
-        for subcmd in (["docker", "stop", self._container_name],
-                       ["docker", "rm", self._container_name]):
+        for subcmd in (["docker", "stop", self._container_name], ["docker", "rm", self._container_name]):
             result = subprocess.run(subcmd, capture_output=True, text=True, encoding="utf-8", check=False)
             if result.stdout.strip():
                 self._append_output(result.stdout.strip())
@@ -283,9 +284,7 @@ class RobotocoreManager:
             except Exception as exc:
                 self._append_output(f"[log reader error: {exc}]")
 
-        self._log_reader_thread = threading.Thread(
-            target=read_logs, name="robotocore-logs", daemon=True
-        )
+        self._log_reader_thread = threading.Thread(target=read_logs, name="robotocore-logs", daemon=True)
         self._log_reader_thread.start()
 
     # ── Health check ──────────────────────────────────────────────────────────

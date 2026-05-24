@@ -2,55 +2,57 @@ from __future__ import annotations
 
 import datetime
 from typing import Any
+
+from gui4aws.services.athena.views import (
+    to_query_execution_summaries,
+    to_workgroup_summaries,
+)
+from gui4aws.services.backup.views import (
+    to_backup_job_summaries,
+    to_backup_plan_summaries,
+    to_backup_vault_summaries,
+    to_recovery_point_by_job_summaries,
+    to_recovery_point_summaries,
+    to_restore_job_summaries,
+)
+from gui4aws.services.cloudformation.views import to_stack_summaries
+from gui4aws.services.cloudwatch.views import (
+    to_alarm_summaries,
+    to_log_event_summaries,
+    to_log_group_summaries,
+    to_log_stream_summaries,
+)
 from gui4aws.services.ecs.views import (
     to_cluster_summaries,
     to_service_summaries,
-    to_task_summaries,
     to_task_definition_summaries,
+    to_task_summaries,
 )
+from gui4aws.services.iam.views import (
+    to_group_summaries,
+    to_policy_summaries,
+    to_role_summaries,
+    to_user_summaries,
+)
+from gui4aws.services.lambdas.views import to_function_summaries
 from gui4aws.services.networking.views import (
-    to_vpc_summaries,
-    to_subnet_summaries,
-    to_security_group_summaries,
-    to_security_group_rule_summaries,
     to_alb_summaries,
+    to_security_group_rule_summaries,
+    to_security_group_summaries,
+    to_subnet_summaries,
     to_target_group_summaries,
-)
-from gui4aws.services.cloudwatch.views import (
-    to_alarm_summaries,
-    to_log_group_summaries,
-    to_log_stream_summaries,
-    to_log_event_summaries,
-)
-from gui4aws.services.athena.views import (
-    to_workgroup_summaries,
-    to_query_execution_summaries,
-)
-from gui4aws.services.ssm.views import to_parameter_summaries
-from gui4aws.services.sns.views import (
-    to_topic_summaries,
-    to_subscription_summaries,
+    to_vpc_summaries,
 )
 from gui4aws.services.ses.views import (
     to_identity_summaries,
     to_template_summaries,
 )
-from gui4aws.services.lambdas.views import to_function_summaries
-from gui4aws.services.cloudformation.views import to_stack_summaries
-from gui4aws.services.iam.views import (
-    to_user_summaries,
-    to_group_summaries,
-    to_role_summaries,
-    to_policy_summaries,
+from gui4aws.services.sns.views import (
+    to_subscription_summaries,
+    to_topic_summaries,
 )
-from gui4aws.services.backup.views import (
-    to_backup_vault_summaries,
-    to_backup_plan_summaries,
-    to_recovery_point_summaries,
-    to_backup_job_summaries,
-    to_recovery_point_by_job_summaries,
-    to_restore_job_summaries,
-)
+from gui4aws.services.ssm.views import to_parameter_summaries
+
 
 # ECS Tests
 def test_ecs_views() -> None:
@@ -80,7 +82,9 @@ def test_ecs_views() -> None:
     assert sums_s2[0].service_name == "s2"
 
     # Tasks
-    resp_t1: dict[str, Any] = {"tasks": [{"taskArn": "arn:.../t1", "clusterArn": "arn:.../c1", "lastStatus": "RUNNING"}]}
+    resp_t1: dict[str, Any] = {
+        "tasks": [{"taskArn": "arn:.../t1", "clusterArn": "arn:.../c1", "lastStatus": "RUNNING"}]
+    }
     sums_t1 = to_task_summaries(resp_t1)
     assert len(sums_t1) == 1
     assert sums_t1[0].task_id == "t1"
@@ -97,7 +101,9 @@ def test_ecs_views() -> None:
     assert sums_td1[0].family == "family"
     assert sums_td1[0].revision == "1"
 
-    resp_td2: dict[str, Any] = {"taskDefinition": {"taskDefinitionArn": "arn:...:task-definition/family:2", "family": "family", "revision": 2}}
+    resp_td2: dict[str, Any] = {
+        "taskDefinition": {"taskDefinitionArn": "arn:...:task-definition/family:2", "family": "family", "revision": 2}
+    }
     sums_td2 = to_task_definition_summaries(resp_td2)
     assert len(sums_td2) == 1
     assert sums_td2[0].revision == "2"
@@ -107,6 +113,7 @@ def test_ecs_views() -> None:
     sums_td3 = to_task_definition_summaries(resp_td3)
     assert sums_td3[0].family == "family"
     assert sums_td3[0].revision == "3"
+
 
 # Networking Tests
 def test_networking_views() -> None:
@@ -130,13 +137,32 @@ def test_networking_views() -> None:
     assert sums_sg[0].group_name == "web"
 
     # SG Rules
-    resp_sgr1: dict[str, Any] = {"SecurityGroupRules": [{"SecurityGroupRuleId": "sgr-1", "IsEgress": False, "IpProtocol": "tcp", "FromPort": 80, "ToPort": 80, "CidrIpv4": "0.0.0.0/0"}]}
+    resp_sgr1: dict[str, Any] = {
+        "SecurityGroupRules": [
+            {
+                "SecurityGroupRuleId": "sgr-1",
+                "IsEgress": False,
+                "IpProtocol": "tcp",
+                "FromPort": 80,
+                "ToPort": 80,
+                "CidrIpv4": "0.0.0.0/0",
+            }
+        ]
+    }
     sums_sgr1 = to_security_group_rule_summaries(resp_sgr1)
     assert sums_sgr1[0].rule_id == "sgr-1"
     assert sums_sgr1[0].direction == "inbound"
 
     # SG Rules - Path 2 (describe_security_groups)
-    resp_sgr2: dict[str, Any] = {"SecurityGroups": [{"IpPermissions": [{"IpProtocol": "tcp", "FromPort": 443, "ToPort": 443, "IpRanges": [{"CidrIp": "1.1.1.1/32"}]}]}]}
+    resp_sgr2: dict[str, Any] = {
+        "SecurityGroups": [
+            {
+                "IpPermissions": [
+                    {"IpProtocol": "tcp", "FromPort": 443, "ToPort": 443, "IpRanges": [{"CidrIp": "1.1.1.1/32"}]}
+                ]
+            }
+        ]
+    }
     sums_sgr2 = to_security_group_rule_summaries(resp_sgr2)
     assert sums_sgr2[0].from_port == "443"
     assert sums_sgr2[0].cidr == "1.1.1.1/32"
@@ -152,6 +178,7 @@ def test_networking_views() -> None:
     sums_tg = to_target_group_summaries(resp_tg)
     assert sums_tg[0].name == "tg-1"
     assert sums_tg[0].port == 80
+
 
 # CloudWatch Tests
 def test_cloudwatch_views() -> None:
@@ -180,6 +207,7 @@ def test_cloudwatch_views() -> None:
     sums_le = to_log_event_summaries(resp_le)
     assert sums_le[0].message == "hello"
 
+
 # Athena Tests
 def test_athena_views() -> None:
     # Workgroups
@@ -197,10 +225,13 @@ def test_athena_views() -> None:
     sums_qe1 = to_query_execution_summaries(resp_qe1)
     assert sums_qe1[0].query_execution_id == "q1"
 
-    resp_qe2: dict[str, Any] = {"QueryExecution": {"QueryExecutionId": "q2", "Query": "SELECT 1", "Status": {"State": "SUCCEEDED"}}}
+    resp_qe2: dict[str, Any] = {
+        "QueryExecution": {"QueryExecutionId": "q2", "Query": "SELECT 1", "Status": {"State": "SUCCEEDED"}}
+    }
     sums_qe2 = to_query_execution_summaries(resp_qe2)
     assert sums_qe2[0].query_execution_id == "q2"
     assert sums_qe2[0].query == "SELECT 1"
+
 
 # SSM Tests
 def test_ssm_views() -> None:
@@ -209,25 +240,36 @@ def test_ssm_views() -> None:
     assert sums[0].name == "p1"
     assert sums[0].type == "String"
 
+
 # SNS Tests
 def test_sns_views() -> None:
     resp_t: dict[str, Any] = {"Topics": [{"TopicArn": "arn:aws:sns:region:account:topic1"}]}
     sums_t = to_topic_summaries(resp_t)
     assert sums_t[0].name == "topic1"
 
-    resp_s1: dict[str, Any] = {"Subscriptions": [{"SubscriptionArn": "arn:aws:sns:region:account:topic1:sub1", "TopicArn": "t1", "Protocol": "sqs"}]}
+    resp_s1: dict[str, Any] = {
+        "Subscriptions": [
+            {"SubscriptionArn": "arn:aws:sns:region:account:topic1:sub1", "TopicArn": "t1", "Protocol": "sqs"}
+        ]
+    }
     sums_s1 = to_subscription_summaries(resp_s1)
     assert sums_s1[0].subscription_id == "sub1"
     assert sums_s1[0].status == "Confirmed"
 
-    resp_s2: dict[str, Any] = {"Subscriptions": [{"SubscriptionArn": "PendingConfirmation", "TopicArn": "t1", "Protocol": "email"}]}
+    resp_s2: dict[str, Any] = {
+        "Subscriptions": [{"SubscriptionArn": "PendingConfirmation", "TopicArn": "t1", "Protocol": "email"}]
+    }
     sums_s2 = to_subscription_summaries(resp_s2)
     assert sums_s2[0].subscription_id == "PendingConfirmation"
     assert sums_s2[0].status == "PendingConfirmation"
 
+
 # SES Tests
 def test_ses_views() -> None:
-    resp_id: dict[str, Any] = {"Identities": ["example.com", "user@example.com"], "VerificationAttributes": {"example.com": {"VerificationStatus": "Success"}}}
+    resp_id: dict[str, Any] = {
+        "Identities": ["example.com", "user@example.com"],
+        "VerificationAttributes": {"example.com": {"VerificationStatus": "Success"}},
+    }
     sums_id = to_identity_summaries(resp_id)
     assert sums_id[0].identity == "example.com"
     assert sums_id[0].identity_type == "domain"
@@ -237,6 +279,7 @@ def test_ses_views() -> None:
     sums_tm = to_template_summaries(resp_tm)
     assert sums_tm[0].name == "t1"
 
+
 # Lambda Tests
 def test_lambda_views() -> None:
     resp: dict[str, Any] = {"Functions": [{"FunctionName": "f1", "Runtime": "python3.9", "MemorySize": 128}]}
@@ -244,11 +287,13 @@ def test_lambda_views() -> None:
     assert sums[0].name == "f1"
     assert sums[0].memory_size == 128
 
+
 # CloudFormation Tests
 def test_cloudformation_views() -> None:
     resp: dict[str, Any] = {"Stacks": [{"StackName": "stack1", "StackStatus": "CREATE_COMPLETE"}]}
     sums = to_stack_summaries(resp)
     assert sums[0].name == "stack1"
+
 
 # IAM Tests
 def test_iam_views() -> None:
@@ -268,6 +313,7 @@ def test_iam_views() -> None:
     sums_p = to_policy_summaries(resp_p)
     assert sums_p[0].name == "p1"
 
+
 # Backup Tests
 def test_backup_views() -> None:
     resp_bv: dict[str, Any] = {"BackupVaultList": [{"BackupVaultName": "v1", "NumberOfRecoveryPoints": 5}]}
@@ -278,7 +324,9 @@ def test_backup_views() -> None:
     sums_bp = to_backup_plan_summaries(resp_bp)
     assert sums_bp[0].plan_name == "p1"
 
-    resp_rp: dict[str, Any] = {"RecoveryPoints": [{"RecoveryPointArn": "arn1", "BackupVaultName": "v1", "Status": "COMPLETED"}]}
+    resp_rp: dict[str, Any] = {
+        "RecoveryPoints": [{"RecoveryPointArn": "arn1", "BackupVaultName": "v1", "Status": "COMPLETED"}]
+    }
     sums_rp = to_recovery_point_summaries(resp_rp)
     assert sums_rp[0].recovery_point_arn == "arn1"
 

@@ -136,14 +136,19 @@ def _cluster_cli_args(inputs: Mapping[str, str]) -> list[str]:
 
     min_capacity = inputs.get("serverless_min_capacity", "").strip()
     max_capacity = inputs.get("serverless_max_capacity", "").strip()
-    scaling_parts = [part for part in (f"MinCapacity={min_capacity}" if min_capacity else "", f"MaxCapacity={max_capacity}" if max_capacity else "") if part]
+    scaling_parts = [
+        part
+        for part in (
+            f"MinCapacity={min_capacity}" if min_capacity else "",
+            f"MaxCapacity={max_capacity}" if max_capacity else "",
+        )
+        if part
+    ]
     if scaling_parts:
         flag = (
             "scaling-configuration"
             if cluster_kind == "serverless-v1"
-            else "serverless-v2-scaling-configuration"
-            if cluster_kind == "serverless-v2"
-            else ""
+            else "serverless-v2-scaling-configuration" if cluster_kind == "serverless-v2" else ""
         )
         if flag:
             _append_cli_value(argv, flag, ",".join(scaling_parts))

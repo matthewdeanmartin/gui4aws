@@ -137,9 +137,7 @@ class FilterBar(ttk.LabelFrame):
             self._variables[fld.name] = var
             widget: tk.Widget
             if fld.kind == "choice" and fld.choices:
-                combo = ttk.Combobox(
-                    self._inner, textvariable=var, values=list(fld.choices), width=24
-                )
+                combo = ttk.Combobox(self._inner, textvariable=var, values=list(fld.choices), width=24)
                 combo.bind("<<ComboboxSelected>>", lambda _e: self._fire_refresh())
                 self._comboboxes[fld.name] = combo
                 widget = combo
@@ -151,8 +149,11 @@ class FilterBar(ttk.LabelFrame):
                 widget = combo
             elif fld.kind == "bool":
                 combo = ttk.Combobox(
-                    self._inner, textvariable=var, values=["true", "false"],
-                    state="readonly", width=8,
+                    self._inner,
+                    textvariable=var,
+                    values=["true", "false"],
+                    state="readonly",
+                    width=8,
                 )
                 combo.bind("<<ComboboxSelected>>", lambda _e: self._fire_refresh())
                 widget = combo
@@ -164,19 +165,13 @@ class FilterBar(ttk.LabelFrame):
             col += 1
 
         # Refresh button — always present, even when no service-side fields exist.
-        ttk.Button(self._inner, text="Refresh", command=self._fire_refresh).grid(
-            row=0, column=col, padx=(4, 8), pady=2
-        )
+        ttk.Button(self._inner, text="Refresh", command=self._fire_refresh).grid(row=0, column=col, padx=(4, 8), pady=2)
         col += 1
 
         # Client-side JMESPath filter ─────────────────────────────────────────
-        ttk.Separator(self._inner, orient="vertical").grid(
-            row=0, column=col, sticky="ns", padx=4
-        )
+        ttk.Separator(self._inner, orient="vertical").grid(row=0, column=col, sticky="ns", padx=4)
         col += 1
-        ttk.Label(self._inner, text="Filter rows (JMESPath):").grid(
-            row=0, column=col, sticky="w", padx=(4, 2), pady=2
-        )
+        ttk.Label(self._inner, text="Filter rows (JMESPath):").grid(row=0, column=col, sticky="w", padx=(4, 2), pady=2)
         col += 1
         client_entry = ttk.Entry(self._inner, textvariable=self._client_var, width=30)
         client_entry.grid(row=0, column=col, sticky="ew", padx=(0, 4), pady=2)

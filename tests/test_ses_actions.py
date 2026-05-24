@@ -42,13 +42,7 @@ def test_identity_actions(mock_aws_env: None) -> None:
 
 def test_list_templates(mock_aws_env: None) -> None:
     ses = boto3.client("ses", region_name="us-east-1")
-    ses.create_template(
-        Template={
-            "TemplateName": "test-template",
-            "SubjectPart": "Hello",
-            "TextPart": "World"
-        }
-    )
+    ses.create_template(Template={"TemplateName": "test-template", "SubjectPart": "Hello", "TextPart": "World"})
 
     context = AppContext(region_name="us-east-1")
     result = context.execute(LIST_TEMPLATES, inputs={})

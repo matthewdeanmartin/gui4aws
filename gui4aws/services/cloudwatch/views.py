@@ -59,6 +59,7 @@ def _fmt_ts(ms: Any) -> str | None:
         return None
     try:
         import datetime
+
         return datetime.datetime.utcfromtimestamp(int(ms) / 1000).strftime("%Y-%m-%d %H:%M:%S")
     except Exception:
         return str(ms)

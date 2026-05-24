@@ -159,10 +159,15 @@ def _seed_networking(ec2: Any, elbv2: Any) -> dict[str, list[str]]:
 
     vpc_id: str | None = None
     try:
-        resp = ec2.create_vpc(CidrBlock="10.0.0.0/16", TagSpecifications=[{
-            "ResourceType": "vpc",
-            "Tags": _tags({"Key": "Name", "Value": "demo-vpc"}),
-        }])
+        resp = ec2.create_vpc(
+            CidrBlock="10.0.0.0/16",
+            TagSpecifications=[
+                {
+                    "ResourceType": "vpc",
+                    "Tags": _tags({"Key": "Name", "Value": "demo-vpc"}),
+                }
+            ],
+        )
         vpc_id = resp["Vpc"]["VpcId"]
         logger.info("created VPC %s", vpc_id)
         created["vpcs"].append(vpc_id)
@@ -178,10 +183,12 @@ def _seed_networking(ec2: Any, elbv2: Any) -> dict[str, list[str]]:
                     VpcId=vpc_id,
                     CidrBlock=cidr,
                     AvailabilityZone=az,
-                    TagSpecifications=[{
-                        "ResourceType": "subnet",
-                        "Tags": _tags({"Key": "Name", "Value": name}),
-                    }],
+                    TagSpecifications=[
+                        {
+                            "ResourceType": "subnet",
+                            "Tags": _tags({"Key": "Name", "Value": name}),
+                        }
+                    ],
                 )
                 subnet_id = resp["Subnet"]["SubnetId"]
                 subnet_ids.append(subnet_id)
@@ -197,10 +204,12 @@ def _seed_networking(ec2: Any, elbv2: Any) -> dict[str, list[str]]:
                 GroupName="demo-sg",
                 Description="Demo security group for gui4aws",
                 VpcId=vpc_id,
-                TagSpecifications=[{
-                    "ResourceType": "security-group",
-                    "Tags": _tags({"Key": "Name", "Value": "demo-sg"}),
-                }],
+                TagSpecifications=[
+                    {
+                        "ResourceType": "security-group",
+                        "Tags": _tags({"Key": "Name", "Value": "demo-sg"}),
+                    }
+                ],
             )
             sg_id = resp["GroupId"]
             logger.info("created security group %s", sg_id)
@@ -461,15 +470,17 @@ def _seed_backup(backup: Any, rds: Any | None = None, *, extended: bool = False)
     ]
 
     if extended:
-        plans.append((
-            "demo-monthly-plan",
-            "demo-monthly-vault",
-            "monthly-rule",
-            "cron(0 5 1 * ? *)",
-            120,
-            720,
-            "Demo monthly backup plan — backs up on the 1st of each month",
-        ))
+        plans.append(
+            (
+                "demo-monthly-plan",
+                "demo-monthly-vault",
+                "monthly-rule",
+                "cron(0 5 1 * ? *)",
+                120,
+                720,
+                "Demo monthly backup plan — backs up on the 1st of each month",
+            )
+        )
 
     for plan_name, vault_name, rule_name, schedule, start_window, completion_window, description in plans:
         if vault_name not in created["backup_vaults"]:
@@ -665,8 +676,7 @@ def _make_lambda_zip() -> bytes:
     import zipfile
 
     handler_code = (
-        "def handler(event, context):\n"
-        '    return {"statusCode": 200, "body": "Hello from gui4aws demo"}\n'
+        "def handler(event, context):\n" '    return {"statusCode": 200, "body": "Hello from gui4aws demo"}\n'
     )
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
@@ -683,16 +693,21 @@ def _seed_lambda(lambda_client: Any, iam: Any) -> dict[str, list[str]]:
     demo_role_arn = "arn:aws:iam::123456789012:role/DemoLambdaRole"
     try:
         import json
+
         resp = iam.create_role(
             RoleName="DemoLambdaRole",
-            AssumeRolePolicyDocument=json.dumps({
-                "Version": "2012-10-17",
-                "Statement": [{
-                    "Effect": "Allow",
-                    "Principal": {"Service": "lambda.amazonaws.com"},
-                    "Action": "sts:AssumeRole",
-                }],
-            }),
+            AssumeRolePolicyDocument=json.dumps(
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {"Service": "lambda.amazonaws.com"},
+                            "Action": "sts:AssumeRole",
+                        }
+                    ],
+                }
+            ),
             Description="Demo IAM role for gui4aws Lambda functions",
         )
         demo_role_arn = resp["Role"]["Arn"]
@@ -900,6 +915,7 @@ def _seed_ses(ses: Any) -> dict[str, list[str]]:
 def _seed_iam_extras(iam: Any) -> dict[str, list[str]]:
     """Seed additional IAM resources (users, groups, policies) beyond the Lambda role."""
     import json
+
     created: dict[str, list[str]] = {"iam_users": [], "iam_groups": [], "iam_policies": []}
 
     # Groups
@@ -938,11 +954,13 @@ def _seed_iam_extras(iam: Any) -> dict[str, list[str]]:
     # Customer-managed policy
     policy_doc = {
         "Version": "2012-10-17",
-        "Statement": [{
-            "Effect": "Allow",
-            "Action": ["s3:GetObject", "s3:ListBucket"],
-            "Resource": ["arn:aws:s3:::demo-gui4aws-assets", "arn:aws:s3:::demo-gui4aws-assets/*"],
-        }],
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Action": ["s3:GetObject", "s3:ListBucket"],
+                "Resource": ["arn:aws:s3:::demo-gui4aws-assets", "arn:aws:s3:::demo-gui4aws-assets/*"],
+            }
+        ],
     }
     try:
         resp = iam.create_policy(

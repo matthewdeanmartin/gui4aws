@@ -196,9 +196,7 @@ DELETE_PARAMETER = ActionDefinition(
     display_name="Delete parameter",
     service_id="ssm",
     risk_level=RiskLevel.DESTRUCTIVE,
-    input_fields=(
-        InputField(name="name", label="Parameter name", required=True),
-    ),
+    input_fields=(InputField(name="name", label="Parameter name", required=True),),
     cli_template=CliTemplate(
         service="ssm",
         command="delete-parameter",

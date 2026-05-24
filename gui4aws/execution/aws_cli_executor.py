@@ -182,7 +182,7 @@ def quote_for_shell(parts: Sequence[str]) -> str:
     """Shell-quote a sequence of argv parts for display in the script viewer."""
     quoted: list[str] = []
     for part in parts:
-        if not part or any(ch in part for ch in ' \t"\'$`\\!*?[](){}<>|;&'):
+        if not part or any(ch in part for ch in " \t\"'$`\\!*?[](){}<>|;&"):
             escaped = part.replace("'", "'\\''")
             quoted.append(f"'{escaped}'")
         else:

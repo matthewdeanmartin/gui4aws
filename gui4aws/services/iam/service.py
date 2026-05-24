@@ -1,11 +1,23 @@
 """ServiceDefinition for IAM."""
+
 from __future__ import annotations
+
 from gui4aws.models import NavigationItem, RowAction, ServiceDefinition
 from gui4aws.services.iam.actions import (
-    ALL_ACTIONS, CREATE_GROUP, CREATE_ROLE, CREATE_USER,
-    DELETE_GROUP, DELETE_ROLE, DELETE_USER, GET_POLICY,
-    GET_ROLE, GET_USER, LIST_GROUPS, LIST_POLICIES,
-    LIST_ROLES, LIST_USERS,
+    ALL_ACTIONS,
+    CREATE_GROUP,
+    CREATE_ROLE,
+    CREATE_USER,
+    DELETE_GROUP,
+    DELETE_ROLE,
+    DELETE_USER,
+    GET_POLICY,
+    GET_ROLE,
+    GET_USER,
+    LIST_GROUPS,
+    LIST_POLICIES,
+    LIST_ROLES,
+    LIST_USERS,
 )
 
 __all__ = ["SERVICE"]

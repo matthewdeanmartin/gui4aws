@@ -111,7 +111,9 @@ UPLOAD_FILE = ActionDefinition(
     risk_level=RiskLevel.SAFE_WRITE,
     input_fields=(
         InputField(name="bucket_name", label="Bucket name", required=True),
-        InputField(name="local_path", label="Local file path", required=True, help_text="Absolute path to the local file."),
+        InputField(
+            name="local_path", label="Local file path", required=True, help_text="Absolute path to the local file."
+        ),
         InputField(name="s3_key", label="S3 key (object path)", required=True, help_text="e.g. folder/myfile.txt"),
     ),
     cli_template=CliTemplate(
@@ -138,7 +140,12 @@ DOWNLOAD_FILE = ActionDefinition(
     input_fields=(
         InputField(name="bucket_name", label="Bucket name", required=True),
         InputField(name="s3_key", label="S3 key (object path)", required=True),
-        InputField(name="local_path", label="Local destination path", required=True, help_text="Absolute path where the file will be saved."),
+        InputField(
+            name="local_path",
+            label="Local destination path",
+            required=True,
+            help_text="Absolute path where the file will be saved.",
+        ),
     ),
     cli_template=CliTemplate(
         service="s3api",

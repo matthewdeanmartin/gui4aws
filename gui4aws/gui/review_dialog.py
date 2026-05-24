@@ -33,10 +33,7 @@ def needs_review(action: ActionDefinition) -> bool:
 def warning_banner(action: ActionDefinition) -> str | None:
     """Return the warning message for the dialog header, or None."""
     if action.risk_level is RiskLevel.COST_AFFECTING:
-        return (
-            "This action may create billable resources. Review the generated script before "
-            "confirming."
-        )
+        return "This action may create billable resources. Review the generated script before " "confirming."
     if action.risk_level is RiskLevel.DESTRUCTIVE:
         return "This action is destructive. Type the exact confirmation text to proceed."
     return None

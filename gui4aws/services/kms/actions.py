@@ -199,8 +199,12 @@ CREATE_KEY = ActionDefinition(
             kind="choice",
             choices=(
                 "SYMMETRIC_DEFAULT",
-                "RSA_2048", "RSA_3072", "RSA_4096",
-                "ECC_NIST_P256", "ECC_NIST_P384", "ECC_NIST_P521",
+                "RSA_2048",
+                "RSA_3072",
+                "RSA_4096",
+                "ECC_NIST_P256",
+                "ECC_NIST_P384",
+                "ECC_NIST_P521",
                 "HMAC_256",
             ),
             default="SYMMETRIC_DEFAULT",
@@ -289,9 +293,7 @@ ENABLE_KEY = ActionDefinition(
     display_name="Enable key",
     service_id="kms",
     risk_level=RiskLevel.SAFE_WRITE,
-    input_fields=(
-        InputField(name="key_id", label="Key ID or ARN", required=True),
-    ),
+    input_fields=(InputField(name="key_id", label="Key ID or ARN", required=True),),
     cli_template=CliTemplate(
         service="kms",
         command="enable-key",
@@ -314,9 +316,7 @@ DISABLE_KEY = ActionDefinition(
     display_name="Disable key",
     service_id="kms",
     risk_level=RiskLevel.DESTRUCTIVE,
-    input_fields=(
-        InputField(name="key_id", label="Key ID or ARN", required=True),
-    ),
+    input_fields=(InputField(name="key_id", label="Key ID or ARN", required=True),),
     cli_template=CliTemplate(
         service="kms",
         command="disable-key",

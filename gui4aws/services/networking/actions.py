@@ -159,12 +159,20 @@ MODIFY_VPC_ATTRIBUTE = ActionDefinition(
     cli_template=CliTemplate(
         service="ec2",
         command="modify-vpc-attribute",
-        arg_map={"vpc_id": "vpc-id", "enable_dns_support": "enable-dns-support", "enable_dns_hostnames": "enable-dns-hostnames"},
+        arg_map={
+            "vpc_id": "vpc-id",
+            "enable_dns_support": "enable-dns-support",
+            "enable_dns_hostnames": "enable-dns-hostnames",
+        },
     ),
     boto3_template=Boto3Template(
         service="ec2",
         operation="modify_vpc_attribute",
-        param_map={"vpc_id": "VpcId", "enable_dns_support": "EnableDnsSupport", "enable_dns_hostnames": "EnableDnsHostnames"},
+        param_map={
+            "vpc_id": "VpcId",
+            "enable_dns_support": "EnableDnsSupport",
+            "enable_dns_hostnames": "EnableDnsHostnames",
+        },
     ),
     result_view=ResultViewDefinition(kind=ResultViewKind.RAW_JSON, title="Modify VPC result"),
     iam_permissions=("ec2:ModifyVpcAttribute",),
@@ -355,9 +363,7 @@ DESCRIBE_SECURITY_GROUP_RULES = ActionDefinition(
     display_name="View security group rules",
     service_id="networking",
     risk_level=RiskLevel.READ_ONLY,
-    input_fields=(
-        InputField(name="group_id", label="Security group ID", kind="list", required=True),
-    ),
+    input_fields=(InputField(name="group_id", label="Security group ID", kind="list", required=True),),
     cli_template=CliTemplate(
         service="ec2",
         command="describe-security-groups",

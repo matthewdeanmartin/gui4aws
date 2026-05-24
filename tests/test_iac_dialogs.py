@@ -7,7 +7,7 @@ from collections.abc import Generator
 
 import pytest
 
-from gui4aws.gui.cdk_dialog import CdkDialog, _CDK_SUBCOMMANDS
+from gui4aws.gui.cdk_dialog import _CDK_SUBCOMMANDS, CdkDialog
 from gui4aws.gui.terraform_dialog import TerraformDialog
 
 

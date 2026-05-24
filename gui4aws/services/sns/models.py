@@ -1,13 +1,17 @@
 """Normalized SNS summaries."""
+
 from __future__ import annotations
+
 from dataclasses import dataclass
 
 __all__ = ["SubscriptionSummary", "TopicSummary"]
+
 
 @dataclass(frozen=True)
 class TopicSummary:
     name: str
     arn: str
+
 
 @dataclass(frozen=True)
 class SubscriptionSummary:

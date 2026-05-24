@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 from gui4aws.config import AppConfig, config_path, load_config, save_config
 
 
@@ -22,11 +21,7 @@ def test_load_default_config(tmp_path: Path) -> None:
 
 def test_save_and_load_config(tmp_path: Path) -> None:
     path = tmp_path / "config.toml"
-    config = AppConfig(
-        default_profile="test-prof",
-        window_width=100,
-        local_endpoints={"s3": "http://loc"}
-    )
+    config = AppConfig(default_profile="test-prof", window_width=100, local_endpoints={"s3": "http://loc"})
     save_config(config, path)
 
     loaded = load_config(path)

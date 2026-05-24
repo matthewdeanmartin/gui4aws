@@ -88,9 +88,7 @@ GET_QUERY_EXECUTION = ActionDefinition(
     display_name="Get query execution",
     service_id="athena",
     risk_level=RiskLevel.READ_ONLY,
-    input_fields=(
-        InputField(name="query_execution_id", label="Query execution ID", required=True),
-    ),
+    input_fields=(InputField(name="query_execution_id", label="Query execution ID", required=True),),
     cli_template=CliTemplate(
         service="athena",
         command="get-query-execution",
@@ -103,7 +101,15 @@ GET_QUERY_EXECUTION = ActionDefinition(
     ),
     result_view=ResultViewDefinition(
         kind=ResultViewKind.TABLE,
-        columns=("query_execution_id", "query", "state", "state_change_reason", "workgroup", "submission_date", "completion_date"),
+        columns=(
+            "query_execution_id",
+            "query",
+            "state",
+            "state_change_reason",
+            "workgroup",
+            "submission_date",
+            "completion_date",
+        ),
         title="Query Execution Detail",
     ),
     iam_permissions=("athena:GetQueryExecution",),
@@ -174,9 +180,7 @@ STOP_QUERY_EXECUTION = ActionDefinition(
     display_name="Stop query execution",
     service_id="athena",
     risk_level=RiskLevel.DESTRUCTIVE,
-    input_fields=(
-        InputField(name="query_execution_id", label="Query execution ID", required=True),
-    ),
+    input_fields=(InputField(name="query_execution_id", label="Query execution ID", required=True),),
     cli_template=CliTemplate(
         service="athena",
         command="stop-query-execution",

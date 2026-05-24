@@ -58,10 +58,14 @@ def _create_service_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
 
 def _create_service_cli_args(inputs: Mapping[str, str]) -> list[str]:
     args = [
-        "--cluster", inputs["cluster"],
-        "--service-name", inputs["service_name"],
-        "--task-definition", inputs["task_definition"],
-        "--desired-count", inputs.get("desired_count") or "1",
+        "--cluster",
+        inputs["cluster"],
+        "--service-name",
+        inputs["service_name"],
+        "--task-definition",
+        inputs["task_definition"],
+        "--desired-count",
+        inputs.get("desired_count") or "1",
     ]
     if inputs.get("launch_type"):
         args += ["--launch-type", inputs["launch_type"]]
@@ -70,6 +74,7 @@ def _create_service_cli_args(inputs: Mapping[str, str]) -> list[str]:
 
 def _register_task_def_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
     import json
+
     raw = inputs.get("task_definition_json", "{}")
     try:
         doc = json.loads(raw)
@@ -169,9 +174,7 @@ CREATE_CLUSTER = ActionDefinition(
     display_name="Create cluster",
     service_id="ecs",
     risk_level=RiskLevel.SAFE_WRITE,
-    input_fields=(
-        InputField(name="cluster_name", label="Cluster name", required=True),
-    ),
+    input_fields=(InputField(name="cluster_name", label="Cluster name", required=True),),
     cli_template=CliTemplate(
         service="ecs",
         command="create-cluster",
@@ -194,9 +197,7 @@ DELETE_CLUSTER = ActionDefinition(
     display_name="Delete cluster",
     service_id="ecs",
     risk_level=RiskLevel.DESTRUCTIVE,
-    input_fields=(
-        InputField(name="cluster", label="Cluster name or ARN", required=True),
-    ),
+    input_fields=(InputField(name="cluster", label="Cluster name or ARN", required=True),),
     cli_template=CliTemplate(
         service="ecs",
         command="delete-cluster",
@@ -280,7 +281,15 @@ DESCRIBE_SERVICES = ActionDefinition(
     ),
     result_view=ResultViewDefinition(
         kind=ResultViewKind.TABLE,
-        columns=("service_name", "status", "desired_count", "running_count", "pending_count", "launch_type", "task_definition"),
+        columns=(
+            "service_name",
+            "status",
+            "desired_count",
+            "running_count",
+            "pending_count",
+            "launch_type",
+            "task_definition",
+        ),
         title="ECS Services",
     ),
     iam_permissions=("ecs:DescribeServices",),

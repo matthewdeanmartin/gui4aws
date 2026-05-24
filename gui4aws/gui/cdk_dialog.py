@@ -28,7 +28,13 @@ _CDK_SUBCOMMANDS: list[dict[str, Any]] = [
         "label": "list",
         "description": "List all stacks in the app.",
         "flags": [
-            ("--long", "Long format (show full details)", "bool", False, "Display environment information for each stack"),
+            (
+                "--long",
+                "Long format (show full details)",
+                "bool",
+                False,
+                "Display environment information for each stack",
+            ),
             ("--context", "Context key=value", "string", "", "Add contextual string parameter (-c KEY=VALUE)"),
         ],
     },
@@ -37,9 +43,21 @@ _CDK_SUBCOMMANDS: list[dict[str, Any]] = [
         "label": "synth",
         "description": "Synthesize and print the CloudFormation template.",
         "flags": [
-            ("--output", "Output directory", "string", "cdk.out", "Emits the synthesized cloud assembly into a directory (default: cdk.out)"),
+            (
+                "--output",
+                "Output directory",
+                "string",
+                "cdk.out",
+                "Emits the synthesized cloud assembly into a directory (default: cdk.out)",
+            ),
             ("--quiet", "Quiet (suppress output)", "bool", False, "Do not output CloudFormation template to stdout"),
-            ("--exclusively", "Exclusively synth selected stacks", "bool", False, "Only synthesize requested stacks, don't include dependencies"),
+            (
+                "--exclusively",
+                "Exclusively synth selected stacks",
+                "bool",
+                False,
+                "Only synthesize requested stacks, don't include dependencies",
+            ),
             ("--context", "Context key=value", "string", "", "Add contextual string parameter (-c KEY=VALUE)"),
             ("STACKS", "Stack names (space-separated)", "string", "", "Stacks to synthesize (leave empty for all)"),
         ],
@@ -50,11 +68,41 @@ _CDK_SUBCOMMANDS: list[dict[str, Any]] = [
         "description": "Deploy the CDK toolkit stack (required once per account/region).",
         "flags": [
             ("--profile", "AWS profile", "string", "", "Use the indicated AWS profile as the default environment"),
-            ("--toolkit-stack-name", "Toolkit stack name", "string", "", "The name of the CDK toolkit stack (default: CDKToolkit)"),
-            ("--qualifier", "Qualifier", "string", "", "String which must be unique per bootstrap stack name & target environment"),
-            ("--trust", "Trust accounts (comma-sep)", "string", "", "Account IDs that should be trusted to perform deployments into this environment"),
-            ("--cloudformation-execution-policies", "CF execution policies", "string", "", "ARNs of managed policies to attach to the deployment role"),
-            ("ENVIRONMENTS", "Environments (e.g. aws://123456789012/us-east-1)", "string", "", "Environments to bootstrap"),
+            (
+                "--toolkit-stack-name",
+                "Toolkit stack name",
+                "string",
+                "",
+                "The name of the CDK toolkit stack (default: CDKToolkit)",
+            ),
+            (
+                "--qualifier",
+                "Qualifier",
+                "string",
+                "",
+                "String which must be unique per bootstrap stack name & target environment",
+            ),
+            (
+                "--trust",
+                "Trust accounts (comma-sep)",
+                "string",
+                "",
+                "Account IDs that should be trusted to perform deployments into this environment",
+            ),
+            (
+                "--cloudformation-execution-policies",
+                "CF execution policies",
+                "string",
+                "",
+                "ARNs of managed policies to attach to the deployment role",
+            ),
+            (
+                "ENVIRONMENTS",
+                "Environments (e.g. aws://123456789012/us-east-1)",
+                "string",
+                "",
+                "Environments to bootstrap",
+            ),
         ],
     },
     {
@@ -62,15 +110,51 @@ _CDK_SUBCOMMANDS: list[dict[str, Any]] = [
         "label": "deploy",
         "description": "Deploy stacks to AWS.",
         "flags": [
-            ("--require-approval", "Require approval", "choice", "broadening", "What security-sensitive changes need manual approval (never/any/broadening)"),
-            ("--exclusively", "Exclusively deploy selected stacks", "bool", False, "Only deploy requested stacks, don't include dependencies"),
-            ("--parameters", "Parameters (KEY=VALUE)", "string", "", "Additional parameters passed to CloudFormation at deploy time"),
+            (
+                "--require-approval",
+                "Require approval",
+                "choice",
+                "broadening",
+                "What security-sensitive changes need manual approval (never/any/broadening)",
+            ),
+            (
+                "--exclusively",
+                "Exclusively deploy selected stacks",
+                "bool",
+                False,
+                "Only deploy requested stacks, don't include dependencies",
+            ),
+            (
+                "--parameters",
+                "Parameters (KEY=VALUE)",
+                "string",
+                "",
+                "Additional parameters passed to CloudFormation at deploy time",
+            ),
             ("--context", "Context key=value", "string", "", "Add contextual string parameter (-c KEY=VALUE)"),
-            ("--outputs-file", "Outputs file", "string", "", "Path to file where stack outputs will be written as JSON"),
+            (
+                "--outputs-file",
+                "Outputs file",
+                "string",
+                "",
+                "Path to file where stack outputs will be written as JSON",
+            ),
             ("--profile", "AWS profile", "string", "", "Use the indicated AWS profile"),
             ("--no-rollback", "Disable rollback", "bool", False, "Disable automatic rollback on failure"),
-            ("--hotswap", "Hotswap (Lambda/ECS only)", "bool", False, "Attempts to perform a 'hotswap' deployment for faster iteration on code changes"),
-            ("--watch", "Watch mode", "bool", False, "Continuously observe your code and assets, and deploy the smallest possible change"),
+            (
+                "--hotswap",
+                "Hotswap (Lambda/ECS only)",
+                "bool",
+                False,
+                "Attempts to perform a 'hotswap' deployment for faster iteration on code changes",
+            ),
+            (
+                "--watch",
+                "Watch mode",
+                "bool",
+                False,
+                "Continuously observe your code and assets, and deploy the smallest possible change",
+            ),
             ("STACKS", "Stack names (space-separated)", "string", "", "Stacks to deploy (leave empty for all)"),
         ],
     },
@@ -79,8 +163,20 @@ _CDK_SUBCOMMANDS: list[dict[str, Any]] = [
         "label": "destroy",
         "description": "Destroy stacks from AWS (deletes all resources).",
         "flags": [
-            ("--force", "Force (no confirmation)", "bool", False, "Do not ask for confirmation before destroying the stacks"),
-            ("--exclusively", "Exclusively destroy selected stacks", "bool", False, "Only destroy requested stacks, don't include dependents"),
+            (
+                "--force",
+                "Force (no confirmation)",
+                "bool",
+                False,
+                "Do not ask for confirmation before destroying the stacks",
+            ),
+            (
+                "--exclusively",
+                "Exclusively destroy selected stacks",
+                "bool",
+                False,
+                "Only destroy requested stacks, don't include dependents",
+            ),
             ("--profile", "AWS profile", "string", "", "Use the indicated AWS profile"),
             ("STACKS", "Stack names (space-separated)", "string", "", "Stacks to destroy (leave empty for all)"),
         ],
@@ -90,8 +186,20 @@ _CDK_SUBCOMMANDS: list[dict[str, Any]] = [
         "label": "diff",
         "description": "Compare deployed stack with current state.",
         "flags": [
-            ("--exclusively", "Only specified stacks", "bool", False, "Only diff requested stacks, don't include dependencies"),
-            ("--context-lines", "Context lines", "string", "3", "Number of context lines to include in arbitrary JSON diff"),
+            (
+                "--exclusively",
+                "Only specified stacks",
+                "bool",
+                False,
+                "Only diff requested stacks, don't include dependencies",
+            ),
+            (
+                "--context-lines",
+                "Context lines",
+                "string",
+                "3",
+                "Number of context lines to include in arbitrary JSON diff",
+            ),
             ("--security-only", "Security changes only", "bool", False, "Only diff for broadened security changes"),
             ("--profile", "AWS profile", "string", "", "Use the indicated AWS profile"),
             ("STACKS", "Stack names (space-separated)", "string", "", "Stacks to diff (leave empty for all)"),
@@ -102,8 +210,20 @@ _CDK_SUBCOMMANDS: list[dict[str, Any]] = [
         "label": "import",
         "description": "Import existing resources into a CDK stack.",
         "flags": [
-            ("--record-resource-mapping", "Record resource mapping", "string", "", "If specified, CDK will generate a mapping of existing physical resources to CDK resources"),
-            ("--resource-mapping", "Resource mapping file", "string", "", "If specified, CDK will use the mapping file to import resources into the CDK stack"),
+            (
+                "--record-resource-mapping",
+                "Record resource mapping",
+                "string",
+                "",
+                "If specified, CDK will generate a mapping of existing physical resources to CDK resources",
+            ),
+            (
+                "--resource-mapping",
+                "Resource mapping file",
+                "string",
+                "",
+                "If specified, CDK will use the mapping file to import resources into the CDK stack",
+            ),
             ("--force", "Force import", "bool", False, "Do not ask for confirmation before importing"),
             ("STACK", "Stack name", "string", "", "Stack to import resources into"),
         ],
@@ -162,7 +282,13 @@ _CDK_SUBCOMMANDS: list[dict[str, Any]] = [
         "label": "docs",
         "description": "Opens the reference documentation in your browser.",
         "flags": [
-            ("--browser", "Browser command", "string", "", "the command to use to open the browser, using %u as a placeholder for the path of the file to open"),
+            (
+                "--browser",
+                "Browser command",
+                "string",
+                "",
+                "the command to use to open the browser, using %u as a placeholder for the path of the file to open",
+            ),
         ],
     },
     {
@@ -170,7 +296,13 @@ _CDK_SUBCOMMANDS: list[dict[str, Any]] = [
         "label": "init",
         "description": "Create a new CDK project from a template.",
         "flags": [
-            ("--language", "Language", "choice", "typescript", "The language to be used for the new project (javascript/typescript/python/java/csharp/go)"),
+            (
+                "--language",
+                "Language",
+                "choice",
+                "typescript",
+                "The language to be used for the new project (javascript/typescript/python/java/csharp/go)",
+            ),
             ("--list", "List templates", "bool", False, "List the available templates"),
             ("--generate-only", "Generate only (no install)", "bool", False, "Do not call hooks, just generate"),
             ("TEMPLATE", "Template name", "string", "", "The template to instantiate (default: app)"),
@@ -252,8 +384,12 @@ class CdkDialog(tk.Toplevel):
         right.grid(row=0, column=2, sticky="nsew", padx=(4, 4), pady=4)
         right.grid_columnconfigure(0, weight=1)
         right.grid_rowconfigure(1, weight=1)
-        ttk.Label(right, text="CDK --help", font=("", 10, "bold")).grid(row=0, column=0, sticky="w", padx=4, pady=(0, 2))
-        self._help_text = tk.Text(right, wrap="word", state="disabled", font=("Courier", 9), background="#1e1e1e", foreground="#d4d4d4")
+        ttk.Label(right, text="CDK --help", font=("", 10, "bold")).grid(
+            row=0, column=0, sticky="w", padx=4, pady=(0, 2)
+        )
+        self._help_text = tk.Text(
+            right, wrap="word", state="disabled", font=("Courier", 9), background="#1e1e1e", foreground="#d4d4d4"
+        )
         help_scroll = ttk.Scrollbar(right, orient="vertical", command=self._help_text.yview)
         self._help_text.configure(yscrollcommand=help_scroll.set)
         self._help_text.grid(row=1, column=0, sticky="nsew")
@@ -322,7 +458,9 @@ class CdkDialog(tk.Toplevel):
         btn_frame = ttk.Frame(top)
         btn_frame.grid(row=4, column=0, sticky="ew", pady=(0, 4))
         self._dry_run_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(btn_frame, text="Dry run (--dry-run / synth only)", variable=self._dry_run_var).pack(side="left", padx=4)
+        ttk.Checkbutton(btn_frame, text="Dry run (--dry-run / synth only)", variable=self._dry_run_var).pack(
+            side="left", padx=4
+        )
         self._run_btn = ttk.Button(btn_frame, text="Run", command=self._on_run)
         self._run_btn.pack(side="right", padx=4)
         self._stop_btn = ttk.Button(btn_frame, text="Stop", command=self._on_stop, state="disabled")
@@ -339,7 +477,9 @@ class CdkDialog(tk.Toplevel):
         output_frame.grid(row=1, column=0, sticky="nsew", pady=(0, 4))
         output_frame.grid_columnconfigure(0, weight=1)
         output_frame.grid_rowconfigure(0, weight=1)
-        self._output_text = tk.Text(output_frame, wrap="none", state="disabled", font=("Courier", 9), background="#1e1e1e", foreground="#d4d4d4")
+        self._output_text = tk.Text(
+            output_frame, wrap="none", state="disabled", font=("Courier", 9), background="#1e1e1e", foreground="#d4d4d4"
+        )
         out_scroll_y = ttk.Scrollbar(output_frame, orient="vertical", command=self._output_text.yview)
         out_scroll_x = ttk.Scrollbar(output_frame, orient="horizontal", command=self._output_text.xview)
         self._output_text.configure(yscrollcommand=out_scroll_y.set, xscrollcommand=out_scroll_x.set)
@@ -462,7 +602,9 @@ class CdkDialog(tk.Toplevel):
 
     def _on_run(self) -> None:
         if self._proc is not None:
-            messagebox.showwarning("CDK already running", "A CDK process is already running. Stop it first.", parent=self)
+            messagebox.showwarning(
+                "CDK already running", "A CDK process is already running. Stop it first.", parent=self
+            )
             return
         cwd = self._cwd_var.get().strip() or os.getcwd()
         if not os.path.isdir(cwd):

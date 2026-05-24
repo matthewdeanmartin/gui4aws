@@ -41,15 +41,9 @@ def test_list_stacks_empty(mock_aws_env: None) -> None:
 
 def test_create_and_delete_stack(mock_aws_env: None) -> None:
     cfn = boto3.client("cloudformation", region_name="us-east-1")
-    template = {
-        "AWSTemplateFormatVersion": "2010-09-09",
-        "Resources": {
-            "MyBucket": {
-                "Type": "AWS::S3::Bucket"
-            }
-        }
-    }
+    template = {"AWSTemplateFormatVersion": "2010-09-09", "Resources": {"MyBucket": {"Type": "AWS::S3::Bucket"}}}
     import json
+
     cfn.create_stack(StackName="test-stack", TemplateBody=json.dumps(template))
 
     context = AppContext(region_name="us-east-1")

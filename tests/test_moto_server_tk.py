@@ -20,7 +20,6 @@ from gui4aws.app import AppContext
 from gui4aws.execution.endpoint_config import EndpointConfig, EndpointMode
 from gui4aws.moto_server import MotoServerManager
 
-
 # ── Module-scoped moto server ─────────────────────────────────────────────────
 
 

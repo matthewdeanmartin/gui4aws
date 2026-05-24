@@ -99,20 +99,19 @@ def to_security_group_rule_summaries(response: Mapping[str, Any]) -> list[Securi
             from_port = r.get("FromPort")
             to_port = r.get("ToPort")
             cidr = (
-                r.get("CidrIpv4")
-                or r.get("CidrIpv6")
-                or r.get("ReferencedGroupInfo", {}).get("GroupId")
-                or "0.0.0.0/0"
+                r.get("CidrIpv4") or r.get("CidrIpv6") or r.get("ReferencedGroupInfo", {}).get("GroupId") or "0.0.0.0/0"
             )
-            summaries.append(SecurityGroupRuleSummary(
-                rule_id=str(r.get("SecurityGroupRuleId", "")),
-                direction="outbound" if is_egress else "inbound",
-                protocol=str(r.get("IpProtocol", "-1")),
-                from_port=str(from_port) if from_port is not None else "All",
-                to_port=str(to_port) if to_port is not None else "All",
-                cidr=str(cidr),
-                description=r.get("Description") or None,
-            ))
+            summaries.append(
+                SecurityGroupRuleSummary(
+                    rule_id=str(r.get("SecurityGroupRuleId", "")),
+                    direction="outbound" if is_egress else "inbound",
+                    protocol=str(r.get("IpProtocol", "-1")),
+                    from_port=str(from_port) if from_port is not None else "All",
+                    to_port=str(to_port) if to_port is not None else "All",
+                    cidr=str(cidr),
+                    description=r.get("Description") or None,
+                )
+            )
         return summaries
 
     # Path 2: flattened from describe_security_groups (for SubAction use)
@@ -126,15 +125,17 @@ def to_security_group_rule_summaries(response: Mapping[str, Any]) -> list[Securi
             if not cidrs:
                 cidrs = [g.get("GroupId", "") for g in r.get("UserIdGroupPairs", [])] or ["0.0.0.0/0"]
             for cidr in cidrs:
-                summaries.append(SecurityGroupRuleSummary(
-                    rule_id="",
-                    direction="inbound",
-                    protocol=protocol,
-                    from_port=str(from_port) if from_port is not None else "All",
-                    to_port=str(to_port) if to_port is not None else "All",
-                    cidr=cidr,
-                    description=None,
-                ))
+                summaries.append(
+                    SecurityGroupRuleSummary(
+                        rule_id="",
+                        direction="inbound",
+                        protocol=protocol,
+                        from_port=str(from_port) if from_port is not None else "All",
+                        to_port=str(to_port) if to_port is not None else "All",
+                        cidr=cidr,
+                        description=None,
+                    )
+                )
         for r in sg.get("IpPermissionsEgress", []):
             protocol = str(r.get("IpProtocol", "-1"))
             from_port = r.get("FromPort")
@@ -143,15 +144,17 @@ def to_security_group_rule_summaries(response: Mapping[str, Any]) -> list[Securi
             if not cidrs:
                 cidrs = ["0.0.0.0/0"]
             for cidr in cidrs:
-                summaries.append(SecurityGroupRuleSummary(
-                    rule_id="",
-                    direction="outbound",
-                    protocol=protocol,
-                    from_port=str(from_port) if from_port is not None else "All",
-                    to_port=str(to_port) if to_port is not None else "All",
-                    cidr=cidr,
-                    description=None,
-                ))
+                summaries.append(
+                    SecurityGroupRuleSummary(
+                        rule_id="",
+                        direction="outbound",
+                        protocol=protocol,
+                        from_port=str(from_port) if from_port is not None else "All",
+                        to_port=str(to_port) if to_port is not None else "All",
+                        cidr=cidr,
+                        description=None,
+                    )
+                )
     return summaries
 
 

@@ -1,10 +1,17 @@
 """SNS action definitions."""
+
 from __future__ import annotations
+
 from gui4aws.models import (
-    ActionDefinition, Boto3Template, CliTemplate, InputField,
-    ResultViewDefinition, ResultViewKind, RiskLevel,
+    ActionDefinition,
+    Boto3Template,
+    CliTemplate,
+    InputField,
+    ResultViewDefinition,
+    ResultViewKind,
+    RiskLevel,
 )
-from gui4aws.services.sns.views import to_topic_summaries, to_subscription_summaries
+from gui4aws.services.sns.views import to_subscription_summaries, to_topic_summaries
 
 __all__ = [
     "ALL_ACTIONS",
@@ -63,9 +70,7 @@ DELETE_TOPIC = ActionDefinition(
     display_name="Delete topic",
     service_id="sns",
     risk_level=RiskLevel.DESTRUCTIVE,
-    input_fields=(
-        InputField(name="topic_arn", label="Topic ARN", required=True),
-    ),
+    input_fields=(InputField(name="topic_arn", label="Topic ARN", required=True),),
     cli_template=CliTemplate(service="sns", command="delete-topic", arg_map={"topic_arn": "topic-arn"}),
     boto3_template=Boto3Template(service="sns", operation="delete_topic", param_map={"topic_arn": "TopicArn"}),
     result_view=ResultViewDefinition(kind=ResultViewKind.RAW_JSON, title="Delete topic result"),
@@ -106,15 +111,18 @@ SUBSCRIBE = ActionDefinition(
             choices=("email", "email-json", "http", "https", "sqs", "lambda", "sms", "application"),
             default="email",
         ),
-        InputField(name="endpoint", label="Endpoint", required=True,
-                   help_text="Email address, URL, SQS ARN, Lambda ARN, etc."),
+        InputField(
+            name="endpoint", label="Endpoint", required=True, help_text="Email address, URL, SQS ARN, Lambda ARN, etc."
+        ),
     ),
     cli_template=CliTemplate(
-        service="sns", command="subscribe",
+        service="sns",
+        command="subscribe",
         arg_map={"topic_arn": "topic-arn", "protocol": "protocol", "endpoint": "notification-endpoint"},
     ),
     boto3_template=Boto3Template(
-        service="sns", operation="subscribe",
+        service="sns",
+        operation="subscribe",
         param_map={"topic_arn": "TopicArn", "protocol": "Protocol", "endpoint": "Endpoint"},
     ),
     result_view=ResultViewDefinition(kind=ResultViewKind.RAW_JSON, title="Subscribe result"),
@@ -128,11 +136,11 @@ UNSUBSCRIBE = ActionDefinition(
     display_name="Unsubscribe",
     service_id="sns",
     risk_level=RiskLevel.DESTRUCTIVE,
-    input_fields=(
-        InputField(name="subscription_arn", label="Subscription ARN", required=True),
-    ),
+    input_fields=(InputField(name="subscription_arn", label="Subscription ARN", required=True),),
     cli_template=CliTemplate(service="sns", command="unsubscribe", arg_map={"subscription_arn": "subscription-arn"}),
-    boto3_template=Boto3Template(service="sns", operation="unsubscribe", param_map={"subscription_arn": "SubscriptionArn"}),
+    boto3_template=Boto3Template(
+        service="sns", operation="unsubscribe", param_map={"subscription_arn": "SubscriptionArn"}
+    ),
     result_view=ResultViewDefinition(kind=ResultViewKind.RAW_JSON, title="Unsubscribe result"),
     iam_permissions=("sns:Unsubscribe",),
     description="Remove a subscription from an SNS topic.",
@@ -150,11 +158,13 @@ PUBLISH = ActionDefinition(
         InputField(name="subject", label="Subject (optional)", required=False),
     ),
     cli_template=CliTemplate(
-        service="sns", command="publish",
+        service="sns",
+        command="publish",
         arg_map={"topic_arn": "topic-arn", "message": "message", "subject": "subject"},
     ),
     boto3_template=Boto3Template(
-        service="sns", operation="publish",
+        service="sns",
+        operation="publish",
         param_map={"topic_arn": "TopicArn", "message": "Message", "subject": "Subject"},
     ),
     result_view=ResultViewDefinition(kind=ResultViewKind.RAW_JSON, title="Publish result"),

@@ -1,15 +1,20 @@
 """Normalization functions for IAM."""
+
 from __future__ import annotations
+
 from collections.abc import Mapping
 from typing import Any
-from gui4aws.services.iam.models import UserSummary, GroupSummary, RoleSummary, PolicySummary
+
+from gui4aws.services.iam.models import GroupSummary, PolicySummary, RoleSummary, UserSummary
 
 __all__ = ["to_group_summaries", "to_policy_summaries", "to_role_summaries", "to_user_summaries"]
+
 
 def _fmt(value: Any) -> str | None:
     if value is None:
         return None
     return str(value)[:19]
+
 
 def to_user_summaries(response: Mapping[str, Any]) -> list[UserSummary]:
     users = response.get("Users", []) or []
@@ -25,6 +30,7 @@ def to_user_summaries(response: Mapping[str, Any]) -> list[UserSummary]:
         for u in users
     ]
 
+
 def to_group_summaries(response: Mapping[str, Any]) -> list[GroupSummary]:
     groups = response.get("Groups", []) or []
     return [
@@ -37,6 +43,7 @@ def to_group_summaries(response: Mapping[str, Any]) -> list[GroupSummary]:
         )
         for g in groups
     ]
+
 
 def to_role_summaries(response: Mapping[str, Any]) -> list[RoleSummary]:
     roles = response.get("Roles", []) or []
@@ -51,6 +58,7 @@ def to_role_summaries(response: Mapping[str, Any]) -> list[RoleSummary]:
         )
         for r in roles
     ]
+
 
 def to_policy_summaries(response: Mapping[str, Any]) -> list[PolicySummary]:
     policies = response.get("Policies", []) or []

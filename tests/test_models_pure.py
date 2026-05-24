@@ -21,7 +21,6 @@ from gui4aws.models import (
 )
 from gui4aws.services.service_registry import ServiceRegistry
 
-
 # ── ActionDefinition / InputField ────────────────────────────────────────────
 
 
@@ -128,8 +127,8 @@ def test_service_registry_missing_raises() -> None:
 
 
 def test_service_registry_len_and_iter() -> None:
-    from gui4aws.services.sqs.service import SERVICE as SQS_SERVICE
     from gui4aws.services.s3.service import SERVICE as S3_SERVICE
+    from gui4aws.services.sqs.service import SERVICE as SQS_SERVICE
 
     reg = ServiceRegistry((SQS_SERVICE, S3_SERVICE))
     assert len(reg) == 2

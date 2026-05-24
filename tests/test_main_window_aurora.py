@@ -65,7 +65,7 @@ def test_dispatch_result_updates_sub_tables_for_aurora_cluster() -> None:
         multi_az=True,
         member_count=2,
         arn="arn1",
-        kms_key_id=None
+        kms_key_id=None,
     )
     window.main_panel.row = cluster  # type: ignore[attr-defined]
 
@@ -76,7 +76,7 @@ def test_dispatch_result_updates_sub_tables_for_aurora_cluster() -> None:
         region="us-east-1",
         duration_seconds=0.1,
         request_params={},
-        response={"DBClusters": [{"DBClusterIdentifier": "c1", "Status": "available", "Engine": "aurora-mysql"}]}
+        response={"DBClusters": [{"DBClusterIdentifier": "c1", "Status": "available", "Engine": "aurora-mysql"}]},
     )
 
     # Dispatch should trigger sub-table refresh for the selected cluster
@@ -103,7 +103,7 @@ def test_dispatch_result_for_sub_action_updates_sub_table_content() -> None:
     window._nav_generation = 1
 
     # Find the instances sub-action from the service definition
-    nav = AURORA_SERVICE.navigation_items[0] # clusters
+    nav = AURORA_SERVICE.navigation_items[0]  # clusters
     sub_action = nav.sub_action
     assert sub_action is not None
 
@@ -113,7 +113,17 @@ def test_dispatch_result_for_sub_action_updates_sub_table_content() -> None:
         region="us-east-1",
         duration_seconds=0.1,
         request_params={"Filters": []},
-        response={"DBInstances": [{"DBInstanceIdentifier": "i1", "DBClusterIdentifier": "c1", "Engine": "aurora-mysql", "DBInstanceStatus": "available", "DBInstanceClass": "db.t3.medium"}]}
+        response={
+            "DBInstances": [
+                {
+                    "DBInstanceIdentifier": "i1",
+                    "DBClusterIdentifier": "c1",
+                    "Engine": "aurora-mysql",
+                    "DBInstanceStatus": "available",
+                    "DBInstanceClass": "db.t3.medium",
+                }
+            ]
+        },
     )
 
     window.dispatch_result("sub_ok", sub_action, (result, {}))

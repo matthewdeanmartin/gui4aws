@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 import boto3
 
 from gui4aws.app import AppContext

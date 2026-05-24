@@ -32,12 +32,7 @@ def test_put_and_get_parameter(mock_aws_env: None) -> None:
     # Put
     result = context.execute(
         PUT_PARAMETER,
-        inputs={
-            "name": "test-param",
-            "value": "test-value",
-            "type": "String",
-            "description": "test-desc"
-        }
+        inputs={"name": "test-param", "value": "test-value", "type": "String", "description": "test-desc"},
     )
     assert isinstance(result, Boto3Result)
     assert "Version" in result.response

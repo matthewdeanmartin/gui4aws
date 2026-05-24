@@ -12,8 +12,8 @@ from gui4aws.services.aurora.actions import (
     CREATE_DB_INSTANCE,
     DELETE_DB_CLUSTER,
     DELETE_DB_INSTANCE,
-    DESCRIBE_DB_CLUSTER_SNAPSHOTS,
     DESCRIBE_DB_CLUSTER_PARAMETER_GROUPS,
+    DESCRIBE_DB_CLUSTER_SNAPSHOTS,
     DESCRIBE_DB_CLUSTERS,
     DESCRIBE_DB_INSTANCES,
     DESCRIBE_DB_PARAMETER_GROUPS,
@@ -44,11 +44,15 @@ def test_delete_db_cluster_and_instance(mock_aws_env: None) -> None:
     context = AppContext(region_name="us-east-1")
 
     # Delete Instance
-    inst_res = context.execute(DELETE_DB_INSTANCE, inputs={"instance_identifier": "del-inst", "skip_final_snapshot": "true"})
+    inst_res = context.execute(
+        DELETE_DB_INSTANCE, inputs={"instance_identifier": "del-inst", "skip_final_snapshot": "true"}
+    )
     assert isinstance(inst_res, Boto3Result)
 
     # Delete Cluster
-    cluster_res = context.execute(DELETE_DB_CLUSTER, inputs={"cluster_identifier": "del-cluster", "skip_final_snapshot": "true"})
+    cluster_res = context.execute(
+        DELETE_DB_CLUSTER, inputs={"cluster_identifier": "del-cluster", "skip_final_snapshot": "true"}
+    )
     assert isinstance(cluster_res, Boto3Result)
 
 
@@ -107,12 +111,9 @@ def test_db_snapshot_actions(mock_aws_env: None) -> None:
 
     # Create Snapshot
     create_res = context.execute(
-        CREATE_DB_CLUSTER_SNAPSHOT,
-        inputs={"cluster_identifier": "snap-cluster", "snapshot_identifier": "manual-snap"}
+        CREATE_DB_CLUSTER_SNAPSHOT, inputs={"cluster_identifier": "snap-cluster", "snapshot_identifier": "manual-snap"}
     )
     assert isinstance(create_res, Boto3Result)
-
-
 
 
 def test_describe_db_clusters_returns_summaries(mock_aws_env: None) -> None:
@@ -252,8 +253,12 @@ def test_describe_db_subnet_groups_returns_planted_group(mock_aws_env: None) -> 
     """Aurora tree exposes DB subnet groups."""
     ec2 = boto3.client("ec2", region_name="us-east-1")
     vpc = ec2.create_vpc(CidrBlock="10.0.0.0/16")["Vpc"]["VpcId"]
-    subnet_a = ec2.create_subnet(VpcId=vpc, CidrBlock="10.0.1.0/24", AvailabilityZone="us-east-1a")["Subnet"]["SubnetId"]
-    subnet_b = ec2.create_subnet(VpcId=vpc, CidrBlock="10.0.2.0/24", AvailabilityZone="us-east-1b")["Subnet"]["SubnetId"]
+    subnet_a = ec2.create_subnet(VpcId=vpc, CidrBlock="10.0.1.0/24", AvailabilityZone="us-east-1a")["Subnet"][
+        "SubnetId"
+    ]
+    subnet_b = ec2.create_subnet(VpcId=vpc, CidrBlock="10.0.2.0/24", AvailabilityZone="us-east-1b")["Subnet"][
+        "SubnetId"
+    ]
     rds = boto3.client("rds", region_name="us-east-1")
     rds.create_db_subnet_group(
         DBSubnetGroupName="subnet-group-1",
@@ -290,6 +295,4 @@ def test_describe_db_parameter_groups_returns_custom_groups(mock_aws_env: None) 
     cluster_result = context.execute(DESCRIBE_DB_CLUSTER_PARAMETER_GROUPS, inputs={})
     assert isinstance(cluster_result, Boto3Result)
     cluster_summaries = DESCRIBE_DB_CLUSTER_PARAMETER_GROUPS.view(cluster_result.response)  # type: ignore[misc]
-    assert any(
-        summary.cluster_parameter_group_name == "cluster-param-group-1" for summary in cluster_summaries
-    )
+    assert any(summary.cluster_parameter_group_name == "cluster-param-group-1" for summary in cluster_summaries)

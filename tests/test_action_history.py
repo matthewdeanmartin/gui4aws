@@ -22,7 +22,7 @@ def make_entry(action_id: str = "aurora.describe_db_clusters") -> ActionHistoryE
         inputs={},
         cli_script="#!/usr/bin/env bash\nset -euo pipefail\naws rds describe-db-clusters --region us-east-1\n",
         python_script=(
-            'import boto3\n\n\ndef main() -> None:\n'
+            "import boto3\n\n\ndef main() -> None:\n"
             '    session = boto3.Session(region_name="us-east-1")\n'
             '    client = session.client("rds")\n'
             "    response = client.describe_db_clusters()\n"

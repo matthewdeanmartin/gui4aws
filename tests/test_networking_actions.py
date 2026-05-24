@@ -13,8 +13,8 @@ from gui4aws.services.networking.actions import (
     DELETE_SECURITY_GROUP,
     DELETE_SUBNET,
     DELETE_VPC,
-    DESCRIBE_SECURITY_GROUPS,
     DESCRIBE_SECURITY_GROUP_RULES,
+    DESCRIBE_SECURITY_GROUPS,
     DESCRIBE_SUBNETS,
     DESCRIBE_VPCS,
 )
@@ -60,10 +60,7 @@ def test_subnet_actions(mock_aws_env: None) -> None:
     context = AppContext(region_name="us-east-1")
 
     # Create Subnet (name is not currently mapped)
-    result = context.execute(
-        CREATE_SUBNET,
-        inputs={"vpc_id": vpc_id, "cidr_block": "10.2.1.0/24"}
-    )
+    result = context.execute(CREATE_SUBNET, inputs={"vpc_id": vpc_id, "cidr_block": "10.2.1.0/24"})
     assert isinstance(result, Boto3Result)
     subnet_id = result.response["Subnet"]["SubnetId"]
 
@@ -85,8 +82,7 @@ def test_security_group_actions(mock_aws_env: None) -> None:
 
     # Create SG
     result = context.execute(
-        CREATE_SECURITY_GROUP,
-        inputs={"group_name": "test-sg", "description": "test sg desc", "vpc_id": vpc_id}
+        CREATE_SECURITY_GROUP, inputs={"group_name": "test-sg", "description": "test sg desc", "vpc_id": vpc_id}
     )
     assert isinstance(result, Boto3Result)
     group_id = result.response["GroupId"]
@@ -98,13 +94,7 @@ def test_security_group_actions(mock_aws_env: None) -> None:
 
     # Describe Rules
     # Add a rule first via boto3 to have something to see
-    ec2.authorize_security_group_ingress(
-        GroupId=group_id,
-        IpProtocol="tcp",
-        FromPort=80,
-        ToPort=80,
-        CidrIp="0.0.0.0/0"
-    )
+    ec2.authorize_security_group_ingress(GroupId=group_id, IpProtocol="tcp", FromPort=80, ToPort=80, CidrIp="0.0.0.0/0")
 
     rules_result = context.execute(DESCRIBE_SECURITY_GROUP_RULES, inputs={"group_id": group_id})
     rule_summaries = to_security_group_rule_summaries(rules_result.response)

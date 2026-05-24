@@ -116,7 +116,17 @@ SERVICE = ServiceDefinition(
                     name="by_state",
                     label="Filter by state",
                     kind="choice",
-                    choices=("", "CREATED", "PENDING", "RUNNING", "ABORTING", "ABORTED", "COMPLETED", "FAILED", "EXPIRED"),
+                    choices=(
+                        "",
+                        "CREATED",
+                        "PENDING",
+                        "RUNNING",
+                        "ABORTING",
+                        "ABORTED",
+                        "COMPLETED",
+                        "FAILED",
+                        "EXPIRED",
+                    ),
                 ),
             ),
             row_actions=(

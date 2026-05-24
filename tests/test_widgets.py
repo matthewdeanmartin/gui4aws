@@ -4,19 +4,19 @@ from __future__ import annotations
 
 import tkinter as tk
 from collections.abc import Generator
-from unittest.mock import MagicMock
 from dataclasses import dataclass
+from unittest.mock import MagicMock
 
 import pytest
 
 from gui4aws.app import AppContext
+from gui4aws.gui.detail_tree import DetailTree
 from gui4aws.gui.filter_bar import FilterBar
 from gui4aws.gui.resource_table import ResourceTable
 from gui4aws.gui.sidebar import Sidebar
 from gui4aws.gui.status_bar import StatusBar
-from gui4aws.gui.detail_tree import DetailTree
 from gui4aws.gui.toolbar import Toolbar
-from gui4aws.models import InputField, ServiceDefinition, NavigationItem
+from gui4aws.models import InputField, NavigationItem, ServiceDefinition
 from gui4aws.services.service_registry import ServiceRegistry
 
 
@@ -108,7 +108,7 @@ def test_sidebar_populate_and_select(tk_root: tk.Tk) -> None:
         boto3_service_name="s3",
         cli_service_name="s3",
         navigation_items=(nav,),
-        actions=()
+        actions=(),
     )
     on_select = MagicMock()
     registry.register(svc)

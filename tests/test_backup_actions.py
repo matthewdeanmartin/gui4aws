@@ -34,11 +34,7 @@ def test_start_backup_job_python_script() -> None:
     """Builder for start_backup_job correctly handles lifecycle."""
     text = generate_python_script(
         START_BACKUP_JOB,
-        inputs={
-            "vault_name": "v1",
-            "resource_arn": "arn:s3:::b1",
-            "lifecycle_delete_after_days": "7"
-        },
+        inputs={"vault_name": "v1", "resource_arn": "arn:s3:::b1", "lifecycle_delete_after_days": "7"},
         profile_name=None,
         region_name="us-east-1",
         endpoint_config=EndpointConfig(),
@@ -51,11 +47,7 @@ def test_start_restore_job_python_script() -> None:
     """Builder for start_restore_job correctly handles metadata."""
     text = generate_python_script(
         START_RESTORE_JOB,
-        inputs={
-            "recovery_point_arn": "rp1",
-            "new_cluster_identifier": "new-c",
-            "engine": "aurora-mysql"
-        },
+        inputs={"recovery_point_arn": "rp1", "new_cluster_identifier": "new-c", "engine": "aurora-mysql"},
         profile_name=None,
         region_name="us-east-1",
         endpoint_config=EndpointConfig(),
@@ -67,7 +59,7 @@ def test_start_restore_job_python_script() -> None:
 
 def test_list_recovery_points_by_job_view_empty() -> None:
     """View handles empty job list correctly."""
-    summaries = LIST_RECOVERY_POINTS_BY_JOB.view({"BackupJobs": []}) # type: ignore
+    summaries = LIST_RECOVERY_POINTS_BY_JOB.view({"BackupJobs": []})  # type: ignore
     assert summaries == []
 
 
@@ -80,11 +72,11 @@ def test_list_restore_jobs_view() -> None:
                 "Status": "COMPLETED",
                 "ResourceType": "RDS",
                 "CreatedResourceArn": "arn:rds",
-                "CreationDate": "2023-01-01"
+                "CreationDate": "2023-01-01",
             }
         ]
     }
-    summaries = LIST_RESTORE_JOBS.view(resp) # type: ignore
+    summaries = LIST_RESTORE_JOBS.view(resp)  # type: ignore
     assert len(summaries) == 1
     assert summaries[0].job_id == "rj1"
 

@@ -54,12 +54,7 @@ def test_subscription_actions(mock_aws_env: None) -> None:
 
     # Subscribe
     result = context.execute(
-        SUBSCRIBE,
-        inputs={
-            "topic_arn": topic_arn,
-            "protocol": "email",
-            "endpoint": "test@example.com"
-        }
+        SUBSCRIBE, inputs={"topic_arn": topic_arn, "protocol": "email", "endpoint": "test@example.com"}
     )
     assert isinstance(result, Boto3Result)
     sub_arn = result.response["SubscriptionArn"]
@@ -80,12 +75,7 @@ def test_publish_message(mock_aws_env: None) -> None:
 
     context = AppContext(region_name="us-east-1")
     result = context.execute(
-        PUBLISH,
-        inputs={
-            "topic_arn": topic_arn,
-            "message": "hello world",
-            "subject": "test subject"
-        }
+        PUBLISH, inputs={"topic_arn": topic_arn, "message": "hello world", "subject": "test subject"}
     )
     assert isinstance(result, Boto3Result)
     assert "MessageId" in result.response

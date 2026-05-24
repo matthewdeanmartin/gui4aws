@@ -78,11 +78,10 @@ def test_log_actions(mock_aws_env: None) -> None:
     # Create stream and event via boto3
     logs.create_log_stream(logGroupName="test-lg", logStreamName="test-stream")
     import datetime
+
     now_ms = int(datetime.datetime.now().timestamp() * 1000)
     logs.put_log_events(
-        logGroupName="test-lg",
-        logStreamName="test-stream",
-        logEvents=[{"timestamp": now_ms, "message": "hello"}]
+        logGroupName="test-lg", logStreamName="test-stream", logEvents=[{"timestamp": now_ms, "message": "hello"}]
     )
 
     # List Streams
@@ -92,8 +91,7 @@ def test_log_actions(mock_aws_env: None) -> None:
 
     # Get Events
     events_result = context.execute(
-        GET_LOG_EVENTS,
-        inputs={"log_group_name": "test-lg", "log_stream_name": "test-stream"}
+        GET_LOG_EVENTS, inputs={"log_group_name": "test-lg", "log_stream_name": "test-stream"}
     )
     event_summaries = to_log_event_summaries(events_result.response)
     assert any(s.message == "hello" for s in event_summaries)

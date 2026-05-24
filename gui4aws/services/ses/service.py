@@ -1,8 +1,14 @@
 """ServiceDefinition for SES."""
+
 from __future__ import annotations
+
 from gui4aws.models import NavigationItem, RowAction, ServiceDefinition
 from gui4aws.services.ses.actions import (
-    ALL_ACTIONS, DELETE_IDENTITY, LIST_IDENTITIES, LIST_TEMPLATES, VERIFY_EMAIL_IDENTITY,
+    ALL_ACTIONS,
+    DELETE_IDENTITY,
+    LIST_IDENTITIES,
+    LIST_TEMPLATES,
+    VERIFY_EMAIL_IDENTITY,
 )
 
 __all__ = ["SERVICE"]

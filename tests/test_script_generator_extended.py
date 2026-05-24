@@ -26,13 +26,7 @@ def test_generate_cli_script_with_profile_and_endpoint():
         iam_permissions=(),
     )
 
-    script = generate_cli_script(
-        action,
-        {},
-        profile_name="dev",
-        region_name="us-east-1",
-        endpoint_config=config
-    )
+    script = generate_cli_script(action, {}, profile_name="dev", region_name="us-east-1", endpoint_config=config)
 
     assert "aws s3 ls" in script
     assert "--profile dev" in script
@@ -53,9 +47,7 @@ def test_generate_python_script_with_params():
         ),
         cli_template=MagicMock(),
         boto3_template=Boto3Template(
-            service="s3",
-            operation="put_object",
-            param_map={"bucket": "Bucket", "key": "Key"}
+            service="s3", operation="put_object", param_map={"bucket": "Bucket", "key": "Key"}
         ),
         result_view=MagicMock(),
         iam_permissions=(),
@@ -66,7 +58,7 @@ def test_generate_python_script_with_params():
         {"bucket": "my-bucket", "key": "my-key"},
         profile_name=None,
         region_name="us-east-1",
-        endpoint_config=config
+        endpoint_config=config,
     )
 
     assert "import boto3" in script
@@ -88,16 +80,10 @@ def test_generate_cli_script_with_builder():
         boto3_template=MagicMock(),
         result_view=MagicMock(),
         iam_permissions=(),
-        cli_args_builder=lambda inputs: ["--custom-flag", "custom-val"]
+        cli_args_builder=lambda inputs: ["--custom-flag", "custom-val"],
     )
 
-    script = generate_cli_script(
-        action,
-        {},
-        profile_name=None,
-        region_name="us-east-1",
-        endpoint_config=config
-    )
+    script = generate_cli_script(action, {}, profile_name=None, region_name="us-east-1", endpoint_config=config)
 
     assert "--custom-flag custom-val" in script
 
@@ -114,15 +100,9 @@ def test_generate_python_script_with_builder():
         boto3_template=Boto3Template(service="s3", operation="put_object"),
         result_view=MagicMock(),
         iam_permissions=(),
-        boto3_params_builder=lambda inputs: {"CustomParam": "CustomValue"}
+        boto3_params_builder=lambda inputs: {"CustomParam": "CustomValue"},
     )
 
-    script = generate_python_script(
-        action,
-        {},
-        profile_name=None,
-        region_name="us-east-1",
-        endpoint_config=config
-    )
+    script = generate_python_script(action, {}, profile_name=None, region_name="us-east-1", endpoint_config=config)
 
     assert "CustomParam='CustomValue'" in script

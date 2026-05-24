@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from botocore.exceptions import ClientError, BotoCoreError
 from unittest.mock import MagicMock, patch
+
+from botocore.exceptions import BotoCoreError, ClientError
 
 from gui4aws.execution.boto3_executor import Boto3Executor, Boto3Failure, coerce_value
 from gui4aws.execution.endpoint_config import EndpointConfig, EndpointMode
@@ -32,8 +33,7 @@ def test_execute_client_error():
     with patch.object(executor, "build_client") as mock_build:
         mock_client = MagicMock()
         mock_client.list_buckets.side_effect = ClientError(
-            {"Error": {"Code": "NoSuchBucket", "Message": "The bucket does not exist"}},
-            "ListBuckets"
+            {"Error": {"Code": "NoSuchBucket", "Message": "The bucket does not exist"}}, "ListBuckets"
         )
         mock_build.return_value = mock_client
 

@@ -1,9 +1,17 @@
 """ServiceDefinition for SNS."""
+
 from __future__ import annotations
+
 from gui4aws.models import NavigationItem, RowAction, ServiceDefinition
 from gui4aws.services.sns.actions import (
-    ALL_ACTIONS, CREATE_TOPIC, DELETE_TOPIC, LIST_SUBSCRIPTIONS,
-    LIST_TOPICS, PUBLISH, SUBSCRIBE, UNSUBSCRIBE,
+    ALL_ACTIONS,
+    CREATE_TOPIC,
+    DELETE_TOPIC,
+    LIST_SUBSCRIPTIONS,
+    LIST_TOPICS,
+    PUBLISH,
+    SUBSCRIBE,
+    UNSUBSCRIBE,
 )
 
 __all__ = ["SERVICE"]

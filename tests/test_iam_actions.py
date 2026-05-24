@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import boto3
 import json
+
+import boto3
 
 from gui4aws.app import AppContext
 from gui4aws.execution.boto3_executor import Boto3Result
@@ -84,13 +85,12 @@ def test_role_actions(mock_aws_env: None) -> None:
 
     trust_policy = {
         "Version": "2012-10-17",
-        "Statement": [{"Effect": "Allow", "Principal": {"Service": "ec2.amazonaws.com"}, "Action": "sts:AssumeRole"}]
+        "Statement": [{"Effect": "Allow", "Principal": {"Service": "ec2.amazonaws.com"}, "Action": "sts:AssumeRole"}],
     }
 
     # Create
     result = context.execute(
-        CREATE_ROLE,
-        inputs={"role_name": "test-role", "assume_role_policy": json.dumps(trust_policy)}
+        CREATE_ROLE, inputs={"role_name": "test-role", "assume_role_policy": json.dumps(trust_policy)}
     )
     assert isinstance(result, Boto3Result)
 
@@ -112,12 +112,9 @@ def test_policy_actions(mock_aws_env: None) -> None:
     iam = boto3.client("iam", region_name="us-east-1")
     policy_doc = {
         "Version": "2012-10-17",
-        "Statement": [{"Effect": "Allow", "Action": "s3:ListAllMyBuckets", "Resource": "*"}]
+        "Statement": [{"Effect": "Allow", "Action": "s3:ListAllMyBuckets", "Resource": "*"}],
     }
-    policy_arn = iam.create_policy(
-        PolicyName="test-policy",
-        PolicyDocument=json.dumps(policy_doc)
-    )["Policy"]["Arn"]
+    policy_arn = iam.create_policy(PolicyName="test-policy", PolicyDocument=json.dumps(policy_doc))["Policy"]["Arn"]
 
     context = AppContext(region_name="us-east-1")
 

@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import boto3
 import json
+
+import boto3
 
 from gui4aws.app import AppContext
 from gui4aws.execution.boto3_executor import Boto3Result
@@ -72,7 +73,7 @@ def test_task_definition_actions(mock_aws_env: None) -> None:
                 "image": "nginx",
                 "memory": 128,
             }
-        ]
+        ],
     }
 
     # Register
@@ -96,8 +97,7 @@ def test_service_actions(mock_aws_env: None) -> None:
     ecs = boto3.client("ecs", region_name="us-east-1")
     ecs.create_cluster(clusterName="svc-cluster")
     ecs.register_task_definition(
-        family="svc-task",
-        containerDefinitions=[{"name": "web", "image": "nginx", "memory": 128}]
+        family="svc-task", containerDefinitions=[{"name": "web", "image": "nginx", "memory": 128}]
     )
 
     context = AppContext(region_name="us-east-1")
@@ -109,8 +109,8 @@ def test_service_actions(mock_aws_env: None) -> None:
             "cluster": "svc-cluster",
             "service_name": "test-service",
             "task_definition": "svc-task",
-            "desired_count": "1"
-        }
+            "desired_count": "1",
+        },
     )
     assert isinstance(result, Boto3Result)
     assert result.response["service"]["serviceName"] == "test-service"
@@ -121,17 +121,13 @@ def test_service_actions(mock_aws_env: None) -> None:
     assert any(s.service_name == "test-service" for s in summaries)
 
     # Describe Services
-    desc_result = context.execute(
-        DESCRIBE_SERVICES,
-        inputs={"cluster": "svc-cluster", "services": "test-service"}
-    )
+    desc_result = context.execute(DESCRIBE_SERVICES, inputs={"cluster": "svc-cluster", "services": "test-service"})
     summaries = to_service_summaries(desc_result.response)
     assert len(summaries) == 1
     assert summaries[0].service_name == "test-service"
 
     # Delete Service
     del_result = context.execute(
-        DELETE_SERVICE,
-        inputs={"cluster": "svc-cluster", "service": "test-service", "force": "true"}
+        DELETE_SERVICE, inputs={"cluster": "svc-cluster", "service": "test-service", "force": "true"}
     )
     assert isinstance(del_result, Boto3Result)
