@@ -8,14 +8,111 @@ from gui4aws.app import AppContext
 from gui4aws.execution.boto3_executor import Boto3Result
 from gui4aws.services.aurora.actions import (
     CREATE_DB_CLUSTER,
+    CREATE_DB_CLUSTER_SNAPSHOT,
     CREATE_DB_INSTANCE,
+    DELETE_DB_CLUSTER,
+    DELETE_DB_INSTANCE,
     DESCRIBE_DB_CLUSTER_SNAPSHOTS,
     DESCRIBE_DB_CLUSTER_PARAMETER_GROUPS,
     DESCRIBE_DB_CLUSTERS,
     DESCRIBE_DB_INSTANCES,
     DESCRIBE_DB_PARAMETER_GROUPS,
     DESCRIBE_DB_SUBNET_GROUPS,
+    FAILOVER_DB_CLUSTER,
+    REBOOT_DB_INSTANCE,
+    START_DB_CLUSTER,
+    START_DB_INSTANCE,
+    STOP_DB_CLUSTER,
+    STOP_DB_INSTANCE,
 )
+
+
+def test_delete_db_cluster_and_instance(mock_aws_env: None) -> None:
+    rds = boto3.client("rds", region_name="us-east-1")
+    rds.create_db_cluster(
+        DBClusterIdentifier="del-cluster",
+        Engine="aurora-postgresql",
+        MasterUsername="admin",
+        MasterUserPassword="password",
+    )
+    rds.create_db_instance(
+        DBInstanceIdentifier="del-inst",
+        DBClusterIdentifier="del-cluster",
+        Engine="aurora-postgresql",
+        DBInstanceClass="db.t3.medium",
+    )
+    context = AppContext(region_name="us-east-1")
+    
+    # Delete Instance
+    inst_res = context.execute(DELETE_DB_INSTANCE, inputs={"instance_identifier": "del-inst", "skip_final_snapshot": "true"})
+    assert isinstance(inst_res, Boto3Result)
+
+    # Delete Cluster
+    cluster_res = context.execute(DELETE_DB_CLUSTER, inputs={"cluster_identifier": "del-cluster", "skip_final_snapshot": "true"})
+    assert isinstance(cluster_res, Boto3Result)
+
+
+def test_db_lifecycle_actions(mock_aws_env: None) -> None:
+    rds = boto3.client("rds", region_name="us-east-1")
+    rds.create_db_cluster(
+        DBClusterIdentifier="life-cluster",
+        Engine="aurora-postgresql",
+        MasterUsername="admin",
+        MasterUserPassword="password",
+    )
+    rds.create_db_instance(
+        DBInstanceIdentifier="life-inst",
+        DBClusterIdentifier="life-cluster",
+        Engine="aurora-postgresql",
+        DBInstanceClass="db.t3.medium",
+    )
+    rds.create_db_instance(
+        DBInstanceIdentifier="life-inst-2",
+        DBClusterIdentifier="life-cluster",
+        Engine="aurora-postgresql",
+        DBInstanceClass="db.t3.medium",
+    )
+    context = AppContext(region_name="us-east-1")
+    
+    # Reboot
+    reboot_res = context.execute(REBOOT_DB_INSTANCE, inputs={"instance_identifier": "life-inst"})
+    assert isinstance(reboot_res, Boto3Result)
+
+    # Stop/Start Instance
+    stop_inst = context.execute(STOP_DB_INSTANCE, inputs={"instance_identifier": "life-inst"})
+    assert isinstance(stop_inst, Boto3Result)
+    start_inst = context.execute(START_DB_INSTANCE, inputs={"instance_identifier": "life-inst"})
+    assert isinstance(start_inst, Boto3Result)
+
+    # Stop/Start Cluster
+    stop_res = context.execute(STOP_DB_CLUSTER, inputs={"cluster_identifier": "life-cluster"})
+    assert isinstance(stop_res, Boto3Result)
+    start_res = context.execute(START_DB_CLUSTER, inputs={"cluster_identifier": "life-cluster"})
+    assert isinstance(start_res, Boto3Result)
+
+    # Failover
+    failover_res = context.execute(FAILOVER_DB_CLUSTER, inputs={"cluster_identifier": "life-cluster"})
+    assert isinstance(failover_res, Boto3Result)
+
+
+def test_db_snapshot_actions(mock_aws_env: None) -> None:
+    rds = boto3.client("rds", region_name="us-east-1")
+    rds.create_db_cluster(
+        DBClusterIdentifier="snap-cluster",
+        Engine="aurora-postgresql",
+        MasterUsername="admin",
+        MasterUserPassword="password",
+    )
+    context = AppContext(region_name="us-east-1")
+    
+    # Create Snapshot
+    create_res = context.execute(
+        CREATE_DB_CLUSTER_SNAPSHOT,
+        inputs={"cluster_identifier": "snap-cluster", "snapshot_identifier": "manual-snap"}
+    )
+    assert isinstance(create_res, Boto3Result)
+
+
 
 
 def test_describe_db_clusters_returns_summaries(mock_aws_env: None) -> None:

@@ -50,6 +50,7 @@ DESCRIBE_VPCS = ActionDefinition(
         InputField(
             name="vpc_id",
             label="VPC ID (optional filter)",
+            kind="list",
             required=False,
         ),
     ),
@@ -182,11 +183,13 @@ DESCRIBE_SUBNETS = ActionDefinition(
         InputField(
             name="vpc_id",
             label="VPC ID (optional filter)",
+            kind="list",
             required=False,
         ),
         InputField(
             name="subnet_id",
             label="Subnet ID (optional filter)",
+            kind="list",
             required=False,
         ),
     ),
@@ -317,11 +320,13 @@ DESCRIBE_SECURITY_GROUPS = ActionDefinition(
         InputField(
             name="vpc_id",
             label="VPC ID (optional filter)",
+            kind="list",
             required=False,
         ),
         InputField(
             name="group_id",
             label="Security group ID (optional filter)",
+            kind="list",
             required=False,
         ),
     ),
@@ -351,7 +356,7 @@ DESCRIBE_SECURITY_GROUP_RULES = ActionDefinition(
     service_id="networking",
     risk_level=RiskLevel.READ_ONLY,
     input_fields=(
-        InputField(name="group_id", label="Security group ID", required=True),
+        InputField(name="group_id", label="Security group ID", kind="list", required=True),
     ),
     cli_template=CliTemplate(
         service="ec2",

@@ -77,7 +77,7 @@ DESCRIBE_ALARM = ActionDefinition(
     service_id="cloudwatch",
     risk_level=RiskLevel.READ_ONLY,
     input_fields=(
-        InputField(name="alarm_names", label="Alarm name", required=True),
+        InputField(name="alarm_names", label="Alarm name", kind="list", required=True),
     ),
     cli_template=CliTemplate(
         service="cloudwatch",
@@ -101,7 +101,7 @@ DELETE_ALARM = ActionDefinition(
     service_id="cloudwatch",
     risk_level=RiskLevel.DESTRUCTIVE,
     input_fields=(
-        InputField(name="alarm_name", label="Alarm name", required=True),
+        InputField(name="alarm_name", label="Alarm name", kind="list", required=True),
     ),
     cli_template=CliTemplate(
         service="cloudwatch",
