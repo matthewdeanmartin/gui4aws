@@ -159,6 +159,6 @@ class ReviewDialog:
         self.window.wait_window()
         return self.decision
 
-    def _ignored_widget_state(self) -> Any:  # pragma: no cover - placeholder for future tests
+    def ignored_widget_state(self) -> Any:  # pragma: no cover - placeholder for future tests
         """Reserved for future tests that need to introspect Tk state."""
         return None

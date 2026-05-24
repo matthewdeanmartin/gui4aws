@@ -22,8 +22,8 @@ from gui4aws.services.iam.actions import (
     LIST_POLICIES,
     LIST_ROLES,
     LIST_USERS,
-    _list_policies_boto3_params,
-    _list_policies_cli_args,
+    list_policies_boto3_params,
+    list_policies_cli_args,
 )
 from gui4aws.services.iam.views import (
     to_group_summaries,
@@ -36,8 +36,8 @@ from gui4aws.services.iam.views import (
 def test_list_policies_builders():
     """Test pure builders for LIST_POLICIES."""
     inputs = {"scope": "AWS"}
-    assert _list_policies_boto3_params(inputs) == {"Scope": "AWS"}
-    assert _list_policies_cli_args(inputs) == ["--scope", "AWS"]
+    assert list_policies_boto3_params(inputs) == {"Scope": "AWS"}
+    assert list_policies_cli_args(inputs) == ["--scope", "AWS"]
 
 
 def test_user_actions(mock_aws_env: None) -> None:

@@ -12,7 +12,7 @@ from tkinter import ttk
 __all__ = ["TerraformDialog"]
 
 
-def _size_and_center(win: tk.Toplevel) -> None:
+def size_and_center(win: tk.Toplevel) -> None:
     win.update_idletasks()
     sw = win.winfo_screenwidth()
     sh = win.winfo_screenheight()
@@ -39,7 +39,7 @@ class TerraformDialog(tk.Toplevel):
         self.transient(parent.winfo_toplevel())
         self.bind("<Escape>", lambda _e: self.destroy())
 
-        _size_and_center(self)
+        size_and_center(self)
 
         frame = ttk.Frame(self)
         frame.pack(fill="both", expand=True)

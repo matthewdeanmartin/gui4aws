@@ -26,7 +26,8 @@ __all__ = [
 ]
 
 
-def _list_stacks_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+def list_stacks_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+    """Map GUI inputs to Boto3 parameters for listing CloudFormation stacks."""
     params: dict[str, Any] = {}
     status_filter = inputs.get("stack_status_filter", "").strip()
     if status_filter:
@@ -34,7 +35,8 @@ def _list_stacks_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
     return params
 
 
-def _list_stacks_cli_args(inputs: Mapping[str, str]) -> list[str]:
+def list_stacks_cli_args(inputs: Mapping[str, str]) -> list[str]:
+    """Map GUI inputs to AWS CLI arguments for listing CloudFormation stacks."""
     args: list[str] = []
     status_filter = inputs.get("stack_status_filter", "").strip()
     if status_filter:
@@ -65,8 +67,8 @@ LIST_STACKS = ActionDefinition(
     iam_permissions=("cloudformation:DescribeStacks",),
     description="List CloudFormation stacks. Filter by status to narrow results (e.g. hide deleted stacks).",
     view=to_stack_summaries,
-    cli_args_builder=_list_stacks_cli_args,
-    boto3_params_builder=_list_stacks_boto3_params,
+    cli_args_builder=list_stacks_cli_args,
+    boto3_params_builder=list_stacks_boto3_params,
 )
 
 
@@ -158,7 +160,8 @@ CANCEL_UPDATE_STACK = ActionDefinition(
 )
 
 
-def _cdk_config_text(inputs: Mapping[str, str]) -> str:
+def cdk_config_text(inputs: Mapping[str, str]) -> str:
+    """Generate a helpful text block with CDK configuration and environment variables."""
     account = inputs.get("account_id", "").strip() or "000000000000"
     region = inputs.get("region", "").strip() or "us-east-1"
     endpoint = inputs.get("endpoint_url", "").strip()
@@ -269,7 +272,7 @@ CDK_CONFIG = ActionDefinition(
         "Fill in Account ID, Region, and Endpoint URL above, then click Refresh. "
         "The output panel shows shell exports, cdk.json snippet, and workflow commands ready to copy."
     ),
-    text_generator=_cdk_config_text,
+    text_generator=cdk_config_text,
 )
 
 

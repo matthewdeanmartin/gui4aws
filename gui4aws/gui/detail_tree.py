@@ -17,6 +17,7 @@ class DetailTree(ttk.Frame):
     """
 
     def __init__(self, parent: tk.Misc, **kwargs: Any) -> None:
+        """Initialize the detail tree with Field and Value columns."""
         super().__init__(parent, **kwargs)
         cols = ("field", "value")
         self.tree = ttk.Treeview(self, columns=cols, show="headings")
@@ -39,12 +40,12 @@ class DetailTree(ttk.Frame):
             return
         if isinstance(data, dict):
             for key, value in data.items():
-                self.tree.insert("", "end", values=(str(key), _fmt(value)))
+                self.tree.insert("", "end", values=(str(key), fmt(value)))
         else:
-            self.tree.insert("", "end", values=("value", _fmt(data)))
+            self.tree.insert("", "end", values=("value", fmt(data)))
 
 
-def _fmt(value: Any) -> str:
+def fmt(value: Any) -> str:
     """Render any value as a compact single-line string."""
     if value is None:
         return ""
@@ -53,10 +54,10 @@ def _fmt(value: Any) -> str:
     if isinstance(value, dict):
         if not value:
             return "{}"
-        parts = [f"{k}: {_fmt(v)}" for k, v in value.items()]
+        parts = [f"{k}: {fmt(v)}" for k, v in value.items()]
         return "{ " + ",  ".join(parts) + " }"
     if isinstance(value, (list, tuple)):
         if not value:
             return "[]"
-        return "[" + ",  ".join(_fmt(item) for item in value) + "]"
+        return "[" + ",  ".join(fmt(item) for item in value) + "]"
     return str(value)

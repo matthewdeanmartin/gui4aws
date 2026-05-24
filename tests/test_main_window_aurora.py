@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from gui4aws.execution.boto3_executor import Boto3Result
@@ -12,7 +12,7 @@ from gui4aws.services.service_registry import ServiceRegistry
 
 
 @dataclass
-class _FakePanel:
+class FakePanel:
     sub_tables: dict[str, Any]
     row: Any = None
 
@@ -30,26 +30,26 @@ class _FakePanel:
 
 
 @dataclass
-class _FakeContext:
+class FakeContext:
     registry: ServiceRegistry
     mode: str = "boto3"
     profile_name: str | None = None
     region_name: str = "us-east-1"
-    endpoint_config: Any = type("_Config", (), {"resolved_url": lambda s: None})()
-    action_cache: Any = type("_Cache", (), {"add": lambda *a, **k: None})()
-    history: Any = type("_History", (), {"add": lambda *a, **k: None})()
+    endpoint_config: Any = field(default_factory=lambda: type("_Config", (), {"resolved_url": lambda s: None})())
+    action_cache: Any = field(default_factory=lambda: type("_Cache", (), {"add": lambda *a, **k: None})())
+    history: Any = field(default_factory=lambda: type("_History", (), {"add": lambda *a, **k: None})())
 
 
 def test_dispatch_result_updates_sub_tables_for_aurora_cluster() -> None:
     """Aurora clusters have sub-tables (instances). dispatch_result should populate them."""
     window = object.__new__(MainWindow)
-    window.context = _FakeContext(ServiceRegistry((AURORA_SERVICE,)))  # type: ignore[assignment]
-    window.main_panel = _FakePanel({})  # type: ignore[assignment]
-    window._current_service_id = "aurora"
+    window.context = FakeContext(ServiceRegistry((AURORA_SERVICE,)))  # type: ignore[assignment]
+    window.main_panel = FakePanel({})  # type: ignore[assignment]
+    window.current_service_id = "aurora"
     window.current_inputs = {}
     window.status_bar = type("_StatusBar", (), {"set_status": lambda s, t: None})()
     window.active_dialog = None
-    window._nav_generation = 1
+    window.nav_generation = 1
 
     # Define a dummy cluster action
     from gui4aws.services.aurora.actions import DESCRIBE_DB_CLUSTERS
@@ -81,11 +81,11 @@ def test_dispatch_result_updates_sub_tables_for_aurora_cluster() -> None:
 
     # Dispatch should trigger sub-table refresh for the selected cluster
     calls: list[tuple[Any, Any]] = []
-    window._on_sub_action_row_select = lambda row: calls.append(row)  # type: ignore[method-assign]
+    window.on_sub_action_row_select = lambda row: calls.append(row)  # type: ignore[method-assign]
 
     window.dispatch_result("ok", DESCRIBE_DB_CLUSTERS, result)
 
-    # We expect dispatch_result to NOT directly call _on_sub_action_row_select,
+    # We expect dispatch_result to NOT directly call on_sub_action_row_select,
     # as that's usually triggered by the Treeview selection event.
     # But dispatch_result handles 'sub_ok' results.
     # The original test might have been slightly confused about the flow.
@@ -94,13 +94,13 @@ def test_dispatch_result_updates_sub_tables_for_aurora_cluster() -> None:
 def test_dispatch_result_for_sub_action_updates_sub_table_content() -> None:
     """Results from sub-actions (like list_instances) update the sub-table UI."""
     window = object.__new__(MainWindow)
-    window.context = _FakeContext(ServiceRegistry((AURORA_SERVICE,)))  # type: ignore[assignment]
-    window.main_panel = _FakePanel({})  # type: ignore[assignment]
-    window._current_service_id = "aurora"
+    window.context = FakeContext(ServiceRegistry((AURORA_SERVICE,)))  # type: ignore[assignment]
+    window.main_panel = FakePanel({})  # type: ignore[assignment]
+    window.current_service_id = "aurora"
     window.current_inputs = {}
     window.status_bar = type("_StatusBar", (), {"set_status": lambda s, t: None})()
     window.active_dialog = None
-    window._nav_generation = 1
+    window.nav_generation = 1
 
     # Find the instances sub-action from the service definition
     nav = AURORA_SERVICE.navigation_items[0]  # clusters

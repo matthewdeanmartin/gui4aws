@@ -77,6 +77,7 @@ class TypedConfirmationDialog:
         expected_text: str,
         on_resolved: Callable[[TypedConfirmation], None] | None = None,
     ) -> None:
+        """Initialize the typed-confirmation dialog."""
         self.confirmation = TypedConfirmation(expected_text=expected_text)
         self.on_resolved = on_resolved
 
@@ -129,7 +130,7 @@ class TypedConfirmationDialog:
             self.window.destroy()
 
     def show_modal(self) -> TypedConfirmation:
-        """Block until the user resolves the dialog."""
+        """Block until the user resolves the dialog and return result state."""
         self.window.grab_set()
         self.window.wait_window()
         return self.confirmation

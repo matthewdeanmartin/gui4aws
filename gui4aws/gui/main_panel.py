@@ -55,12 +55,13 @@ class ScriptDialog(tk.Toplevel):
 
         btn_bar = ttk.Frame(self)
         btn_bar.pack(fill="x", padx=4, pady=4)
-        ttk.Button(btn_bar, text="Copy CLI", command=lambda: _copy(self, cli)).pack(side="left", padx=4)
-        ttk.Button(btn_bar, text="Copy Python", command=lambda: _copy(self, python)).pack(side="left", padx=4)
+        ttk.Button(btn_bar, text="Copy CLI", command=lambda: copy(self, cli)).pack(side="left", padx=4)
+        ttk.Button(btn_bar, text="Copy Python", command=lambda: copy(self, python)).pack(side="left", padx=4)
         ttk.Button(btn_bar, text="Close", command=self.destroy).pack(side="right", padx=8)
 
 
-def _copy(widget: tk.Misc, text: str) -> None:
+def copy(widget: tk.Misc, text: str) -> None:
+    """Copy text to the system clipboard."""
     widget.clipboard_clear()
     widget.clipboard_append(text)
 
@@ -99,7 +100,7 @@ class MainPanel(ttk.Frame):
         self.filter_bar = FilterBar(top_frame)
         self.filter_bar.grid(row=0, column=0, sticky="ew", padx=2, pady=(2, 0))
 
-        self.resource_table = ResourceTable(top_frame, columns=("identifier", "status"), on_select=self._on_row_select)
+        self.resource_table = ResourceTable(top_frame, columns=("identifier", "status"), on_select=self.on_row_select)
         self.resource_table.grid(row=1, column=0, sticky="nsew")
 
         detail_frame = ttk.LabelFrame(top_frame, text="Detail")
@@ -112,24 +113,24 @@ class MainPanel(ttk.Frame):
         # Row-action button bar — populated by set_row_actions()
         self.row_action_bar = ttk.Frame(top_frame)
         self.row_action_bar.grid(row=3, column=0, sticky="ew", padx=4, pady=4)
-        self._row_action_label = ttk.Label(self.row_action_bar, text="", foreground="gray")
-        self._row_action_label.pack(side="left", padx=4)
+        self.row_action_label = ttk.Label(self.row_action_bar, text="", foreground="gray")
+        self.row_action_label.pack(side="left", padx=4)
 
         # Sub-table panel (e.g. cluster → instances) — hidden until populated.
-        self._sub_frame = ttk.LabelFrame(top_frame, text="Instances")
-        self._sub_frame.grid_columnconfigure(0, weight=1)
-        self._sub_frame.grid_rowconfigure(0, weight=1)
-        self._sub_tree = ttk.Treeview(self._sub_frame, show="headings", height=4)
-        self._sub_scroll = ttk.Scrollbar(self._sub_frame, orient="vertical", command=self._sub_tree.yview)
-        self._sub_tree.configure(yscrollcommand=self._sub_scroll.set)
-        self._sub_tree.grid(row=0, column=0, sticky="nsew")
-        self._sub_scroll.grid(row=0, column=1, sticky="ns")
-        self._sub_tree.bind("<<TreeviewSelect>>", self._on_sub_table_select)
-        self.sub_row_action_bar = ttk.Frame(self._sub_frame)
+        self.sub_frame = ttk.LabelFrame(top_frame, text="Instances")
+        self.sub_frame.grid_columnconfigure(0, weight=1)
+        self.sub_frame.grid_rowconfigure(0, weight=1)
+        self.sub_tree = ttk.Treeview(self.sub_frame, show="headings", height=4)
+        self.sub_scroll = ttk.Scrollbar(self.sub_frame, orient="vertical", command=self.sub_tree.yview)
+        self.sub_tree.configure(yscrollcommand=self.sub_scroll.set)
+        self.sub_tree.grid(row=0, column=0, sticky="nsew")
+        self.sub_scroll.grid(row=0, column=1, sticky="ns")
+        self.sub_tree.bind("<<TreeviewSelect>>", self.on_sub_table_select)
+        self.sub_row_action_bar = ttk.Frame(self.sub_frame)
         self.sub_row_action_bar.grid(row=1, column=0, columnspan=2, sticky="ew", padx=4, pady=(0, 4))
         # Hidden by default; show_sub_table / clear_sub_table toggle visibility.
-        self._sub_visible = False
-        self._sub_grid_row = 4
+        self.sub_visible = False
+        self.sub_grid_row = 4
 
         outer.add(top_frame, weight=3)
 
@@ -143,24 +144,24 @@ class MainPanel(ttk.Frame):
 
         btn_bar = ttk.Frame(bottom_frame)
         btn_bar.grid(row=1, column=0, sticky="e", padx=4, pady=2)
-        self._scripts_cli = ""
-        self._scripts_python = ""
-        ttk.Button(btn_bar, text="Show Scripts", command=self._open_script_dialog).pack(side="right", padx=4)
+        self.scripts_cli = ""
+        self.scripts_python = ""
+        ttk.Button(btn_bar, text="Show Scripts", command=self.open_script_dialog).pack(side="right", padx=4)
 
         outer.add(bottom_frame, weight=1)
 
         # State
-        self._current_rows: list[Any] = []
-        self._current_columns: list[str] = []
-        self._current_row: Any = None
-        self._current_client_filter: str = ""
-        self._on_row_action: Callable[[RowAction, Any], None] | None = None
-        self._on_sub_row_select: Callable[[Any], None] | None = None
-        self._current_row_actions: tuple[RowAction, ...] = ()
-        self._sub_rows: list[Any] = []
-        self._current_sub_row: Any = None
-        self._sub_row_actions: tuple[RowAction, ...] = ()
-        self._on_sub_row_action: Callable[[RowAction, Any], None] | None = None
+        self.current_rows: list[Any] = []
+        self.current_columns: list[str] = []
+        self.current_row: Any = None
+        self.current_client_filter: str = ""
+        self.on_row_action: Callable[[RowAction, Any], None] | None = None
+        self.on_sub_row_select: Callable[[Any], None] | None = None
+        self.current_row_actions: tuple[RowAction, ...] = ()
+        self.sub_rows: list[Any] = []
+        self.current_sub_row: Any = None
+        self.sub_row_actions: tuple[RowAction, ...] = ()
+        self.on_sub_row_action: Callable[[RowAction, Any], None] | None = None
 
     # ── Public API ───────────────────────────────────────────────────────────
 
@@ -169,11 +170,11 @@ class MainPanel(ttk.Frame):
         self.resource_table.set_rows([])
         self.detail_tree.set_data({})
         self.output_panel.set_result("", None)
-        self._scripts_cli = ""
-        self._scripts_python = ""
-        self._current_row = None
-        self._current_rows = []
-        self._current_client_filter = ""
+        self.scripts_cli = ""
+        self.scripts_python = ""
+        self.current_row = None
+        self.current_rows = []
+        self.current_client_filter = ""
         self.set_row_actions((), None)
         self.clear_sub_table()
 
@@ -190,12 +191,12 @@ class MainPanel(ttk.Frame):
         handler is set separately via ``set_filter_field_change_handler``.
         """
         self.filter_bar.set_fields(fields, prefill)
-        self.filter_bar._on_refresh = (lambda: on_refresh(self.filter_bar.values())) if on_refresh else None
-        self.filter_bar._on_client_filter = self._on_client_filter_changed
+        self.filter_bar.on_refresh = (lambda: on_refresh(self.filter_bar.values())) if on_refresh else None
+        self.filter_bar.on_client_filter = self.on_client_filter_changed
 
     def set_filter_field_change_handler(self, handler: Callable[[str, str], None] | None) -> None:
         """Register a callback fired whenever any (non-client) filter field changes."""
-        self.filter_bar._on_field_change = handler
+        self.filter_bar.on_field_change = handler
 
     def set_filter_choices(self, field_name: str, choices: list[str], *, auto_select: bool = True) -> None:
         """Populate an eager-dropdown field on the filter bar."""
@@ -207,65 +208,65 @@ class MainPanel(ttk.Frame):
 
     def current_row(self) -> Any:
         """Return the currently selected root row."""
-        return self._current_row
+        return self.current_row
 
     def current_sub_row(self) -> Any:
         """Return the currently selected sub-table row."""
-        return self._current_sub_row
+        return self.current_sub_row
 
     def show_sub_table(self, label: str, rows: list[Any], columns: list[str]) -> None:
         """Populate and show the sub-table panel (e.g. instances for a cluster)."""
-        self._sub_frame.configure(text=label)
-        previous_key = _row_identity(self._current_sub_row)
-        self._sub_rows = list(rows)
-        self._current_sub_row = None
-        self._sub_tree.configure(columns=columns)
+        self.sub_frame.configure(text=label)
+        previous_key = row_identity(self.current_sub_row)
+        self.sub_rows = list(rows)
+        self.current_sub_row = None
+        self.sub_tree.configure(columns=columns)
         for col in columns:
-            self._sub_tree.heading(col, text=col)
-            self._sub_tree.column(col, anchor="w", width=140, stretch=True)
-        for child in self._sub_tree.get_children():
-            self._sub_tree.delete(child)
+            self.sub_tree.heading(col, text=col)
+            self.sub_tree.column(col, anchor="w", width=140, stretch=True)
+        for child in self.sub_tree.get_children():
+            self.sub_tree.delete(child)
         for idx, row in enumerate(rows):
             from gui4aws.gui.resource_table import format_cell
 
             values = tuple(format_cell(getattr(row, col, "")) for col in columns)
-            self._sub_tree.insert("", "end", iid=str(idx), values=values)
-        if self._sub_rows:
-            selected_index = _find_row_index_by_identity(self._sub_rows, previous_key)
+            self.sub_tree.insert("", "end", iid=str(idx), values=values)
+        if self.sub_rows:
+            selected_index = find_row_index_by_identity(self.sub_rows, previous_key)
             iid = str(selected_index)
-            self._sub_tree.selection_set(iid)
-            self._sub_tree.focus(iid)
-            self._current_sub_row = self._sub_rows[selected_index]
-        if not self._sub_visible:
-            self._sub_frame.grid(row=self._sub_grid_row, column=0, sticky="nsew", padx=2, pady=2)
-            self._sub_visible = True
+            self.sub_tree.selection_set(iid)
+            self.sub_tree.focus(iid)
+            self.current_sub_row = self.sub_rows[selected_index]
+        if not self.sub_visible:
+            self.sub_frame.grid(row=self.sub_grid_row, column=0, sticky="nsew", padx=2, pady=2)
+            self.sub_visible = True
 
     def clear_sub_table(self) -> None:
         """Hide and empty the sub-table panel."""
-        if self._sub_visible:
-            self._sub_frame.grid_remove()
-            self._sub_visible = False
-        for child in self._sub_tree.get_children():
-            self._sub_tree.delete(child)
-        self._sub_rows = []
-        self._current_sub_row = None
+        if self.sub_visible:
+            self.sub_frame.grid_remove()
+            self.sub_visible = False
+        for child in self.sub_tree.get_children():
+            self.sub_tree.delete(child)
+        self.sub_rows = []
+        self.current_sub_row = None
         self.set_sub_row_actions((), None)
 
     def show_table(self, rows: list[Any], columns: list[str]) -> None:
         """Replace the resource table with new rows and columns."""
-        previous_key = _row_identity(self._current_row)
+        previous_key = row_identity(self.current_row)
         if tuple(columns) != self.resource_table.columns:
             old = self.resource_table
             old.grid_remove()
             old.destroy()
-            self.resource_table = ResourceTable(old.master, columns=columns, on_select=self._on_row_select)
+            self.resource_table = ResourceTable(old.master, columns=columns, on_select=self.on_row_select)
             self.resource_table.grid(row=1, column=0, sticky="nsew")
-        self._current_rows = list(rows)
-        self._current_columns = list(columns)
+        self.current_rows = list(rows)
+        self.current_columns = list(columns)
         # Apply any active client-side JMESPath filter immediately.
-        visible = self._apply_client_filter(self._current_client_filter)
+        visible = self.apply_client_filter(self.current_client_filter)
         self.resource_table.set_rows(visible)
-        selected_index = _find_row_index_by_identity(visible, previous_key)
+        selected_index = find_row_index_by_identity(visible, previous_key)
         if visible and selected_index != 0:
             self.resource_table.set_selected_index(selected_index)
         self.detail_tree.set_data({})
@@ -276,8 +277,8 @@ class MainPanel(ttk.Frame):
 
     def show_scripts(self, cli: str, python: str) -> None:
         """Store the latest generated scripts (opened on demand via Show Scripts)."""
-        self._scripts_cli = cli
-        self._scripts_python = python
+        self.scripts_cli = cli
+        self.scripts_python = python
 
     def set_row_actions(
         self,
@@ -286,20 +287,20 @@ class MainPanel(ttk.Frame):
         on_row_select: Callable[[Any], None] | None = None,
     ) -> None:
         """Rebuild the row-action button bar for the current navigation item."""
-        self._current_row_actions = row_actions
-        self._on_row_action = on_row_action
-        self._on_sub_row_select = on_row_select
+        self.current_row_actions = row_actions
+        self.on_row_action = on_row_action
+        self.on_sub_row_select = on_row_select
         for child in self.row_action_bar.winfo_children():
             child.destroy()
         if not row_actions:
             return
-        self._row_action_label = ttk.Label(self.row_action_bar, text="Actions:", foreground="gray")
-        self._row_action_label.pack(side="left", padx=(4, 8))
+        self.row_action_label = ttk.Label(self.row_action_bar, text="Actions:", foreground="gray")
+        self.row_action_label.pack(side="left", padx=(4, 8))
         for ra in row_actions:
             ttk.Button(
                 self.row_action_bar,
                 text=ra.button_label,
-                command=partial(self._fire_row_action, ra),
+                command=partial(self.fire_row_action, ra),
             ).pack(side="left", padx=2)
 
     def set_sub_row_actions(
@@ -308,8 +309,8 @@ class MainPanel(ttk.Frame):
         on_row_action: Callable[[RowAction, Any], None] | None,
     ) -> None:
         """Rebuild the sub-row action button bar for the current sub-table."""
-        self._sub_row_actions = row_actions
-        self._on_sub_row_action = on_row_action
+        self.sub_row_actions = row_actions
+        self.on_sub_row_action = on_row_action
         for child in self.sub_row_action_bar.winfo_children():
             child.destroy()
         if not row_actions:
@@ -322,14 +323,14 @@ class MainPanel(ttk.Frame):
             ttk.Button(
                 self.sub_row_action_bar,
                 text=ra.button_label,
-                command=partial(self._fire_sub_row_action, ra),
+                command=partial(self.fire_sub_row_action, ra),
             ).pack(side="left", padx=2)
 
     # ── Internal helpers ─────────────────────────────────────────────────────
 
-    def _on_row_select(self, row: Any) -> None:
+    def on_row_select(self, row: Any) -> None:
         """Populate the detail grid when a table row is selected."""
-        self._current_row = row
+        self.current_row = row
         if dataclasses.is_dataclass(row) and not isinstance(row, type):
             data = dataclasses.asdict(row)
         elif hasattr(row, "__dict__"):
@@ -337,42 +338,44 @@ class MainPanel(ttk.Frame):
         else:
             data = {"value": str(row)}
         self.detail_tree.set_data(data)
-        if self._on_sub_row_select is not None:
-            self._on_sub_row_select(row)
+        if self.on_sub_row_select is not None:
+            self.on_sub_row_select(row)
 
-    def _fire_row_action(self, row_action: RowAction) -> None:
-        if self._on_row_action is not None:
-            self._on_row_action(row_action, self._current_row)
+    def fire_row_action(self, row_action: RowAction) -> None:
+        if self.on_row_action is not None:
+            self.on_row_action(row_action, self.current_row)
 
-    def _on_sub_table_select(self, event: object = None) -> None:
+    def on_sub_table_select(self, event: object = None) -> None:
         del event
-        selected = self._sub_tree.selection()
+        selected = self.sub_tree.selection()
         if not selected:
-            self._current_sub_row = None
+            self.current_sub_row = None
             return
         try:
             idx = int(selected[0])
-            self._current_sub_row = self._sub_rows[idx]
+            self.current_sub_row = self.sub_rows[idx]
         except (ValueError, IndexError):
-            self._current_sub_row = None
+            self.current_sub_row = None
 
-    def _fire_sub_row_action(self, row_action: RowAction) -> None:
-        if self._on_sub_row_action is not None:
-            self._on_sub_row_action(row_action, self._current_sub_row)
+    def fire_sub_row_action(self, row_action: RowAction) -> None:
+        """Dispatch a sub-row action click to the registered handler."""
+        if self.on_sub_row_action is not None:
+            self.on_sub_row_action(row_action, self.current_sub_row)
 
-    def _open_script_dialog(self) -> None:
-        if not self._scripts_cli and not self._scripts_python:
+    def open_script_dialog(self) -> None:
+        """Show the generated CLI/Python scripts in a popup dialog."""
+        if not self.scripts_cli and not self.scripts_python:
             return
-        ScriptDialog(self, self._scripts_cli, self._scripts_python)
+        ScriptDialog(self, self.scripts_cli, self.scripts_python)
 
     # ── Client-side row filtering ────────────────────────────────────────────
 
-    def _on_client_filter_changed(self, expression: str) -> None:
-        self._current_client_filter = expression
-        visible = self._apply_client_filter(expression)
+    def on_client_filter_changed(self, expression: str) -> None:
+        self.current_client_filter = expression
+        visible = self.apply_client_filter(expression)
         self.resource_table.set_rows(visible)
 
-    def _apply_client_filter(self, expression: str) -> list[Any]:
+    def apply_client_filter(self, expression: str) -> list[Any]:
         """Return the subset of current rows matching ``expression``.
 
         Empty expression → all rows.
@@ -381,25 +384,25 @@ class MainPanel(ttk.Frame):
         is applied to each row's dict form; rows where it returns a truthy value
         are kept.
         """
-        if not expression or not self._current_rows:
-            return list(self._current_rows)
+        if not expression or not self.current_rows:
+            return list(self.current_rows)
         # Heuristic: if the user typed a plain word, do a substring match — most
         # users will reach for the filter to type "prod" or a partial name, not
         # to write a JMESPath. Reserve JMESPath for expressions with operators.
         jmespath_chars = set("=<>!&|()[].`?")
         if not any(ch in expression for ch in jmespath_chars):
             needle = expression.lower()
-            return [row for row in self._current_rows if _row_substring_match(row, self._current_columns, needle)]
+            return [row for row in self.current_rows if row_substring_match(row, self.current_columns, needle)]
         try:
             import jmespath  # transitive dep of boto3
 
             compiled = jmespath.compile(expression)
         except Exception as exc:
             logger.debug("invalid JMESPath %r: %s", expression, exc)
-            return list(self._current_rows)
+            return list(self.current_rows)
         kept: list[Any] = []
-        for row in self._current_rows:
-            data = _row_to_dict(row)
+        for row in self.current_rows:
+            data = row_to_dict(row)
             try:
                 if compiled.search(data):
                     kept.append(row)
@@ -409,7 +412,7 @@ class MainPanel(ttk.Frame):
         return kept
 
 
-def _row_to_dict(row: Any) -> dict[str, Any]:
+def row_to_dict(row: Any) -> dict[str, Any]:
     if dataclasses.is_dataclass(row) and not isinstance(row, type):
         return dataclasses.asdict(row)
     if hasattr(row, "__dict__"):
@@ -417,8 +420,8 @@ def _row_to_dict(row: Any) -> dict[str, Any]:
     return {"value": row}
 
 
-def _row_substring_match(row: Any, columns: list[str], needle: str) -> bool:
-    data = _row_to_dict(row)
+def row_substring_match(row: Any, columns: list[str], needle: str) -> bool:
+    data = row_to_dict(row)
     for col in columns or data.keys():
         value = data.get(col, "")
         if value is None:
@@ -428,7 +431,7 @@ def _row_substring_match(row: Any, columns: list[str], needle: str) -> bool:
     return False
 
 
-def _row_identity(row: Any) -> tuple[str, str] | None:
+def row_identity(row: Any) -> tuple[str, str] | None:
     if row is None:
         return None
     for attr in (
@@ -448,7 +451,7 @@ def _row_identity(row: Any) -> tuple[str, str] | None:
     return None
 
 
-def _find_row_index_by_identity(rows: list[Any], key: tuple[str, str] | None) -> int:
+def find_row_index_by_identity(rows: list[Any], key: tuple[str, str] | None) -> int:
     if key is None:
         return 0
     attr, value = key

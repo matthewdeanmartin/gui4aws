@@ -20,7 +20,7 @@ DEMO_TAG = {"Key": "gui4aws:demo", "Value": "true"}
 DEMO_DESC_TAG_KEY = "Description"
 
 
-def _tags(*extra: dict[str, str]) -> list[dict[str, str]]:
+def tags(*extra: dict[str, str]) -> list[dict[str, str]]:
     return [DEMO_TAG, *extra]
 
 
@@ -55,26 +55,26 @@ def seed_demo_resources(
     created: dict[str, list[str]] = {}
 
     rds_client = client("rds")
-    created.update(_seed_aurora(rds_client))
-    created.update(_seed_backup(client("backup"), rds_client, extended=is_robotocore))
-    created.update(_seed_networking(client("ec2"), client("elbv2")))
-    created.update(_seed_ecs(client("ecs"), extended=is_robotocore))
-    created.update(_seed_secrets(client("secretsmanager")))
-    created.update(_seed_ssm(client("ssm")))
-    created.update(_seed_kms(client("kms")))
-    created.update(_seed_s3(client("s3")))
-    created.update(_seed_sqs(client("sqs")))
-    created.update(_seed_lambda(client("lambda"), client("iam")))
-    created.update(_seed_cloudwatch(client("cloudwatch"), client("logs")))
-    created.update(_seed_cloudformation(client("cloudformation")))
-    created.update(_seed_sns(client("sns")))
-    created.update(_seed_ses(client("ses")))
-    created.update(_seed_iam_extras(client("iam")))
+    created.update(seed_aurora(rds_client))
+    created.update(seed_backup(client("backup"), rds_client, extended=is_robotocore))
+    created.update(seed_networking(client("ec2"), client("elbv2")))
+    created.update(seed_ecs(client("ecs"), extended=is_robotocore))
+    created.update(seed_secrets(client("secretsmanager")))
+    created.update(seed_ssm(client("ssm")))
+    created.update(seed_kms(client("kms")))
+    created.update(seed_s3(client("s3")))
+    created.update(seed_sqs(client("sqs")))
+    created.update(seed_lambda(client("lambda"), client("iam")))
+    created.update(seed_cloudwatch(client("cloudwatch"), client("logs")))
+    created.update(seed_cloudformation(client("cloudformation")))
+    created.update(seed_sns(client("sns")))
+    created.update(seed_ses(client("ses")))
+    created.update(seed_iam_extras(client("iam")))
 
     return created
 
 
-def _seed_aurora(rds: Any) -> dict[str, list[str]]:
+def seed_aurora(rds: Any) -> dict[str, list[str]]:
     created: dict[str, list[str]] = {"aurora_clusters": [], "aurora_instances": [], "aurora_snapshots": []}
 
     clusters = [
@@ -83,7 +83,7 @@ def _seed_aurora(rds: Any) -> dict[str, list[str]]:
             "Engine": "aurora-mysql",
             "MasterUsername": "admin",
             "MasterUserPassword": "DemoPass123!",
-            "Tags": _tags(
+            "Tags": tags(
                 {"Key": "Name", "Value": "demo-aurora-mysql-prod"},
                 {"Key": DEMO_DESC_TAG_KEY, "Value": "Demo Aurora MySQL cluster (production-like)"},
             ),
@@ -93,7 +93,7 @@ def _seed_aurora(rds: Any) -> dict[str, list[str]]:
             "Engine": "aurora-postgresql",
             "MasterUsername": "postgres",
             "MasterUserPassword": "DemoPass123!",
-            "Tags": _tags(
+            "Tags": tags(
                 {"Key": "Name", "Value": "demo-aurora-pg-analytics"},
                 {"Key": DEMO_DESC_TAG_KEY, "Value": "Demo Aurora PostgreSQL cluster (analytics)"},
             ),
@@ -118,7 +118,7 @@ def _seed_aurora(rds: Any) -> dict[str, list[str]]:
                 DBInstanceClass="db.t3.medium",
                 Engine=engine,
                 DBClusterIdentifier=cluster_id,
-                Tags=_tags(
+                Tags=tags(
                     {"Key": "Name", "Value": instance_id},
                     {"Key": DEMO_DESC_TAG_KEY, "Value": f"Demo instance for {cluster_id}"},
                 ),
@@ -135,7 +135,7 @@ def _seed_aurora(rds: Any) -> dict[str, list[str]]:
             rds.create_db_cluster_snapshot(
                 DBClusterIdentifier=source,
                 DBClusterSnapshotIdentifier=snap_id,
-                Tags=_tags(
+                Tags=tags(
                     {"Key": "Name", "Value": snap_id},
                     {"Key": DEMO_DESC_TAG_KEY, "Value": "Demo snapshot — safe to restore"},
                 ),
@@ -148,7 +148,7 @@ def _seed_aurora(rds: Any) -> dict[str, list[str]]:
     return created
 
 
-def _seed_networking(ec2: Any, elbv2: Any) -> dict[str, list[str]]:
+def seed_networking(ec2: Any, elbv2: Any) -> dict[str, list[str]]:
     created: dict[str, list[str]] = {
         "vpcs": [],
         "subnets": [],
@@ -164,7 +164,7 @@ def _seed_networking(ec2: Any, elbv2: Any) -> dict[str, list[str]]:
             TagSpecifications=[
                 {
                     "ResourceType": "vpc",
-                    "Tags": _tags({"Key": "Name", "Value": "demo-vpc"}),
+                    "Tags": tags({"Key": "Name", "Value": "demo-vpc"}),
                 }
             ],
         )
@@ -186,7 +186,7 @@ def _seed_networking(ec2: Any, elbv2: Any) -> dict[str, list[str]]:
                     TagSpecifications=[
                         {
                             "ResourceType": "subnet",
-                            "Tags": _tags({"Key": "Name", "Value": name}),
+                            "Tags": tags({"Key": "Name", "Value": name}),
                         }
                     ],
                 )
@@ -207,7 +207,7 @@ def _seed_networking(ec2: Any, elbv2: Any) -> dict[str, list[str]]:
                 TagSpecifications=[
                     {
                         "ResourceType": "security-group",
-                        "Tags": _tags({"Key": "Name", "Value": "demo-sg"}),
+                        "Tags": tags({"Key": "Name", "Value": "demo-sg"}),
                     }
                 ],
             )
@@ -226,7 +226,7 @@ def _seed_networking(ec2: Any, elbv2: Any) -> dict[str, list[str]]:
                 SecurityGroups=[sg_id] if sg_id else [],
                 Scheme="internet-facing",
                 Type="application",
-                Tags=_tags({"Key": "Name", "Value": "demo-alb"}),
+                Tags=tags({"Key": "Name", "Value": "demo-alb"}),
             )
             alb_arn = resp["LoadBalancers"][0]["LoadBalancerArn"]
             logger.info("created ALB %s", alb_arn)
@@ -243,7 +243,7 @@ def _seed_networking(ec2: Any, elbv2: Any) -> dict[str, list[str]]:
                 VpcId=vpc_id,
                 TargetType="ip",
                 HealthCheckPath="/health",
-                Tags=_tags({"Key": "Name", "Value": "demo-tg"}),
+                Tags=tags({"Key": "Name", "Value": "demo-tg"}),
             )
             tg_arn = resp["TargetGroups"][0]["TargetGroupArn"]
             logger.info("created target group %s", tg_arn)
@@ -254,7 +254,7 @@ def _seed_networking(ec2: Any, elbv2: Any) -> dict[str, list[str]]:
     return created
 
 
-def _seed_ecs(ecs: Any, *, extended: bool = False) -> dict[str, list[str]]:
+def seed_ecs(ecs: Any, *, extended: bool = False) -> dict[str, list[str]]:
     """Seed ECS resources.
 
     ``extended=True`` seeds task definitions, services, and tasks — requires
@@ -361,7 +361,7 @@ def _seed_ecs(ecs: Any, *, extended: bool = False) -> dict[str, list[str]]:
     return created
 
 
-def _seed_secrets(sm: Any) -> dict[str, list[str]]:
+def seed_secrets(sm: Any) -> dict[str, list[str]]:
     created: dict[str, list[str]] = {"secrets": []}
 
     secrets = [
@@ -375,7 +375,7 @@ def _seed_secrets(sm: Any) -> dict[str, list[str]]:
                 Name=name,
                 Description=description,
                 SecretString=value,
-                Tags=_tags({"Key": "Name", "Value": name}),
+                Tags=tags({"Key": "Name", "Value": name}),
             )
             logger.info("created secret %s", name)
             created["secrets"].append(name)
@@ -385,7 +385,7 @@ def _seed_secrets(sm: Any) -> dict[str, list[str]]:
     return created
 
 
-def _seed_ssm(ssm: Any) -> dict[str, list[str]]:
+def seed_ssm(ssm: Any) -> dict[str, list[str]]:
     created: dict[str, list[str]] = {"ssm_parameters": []}
 
     params = [
@@ -402,7 +402,7 @@ def _seed_ssm(ssm: Any) -> dict[str, list[str]]:
                 Value=value,
                 Type=ptype,
                 Description=f"Demo parameter: {name}",
-                Tags=_tags({"Key": "Name", "Value": name}),
+                Tags=tags({"Key": "Name", "Value": name}),
             )
             logger.info("created SSM parameter %s", name)
             created["ssm_parameters"].append(name)
@@ -412,7 +412,7 @@ def _seed_ssm(ssm: Any) -> dict[str, list[str]]:
     return created
 
 
-def _seed_backup(backup: Any, rds: Any | None = None, *, extended: bool = False) -> dict[str, list[str]]:
+def seed_backup(backup: Any, rds: Any | None = None, *, extended: bool = False) -> dict[str, list[str]]:
     """Seed Backup resources.
 
     ``extended=True`` seeds additional backup plans and on-demand backup jobs
@@ -534,12 +534,12 @@ def _seed_backup(backup: Any, rds: Any | None = None, *, extended: bool = False)
             logger.warning("skipped backup plan %s: %s", plan_name, exc)
 
     if extended and rds is not None and created["backup_vaults"]:
-        _seed_backup_jobs(backup, rds, created)
+        seed_backup_jobs(backup, rds, created)
 
     return created
 
 
-def _seed_backup_jobs(backup: Any, rds: Any, created: dict[str, list[str]]) -> None:
+def seed_backup_jobs(backup: Any, rds: Any, created: dict[str, list[str]]) -> None:
     """Create on-demand backup jobs for demo clusters so recovery points exist."""
     try:
         clusters = rds.describe_db_clusters().get("DBClusters", [])
@@ -571,7 +571,7 @@ def _seed_backup_jobs(backup: Any, rds: Any, created: dict[str, list[str]]) -> N
             logger.warning("skipped backup job for cluster %s: %s", cluster_id, exc)
 
 
-def _seed_kms(kms: Any) -> dict[str, list[str]]:
+def seed_kms(kms: Any) -> dict[str, list[str]]:
     created: dict[str, list[str]] = {"kms_keys": [], "kms_aliases": []}
 
     key_specs = [
@@ -609,7 +609,7 @@ def _seed_kms(kms: Any) -> dict[str, list[str]]:
     return created
 
 
-def _seed_s3(s3: Any) -> dict[str, list[str]]:
+def seed_s3(s3: Any) -> dict[str, list[str]]:
     created: dict[str, list[str]] = {"s3_buckets": []}
 
     buckets = [
@@ -628,7 +628,7 @@ def _seed_s3(s3: Any) -> dict[str, list[str]]:
                 s3.put_bucket_tagging(
                     Bucket=bucket_name,
                     Tagging={
-                        "TagSet": _tags(
+                        "TagSet": tags(
                             {"Key": "Name", "Value": bucket_name},
                             {"Key": DEMO_DESC_TAG_KEY, "Value": f"Demo bucket: {bucket_name}"},
                         )
@@ -642,7 +642,7 @@ def _seed_s3(s3: Any) -> dict[str, list[str]]:
     return created
 
 
-def _seed_sqs(sqs: Any) -> dict[str, list[str]]:
+def seed_sqs(sqs: Any) -> dict[str, list[str]]:
     created: dict[str, list[str]] = {"sqs_queues": []}
 
     queues = [
@@ -670,7 +670,7 @@ def _seed_sqs(sqs: Any) -> dict[str, list[str]]:
     return created
 
 
-def _make_lambda_zip() -> bytes:
+def make_lambda_zip() -> bytes:
     """Create a minimal in-memory deployment zip containing a handler module."""
     import io
     import zipfile
@@ -684,10 +684,10 @@ def _make_lambda_zip() -> bytes:
     return buf.getvalue()
 
 
-def _seed_lambda(lambda_client: Any, iam: Any) -> dict[str, list[str]]:
+def seed_lambda(lambda_client: Any, iam: Any) -> dict[str, list[str]]:
     created: dict[str, list[str]] = {"lambda_functions": []}
 
-    zip_bytes = _make_lambda_zip()
+    zip_bytes = make_lambda_zip()
 
     # Moto validates that the role actually exists in IAM, so create it first.
     demo_role_arn = "arn:aws:iam::123456789012:role/DemoLambdaRole"
@@ -754,7 +754,7 @@ def _seed_lambda(lambda_client: Any, iam: Any) -> dict[str, list[str]]:
     return created
 
 
-def _seed_cloudwatch(cloudwatch: Any, logs: Any) -> dict[str, list[str]]:
+def seed_cloudwatch(cloudwatch: Any, logs: Any) -> dict[str, list[str]]:
     created: dict[str, list[str]] = {"cloudwatch_alarms": [], "log_groups": []}
 
     # Seed metric alarms
@@ -824,7 +824,7 @@ def _seed_cloudwatch(cloudwatch: Any, logs: Any) -> dict[str, list[str]]:
     return created
 
 
-def _seed_cloudformation(cfn: Any) -> dict[str, list[str]]:
+def seed_cloudformation(cfn: Any) -> dict[str, list[str]]:
     import json
 
     created: dict[str, list[str]] = {"cloudformation_stacks": []}
@@ -859,7 +859,7 @@ def _seed_cloudformation(cfn: Any) -> dict[str, list[str]]:
             cfn.create_stack(
                 StackName=stack_name,
                 TemplateBody=json.dumps(template),
-                Tags=_tags(
+                Tags=tags(
                     {"Key": "Name", "Value": stack_name},
                     {"Key": DEMO_DESC_TAG_KEY, "Value": description},
                 ),
@@ -872,7 +872,7 @@ def _seed_cloudformation(cfn: Any) -> dict[str, list[str]]:
     return created
 
 
-def _seed_sns(sns: Any) -> dict[str, list[str]]:
+def seed_sns(sns: Any) -> dict[str, list[str]]:
     created: dict[str, list[str]] = {"sns_topics": []}
     topics = [
         ("demo-order-events", "Demo SNS topic for order lifecycle events"),
@@ -896,7 +896,7 @@ def _seed_sns(sns: Any) -> dict[str, list[str]]:
     return created
 
 
-def _seed_ses(ses: Any) -> dict[str, list[str]]:
+def seed_ses(ses: Any) -> dict[str, list[str]]:
     created: dict[str, list[str]] = {"ses_identities": []}
     identities = [
         "demo@example.com",
@@ -912,7 +912,7 @@ def _seed_ses(ses: Any) -> dict[str, list[str]]:
     return created
 
 
-def _seed_iam_extras(iam: Any) -> dict[str, list[str]]:
+def seed_iam_extras(iam: Any) -> dict[str, list[str]]:
     """Seed additional IAM resources (users, groups, policies) beyond the Lambda role."""
     import json
 
@@ -940,7 +940,7 @@ def _seed_iam_extras(iam: Any) -> dict[str, list[str]]:
     ]
     for user_name, path, group_name in users:
         try:
-            iam.create_user(UserName=user_name, Path=path, Tags=_tags({"Key": "Name", "Value": user_name}))
+            iam.create_user(UserName=user_name, Path=path, Tags=tags({"Key": "Name", "Value": user_name}))
             logger.info("created IAM user %s", user_name)
             created["iam_users"].append(user_name)
         except Exception as exc:

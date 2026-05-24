@@ -34,7 +34,7 @@ WRITE_ACTION = ActionDefinition(
 
 
 @dataclass
-class _FakeExecutor:
+class FakeExecutor:
     result: Any
     calls: int = 0
 
@@ -44,7 +44,7 @@ class _FakeExecutor:
         return self.result
 
 
-def _result(operation: str) -> Boto3Result:
+def result(operation: str) -> Boto3Result:
     return Boto3Result(
         service="fake",
         operation=operation,
@@ -77,7 +77,7 @@ def test_action_cache_entry_expires() -> None:
 def test_app_context_caches_read_only_results(monkeypatch: Any) -> None:
     """Repeated read-only calls reuse the cached result."""
     context = AppContext(region_name="us-east-1")
-    fake_executor = _FakeExecutor(_result("read"))
+    fake_executor = FakeExecutor(result("read"))
     monkeypatch.setattr(context, "boto3_executor", lambda: fake_executor)
 
     first = context.execute(READ_ACTION, {})
@@ -90,7 +90,7 @@ def test_app_context_caches_read_only_results(monkeypatch: Any) -> None:
 def test_app_context_does_not_cache_writes(monkeypatch: Any) -> None:
     """Write actions always execute again."""
     context = AppContext(region_name="us-east-1")
-    fake_executor = _FakeExecutor(_result("write"))
+    fake_executor = FakeExecutor(result("write"))
     monkeypatch.setattr(context, "boto3_executor", lambda: fake_executor)
 
     context.execute(WRITE_ACTION, {})
@@ -102,7 +102,7 @@ def test_app_context_does_not_cache_writes(monkeypatch: Any) -> None:
 def test_invalidate_read_cache_for_service(monkeypatch: Any) -> None:
     """Invalidating one service drops its cached reads."""
     context = AppContext(region_name="us-east-1")
-    fake_executor = _FakeExecutor(_result("read"))
+    fake_executor = FakeExecutor(result("read"))
     monkeypatch.setattr(context, "boto3_executor", lambda: fake_executor)
 
     context.execute(READ_ACTION, {})
@@ -123,7 +123,7 @@ def test_action_cache_snapshot_reports_entries() -> None:
         region_name="us-east-1",
         endpoint_config=AppContext().endpoint_config,
     )
-    cache.put(key, _result("read"))
+    cache.put(key, result("read"))
 
     snapshot = cache.snapshot()
 
@@ -152,8 +152,8 @@ def test_invalidate_entry_removes_only_selected_cache_entry() -> None:
         region_name="us-east-1",
         endpoint_config=AppContext().endpoint_config,
     )
-    cache.put(first_key, _result("read"))
-    cache.put(second_key, _result("read"))
+    cache.put(first_key, result("read"))
+    cache.put(second_key, result("read"))
 
     removed = cache.invalidate_entry(
         service_id="fake",

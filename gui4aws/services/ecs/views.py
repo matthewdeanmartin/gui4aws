@@ -20,22 +20,22 @@ __all__ = [
 ]
 
 
-def _optional_str(value: Any) -> str | None:
+def optional_str(value: Any) -> str | None:
     if value is None:
         return None
     text = str(value)
     return text or None
 
 
-def _arn_to_name(arn: str) -> str:
+def arn_to_name(arn: str) -> str:
     """Extract the last path segment from an ARN."""
     return arn.split("/")[-1] if "/" in arn else arn
 
 
-def _arn_to_family_revision(arn: str) -> tuple[str, str]:
+def arn_to_family_revision(arn: str) -> tuple[str, str]:
     """Extract family and revision from a task definition ARN or family:revision string."""
     # arn:aws:ecs:...:task-definition/family:revision  OR  family:revision  OR  family
-    name = _arn_to_name(arn)
+    name = arn_to_name(arn)
     if ":" in name:
         parts = name.rsplit(":", 1)
         return parts[0], parts[1]
@@ -56,13 +56,13 @@ def to_cluster_summaries(response: Mapping[str, Any]) -> list[EcsClusterSummary]
                 running_tasks=int(c.get("runningTasksCount", 0)),
                 pending_tasks=int(c.get("pendingTasksCount", 0)),
                 active_services=int(c.get("activeServicesCount", 0)),
-                arn=_optional_str(c.get("clusterArn")),
+                arn=optional_str(c.get("clusterArn")),
             )
         )
     for arn in arns:
         summaries.append(
             EcsClusterSummary(
-                cluster_name=_arn_to_name(arn),
+                cluster_name=arn_to_name(arn),
                 status="",
                 running_tasks=0,
                 pending_tasks=0,
@@ -84,20 +84,20 @@ def to_service_summaries(response: Mapping[str, Any]) -> list[EcsServiceSummary]
         summaries.append(
             EcsServiceSummary(
                 service_name=str(s.get("serviceName", "")),
-                cluster_name=_arn_to_name(cluster_arn),
+                cluster_name=arn_to_name(cluster_arn),
                 status=str(s.get("status", "")),
                 desired_count=int(s.get("desiredCount", 0)),
                 running_count=int(s.get("runningCount", 0)),
                 pending_count=int(s.get("pendingCount", 0)),
-                task_definition=_optional_str(s.get("taskDefinition")),
-                launch_type=_optional_str(s.get("launchType")),
-                arn=_optional_str(s.get("serviceArn")),
+                task_definition=optional_str(s.get("taskDefinition")),
+                launch_type=optional_str(s.get("launchType")),
+                arn=optional_str(s.get("serviceArn")),
             )
         )
     for arn in arns:
         summaries.append(
             EcsServiceSummary(
-                service_name=_arn_to_name(arn),
+                service_name=arn_to_name(arn),
                 cluster_name="",
                 status="",
                 desired_count=0,
@@ -122,19 +122,19 @@ def to_task_summaries(response: Mapping[str, Any]) -> list[EcsTaskSummary]:
         cluster_arn = str(t.get("clusterArn", ""))
         summaries.append(
             EcsTaskSummary(
-                task_id=_arn_to_name(task_arn),
-                cluster_name=_arn_to_name(cluster_arn),
-                task_definition=_optional_str(t.get("taskDefinitionArn")),
+                task_id=arn_to_name(task_arn),
+                cluster_name=arn_to_name(cluster_arn),
+                task_definition=optional_str(t.get("taskDefinitionArn")),
                 last_status=str(t.get("lastStatus", "")),
                 desired_status=str(t.get("desiredStatus", "")),
-                launch_type=_optional_str(t.get("launchType")),
-                arn=_optional_str(t.get("taskArn")),
+                launch_type=optional_str(t.get("launchType")),
+                arn=optional_str(t.get("taskArn")),
             )
         )
     for arn in arns:
         summaries.append(
             EcsTaskSummary(
-                task_id=_arn_to_name(arn),
+                task_id=arn_to_name(arn),
                 cluster_name="",
                 task_definition=None,
                 last_status="",
@@ -152,7 +152,7 @@ def to_task_definition_summaries(response: Mapping[str, Any]) -> list[EcsTaskDef
     arns = response.get("taskDefinitionArns", []) or []
     summaries: list[EcsTaskDefinitionSummary] = []
     for arn in arns:
-        family, revision = _arn_to_family_revision(arn)
+        family, revision = arn_to_family_revision(arn)
         summaries.append(
             EcsTaskDefinitionSummary(
                 task_definition_arn=arn,
@@ -167,9 +167,9 @@ def to_task_definition_summaries(response: Mapping[str, Any]) -> list[EcsTaskDef
         summaries.append(
             EcsTaskDefinitionSummary(
                 task_definition_arn=arn,
-                family=str(td.get("family", _arn_to_family_revision(arn)[0])),
-                revision=str(td.get("revision", _arn_to_family_revision(arn)[1])),
-                status=_optional_str(td.get("status")),
+                family=str(td.get("family", arn_to_family_revision(arn)[0])),
+                revision=str(td.get("revision", arn_to_family_revision(arn)[1])),
+                status=optional_str(td.get("status")),
             )
         )
     return summaries

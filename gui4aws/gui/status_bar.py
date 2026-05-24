@@ -19,7 +19,7 @@ class StatusBar(ttk.Frame):
         self.context = context
         self.status_var = tk.StringVar(value="Ready")
         self.last_action_var = tk.StringVar(value="—")
-        self.context_var = tk.StringVar(value=self._context_text())
+        self.context_var = tk.StringVar(value=self.context_text())
 
         ttk.Label(self, textvariable=self.status_var, width=12).grid(row=0, column=0, padx=8, pady=2)
         ttk.Separator(self, orient="vertical").grid(row=0, column=1, sticky="ns", padx=4)
@@ -38,9 +38,9 @@ class StatusBar(ttk.Frame):
 
     def refresh_context(self) -> None:
         """Refresh the right-hand context summary."""
-        self.context_var.set(self._context_text())
+        self.context_var.set(self.context_text())
 
-    def _context_text(self) -> str:
+    def context_text(self) -> str:
         ctx = self.context
         return (
             f"mode={ctx.mode}  profile={ctx.profile_name or '(env)'}  "

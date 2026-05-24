@@ -15,7 +15,7 @@ from gui4aws.services.lambdas.actions import (
     DELETE_FUNCTION,
     GET_FUNCTION,
     LIST_FUNCTIONS,
-    _create_function_boto3_params,
+    create_function_boto3_params,
 )
 from gui4aws.services.lambdas.views import to_function_summaries
 
@@ -79,7 +79,7 @@ def test_create_and_delete_function(mock_aws_env: None) -> None:
 def test_create_function_params_builder():
     """Test the pure builder for CREATE_FUNCTION."""
     inputs = {"function_name": "f1", "role_arn": "arn:role", "runtime": "python3.12"}
-    params = _create_function_boto3_params(inputs)
+    params = create_function_boto3_params(inputs)
     assert params["FunctionName"] == "f1"
     assert params["Role"] == "arn:role"
     assert params["Runtime"] == "python3.12"

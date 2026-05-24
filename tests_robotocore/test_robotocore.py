@@ -22,12 +22,12 @@ from gui4aws.execution.endpoint_config import EndpointConfig, EndpointMode
 from gui4aws.robotocore_server import RobotocoreManager
 
 
-def _ctx(robotocore: RobotocoreManager) -> AppContext:
+def ctx(robotocore: RobotocoreManager) -> AppContext:
     cfg = EndpointConfig(mode=EndpointMode.ROBOTOCORE, endpoint_url=robotocore.endpoint_url)
     return AppContext(region_name="us-east-1", endpoint_config=cfg)
 
 
-def _client(robotocore: RobotocoreManager, service: str) -> boto3.client:  # type: ignore[type-arg]
+def client(robotocore: RobotocoreManager, service: str) -> boto3.client:  # type: ignore[type-arg]
     return boto3.client(service, region_name="us-east-1", endpoint_url=robotocore.endpoint_url)
 
 
@@ -38,7 +38,7 @@ def test_sqs_create_and_list_queues(robotocore: RobotocoreManager) -> None:
     from gui4aws.services.sqs.actions import CREATE_QUEUE, LIST_QUEUES
     from gui4aws.services.sqs.views import to_queue_summaries
 
-    context = _ctx(robotocore)
+    context = ctx(robotocore)
     context.execute(CREATE_QUEUE, inputs={"queue_name": "rc-queue-1", "visibility_timeout": "30"})
 
     result = context.execute(LIST_QUEUES, inputs={})
@@ -51,10 +51,10 @@ def test_sqs_send_and_receive_message(robotocore: RobotocoreManager) -> None:
     from gui4aws.services.sqs.actions import LIST_QUEUES, RECEIVE_MESSAGES, SEND_MESSAGE
     from gui4aws.services.sqs.views import to_queue_summaries
 
-    sqs = _client(robotocore, "sqs")
+    sqs = client(robotocore, "sqs")
     url = sqs.create_queue(QueueName="rc-msg-queue")["QueueUrl"]
 
-    context = _ctx(robotocore)
+    context = ctx(robotocore)
     send_result = context.execute(
         SEND_MESSAGE,
         inputs={"queue_url": url, "message_body": "robotocore hello", "delay_seconds": "0"},
@@ -79,7 +79,7 @@ def test_s3_create_and_list_buckets(robotocore: RobotocoreManager) -> None:
     from gui4aws.services.s3.actions import CREATE_BUCKET, LIST_BUCKETS
     from gui4aws.services.s3.views import to_bucket_summaries
 
-    context = _ctx(robotocore)
+    context = ctx(robotocore)
     context.execute(CREATE_BUCKET, inputs={"bucket_name": "rc-bucket-1", "region": ""})
 
     result = context.execute(LIST_BUCKETS, inputs={})
@@ -92,12 +92,12 @@ def test_s3_list_objects_in_bucket(robotocore: RobotocoreManager) -> None:
     from gui4aws.services.s3.actions import LIST_OBJECTS
     from gui4aws.services.s3.views import to_object_summaries
 
-    s3 = _client(robotocore, "s3")
+    s3 = client(robotocore, "s3")
     s3.create_bucket(Bucket="rc-obj-bucket")
     s3.put_object(Bucket="rc-obj-bucket", Key="data/file1.txt", Body=b"hello")
     s3.put_object(Bucket="rc-obj-bucket", Key="data/file2.txt", Body=b"world")
 
-    context = _ctx(robotocore)
+    context = ctx(robotocore)
     result = context.execute(
         LIST_OBJECTS,
         inputs={"bucket_name": "rc-obj-bucket", "prefix": "data/", "max_keys": "100"},
@@ -116,7 +116,7 @@ def test_secrets_create_and_list(robotocore: RobotocoreManager) -> None:
     from gui4aws.services.secrets.actions import CREATE_SECRET, LIST_SECRETS
     from gui4aws.services.secrets.views import to_secret_summaries
 
-    context = _ctx(robotocore)
+    context = ctx(robotocore)
     context.execute(
         CREATE_SECRET,
         inputs={"name": "rc-secret-1", "description": "rc test", "secret_string": "s3cr3t"},
@@ -131,10 +131,10 @@ def test_secrets_create_and_list(robotocore: RobotocoreManager) -> None:
 def test_secrets_put_and_describe(robotocore: RobotocoreManager) -> None:
     from gui4aws.services.secrets.actions import DESCRIBE_SECRET, PUT_SECRET_VALUE
 
-    sm = _client(robotocore, "secretsmanager")
+    sm = client(robotocore, "secretsmanager")
     sm.create_secret(Name="rc-rotate-secret", SecretString="old")
 
-    context = _ctx(robotocore)
+    context = ctx(robotocore)
     context.execute(PUT_SECRET_VALUE, inputs={"secret_id": "rc-rotate-secret", "secret_string": "new-value"})
 
     result = context.execute(DESCRIBE_SECRET, inputs={"secret_id": "rc-rotate-secret"})
@@ -152,7 +152,7 @@ def test_kms_create_key_and_list(robotocore: RobotocoreManager) -> None:
     from gui4aws.services.kms.actions import CREATE_KEY, LIST_KEYS
     from gui4aws.services.kms.views import to_key_summaries
 
-    context = _ctx(robotocore)
+    context = ctx(robotocore)
     create_result = context.execute(
         CREATE_KEY,
         inputs={
@@ -175,10 +175,10 @@ def test_kms_create_alias(robotocore: RobotocoreManager) -> None:
     from gui4aws.services.kms.actions import CREATE_ALIAS, LIST_ALIASES
     from gui4aws.services.kms.views import to_alias_summaries
 
-    kms = _client(robotocore, "kms")
+    kms = client(robotocore, "kms")
     key_id = kms.create_key()["KeyMetadata"]["KeyId"]
 
-    context = _ctx(robotocore)
+    context = ctx(robotocore)
     context.execute(CREATE_ALIAS, inputs={"alias_name": "alias/rc-test-key", "target_key_id": key_id})
 
     result = context.execute(LIST_ALIASES, inputs={"key_id": ""})
@@ -193,7 +193,7 @@ def test_kms_create_alias(robotocore: RobotocoreManager) -> None:
 def test_aurora_create_cluster_and_describe(robotocore: RobotocoreManager) -> None:
     from gui4aws.services.aurora.actions import CREATE_DB_CLUSTER, DESCRIBE_DB_CLUSTERS
 
-    context = _ctx(robotocore)
+    context = ctx(robotocore)
     context.execute(
         CREATE_DB_CLUSTER,
         inputs={

@@ -10,7 +10,7 @@ from gui4aws.services.cloudwatch.models import AlarmSummary, LogEventSummary, Lo
 __all__ = ["to_alarm_summaries", "to_log_event_summaries", "to_log_group_summaries", "to_log_stream_summaries"]
 
 
-def _optional_int(value: Any) -> int | None:
+def optional_int(value: Any) -> int | None:
     if value is None:
         return None
     try:
@@ -46,15 +46,15 @@ def to_log_group_summaries(response: Mapping[str, Any]) -> list[LogGroupSummary]
         summaries.append(
             LogGroupSummary(
                 name=str(g.get("logGroupName", "")),
-                retention_days=_optional_int(g.get("retentionInDays")),
-                stored_bytes=_optional_int(g.get("storedBytes")),
+                retention_days=optional_int(g.get("retentionInDays")),
+                stored_bytes=optional_int(g.get("storedBytes")),
                 arn=g.get("arn") or None,
             )
         )
     return summaries
 
 
-def _fmt_ts(ms: Any) -> str | None:
+def fmt_ts(ms: Any) -> str | None:
     if ms is None:
         return None
     try:
@@ -72,9 +72,9 @@ def to_log_stream_summaries(response: Mapping[str, Any]) -> list[LogStreamSummar
         summaries.append(
             LogStreamSummary(
                 stream_name=str(s.get("logStreamName", "")),
-                last_event_time=_fmt_ts(s.get("lastEventTimestamp")),
-                first_event_time=_fmt_ts(s.get("firstEventTimestamp")),
-                stored_bytes=_optional_int(s.get("storedBytes")),
+                last_event_time=fmt_ts(s.get("lastEventTimestamp")),
+                first_event_time=fmt_ts(s.get("firstEventTimestamp")),
+                stored_bytes=optional_int(s.get("storedBytes")),
             )
         )
     return summaries
@@ -86,7 +86,7 @@ def to_log_event_summaries(response: Mapping[str, Any]) -> list[LogEventSummary]
     for e in events:
         summaries.append(
             LogEventSummary(
-                timestamp=_fmt_ts(e.get("timestamp")) or "",
+                timestamp=fmt_ts(e.get("timestamp")) or "",
                 message=str(e.get("message", "")).rstrip("\n"),
             )
         )

@@ -31,7 +31,7 @@ __all__ = [
 ]
 
 
-def _create_key_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+def create_key_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
     params: dict[str, Any] = {}
     if inputs.get("description"):
         params["Description"] = inputs["description"]
@@ -46,7 +46,7 @@ def _create_key_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
     return params
 
 
-def _create_key_cli_args(inputs: Mapping[str, str]) -> list[str]:
+def create_key_cli_args(inputs: Mapping[str, str]) -> list[str]:
     args: list[str] = []
     if inputs.get("description"):
         args += ["--description", inputs["description"]]
@@ -222,8 +222,8 @@ CREATE_KEY = ActionDefinition(
     iam_permissions=("kms:CreateKey",),
     description="Create a new KMS key.",
     cache_refresh_nav_ids=("keys", "aliases"),
-    cli_args_builder=_create_key_cli_args,
-    boto3_params_builder=_create_key_boto3_params,
+    cli_args_builder=create_key_cli_args,
+    boto3_params_builder=create_key_boto3_params,
 )
 
 

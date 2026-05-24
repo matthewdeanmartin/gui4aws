@@ -18,7 +18,7 @@ __all__ = ["ActionDialog"]
 logger = logging.getLogger(__name__)
 
 
-def _size_and_center(win: tk.Toplevel) -> None:
+def size_and_center(win: tk.Toplevel) -> None:
     """Size the dialog to 80% of its parent root window and center it on screen."""
     win.update_idletasks()
     root = win.winfo_toplevel() if win.master is None else win.master.winfo_toplevel()
@@ -61,14 +61,14 @@ class ActionDialog(tk.Toplevel):
         super().__init__(parent)
         self.action = action
         self.on_run = on_run
-        self._on_generate_scripts = on_generate_scripts
-        self._running = False
+        self.on_generate_scripts = on_generate_scripts
+        self.running = False
 
         self.title(action.display_name)
         self.resizable(True, True)
         self.transient(parent.winfo_toplevel())
-        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
-        self.bind("<Escape>", lambda _e: self._on_cancel())
+        self.protocol("WM_DELETE_WINDOW", self.on_cancel)
+        self.bind("<Escape>", lambda _e: self.on_cancel())
 
         # Root grid: paned area grows, then status bar and button bar are fixed.
         self.grid_columnconfigure(0, weight=1)
@@ -93,14 +93,14 @@ class ActionDialog(tk.Toplevel):
         form_container.grid_columnconfigure(0, weight=1)
         _win_id = canvas.create_window((0, 0), window=form_container, anchor="nw")
 
-        def _sync_scroll(_e: Any) -> None:
+        def sync_scroll(_e: Any) -> None:
             canvas.configure(scrollregion=canvas.bbox("all"))
 
-        def _stretch(_e: Any) -> None:
+        def stretch(_e: Any) -> None:
             canvas.itemconfigure(_win_id, width=_e.width)
 
-        form_container.bind("<Configure>", _sync_scroll)
-        canvas.bind("<Configure>", _stretch)
+        form_container.bind("<Configure>", sync_scroll)
+        canvas.bind("<Configure>", stretch)
 
         paned.add(top_canvas_frame, weight=1)
 
@@ -119,7 +119,7 @@ class ActionDialog(tk.Toplevel):
             form_row += 1
 
         # Form
-        self.form = ActionForm(form_container, action, prefill=prefill, on_change=self._refresh_scripts)
+        self.form = ActionForm(form_container, action, prefill=prefill, on_change=self.refresh_scripts)
         self.form.grid(row=form_row, column=0, sticky="nsew", padx=8, pady=4)
         form_row += 1
 
@@ -135,8 +135,8 @@ class ActionDialog(tk.Toplevel):
             form_row += 1
 
         # Live script preview (for non-read-only actions)
-        self._cli_text: tk.Text | None = None
-        self._python_text: tk.Text | None = None
+        self.cli_text: tk.Text | None = None
+        self.python_text: tk.Text | None = None
         if needs_review(action):
             script_frame = ttk.LabelFrame(form_container, text="Generated scripts")
             script_frame.grid(row=form_row, column=0, sticky="nsew", padx=8, pady=4)
@@ -148,31 +148,31 @@ class ActionDialog(tk.Toplevel):
             cli_lf.grid(row=0, column=0, sticky="nsew", padx=4, pady=4)
             cli_lf.grid_columnconfigure(0, weight=1)
             cli_lf.grid_rowconfigure(0, weight=1)
-            self._cli_text = tk.Text(cli_lf, height=8, width=48, wrap="none", font=("Courier", 9))
-            self._cli_text.configure(state="disabled")
-            cli_scroll = ttk.Scrollbar(cli_lf, orient="vertical", command=self._cli_text.yview)
-            self._cli_text.configure(yscrollcommand=cli_scroll.set)
-            self._cli_text.grid(row=0, column=0, sticky="nsew")
+            self.cli_text = tk.Text(cli_lf, height=8, width=48, wrap="none", font=("Courier", 9))
+            self.cli_text.configure(state="disabled")
+            cli_scroll = ttk.Scrollbar(cli_lf, orient="vertical", command=self.cli_text.yview)
+            self.cli_text.configure(yscrollcommand=cli_scroll.set)
+            self.cli_text.grid(row=0, column=0, sticky="nsew")
             cli_scroll.grid(row=0, column=1, sticky="ns")
 
             py_lf = ttk.LabelFrame(script_frame, text="Python (boto3)")
             py_lf.grid(row=0, column=1, sticky="nsew", padx=4, pady=4)
             py_lf.grid_columnconfigure(0, weight=1)
             py_lf.grid_rowconfigure(0, weight=1)
-            self._python_text = tk.Text(py_lf, height=8, width=48, wrap="none", font=("Courier", 9))
-            self._python_text.configure(state="disabled")
-            py_scroll = ttk.Scrollbar(py_lf, orient="vertical", command=self._python_text.yview)
-            self._python_text.configure(yscrollcommand=py_scroll.set)
-            self._python_text.grid(row=0, column=0, sticky="nsew")
+            self.python_text = tk.Text(py_lf, height=8, width=48, wrap="none", font=("Courier", 9))
+            self.python_text.configure(state="disabled")
+            py_scroll = ttk.Scrollbar(py_lf, orient="vertical", command=self.python_text.yview)
+            self.python_text.configure(yscrollcommand=py_scroll.set)
+            self.python_text.grid(row=0, column=0, sticky="nsew")
             py_scroll.grid(row=0, column=1, sticky="ns")
 
             copy_bar = ttk.Frame(script_frame)
             copy_bar.grid(row=1, column=0, columnspan=2, sticky="e", padx=4, pady=2)
-            ttk.Button(copy_bar, text="Copy CLI", command=self._copy_cli).grid(row=0, column=0, padx=2)
-            ttk.Button(copy_bar, text="Copy Python", command=self._copy_python).grid(row=0, column=1, padx=2)
+            ttk.Button(copy_bar, text="Copy CLI", command=self.copy_cli).grid(row=0, column=0, padx=2)
+            ttk.Button(copy_bar, text="Copy Python", command=self.copy_python).grid(row=0, column=1, padx=2)
 
             form_row += 1
-            self._refresh_scripts()
+            self.refresh_scripts()
 
         # ── Bottom pane: result — fills remaining dialog height ───────────────
         result_lf = ttk.LabelFrame(paned, text="Result")
@@ -200,66 +200,72 @@ class ActionDialog(tk.Toplevel):
         btn_frame = ttk.Frame(self)
         btn_frame.grid(row=2, column=0, sticky="e", padx=8, pady=8)
 
-        self._cancel_btn = ttk.Button(btn_frame, text="Cancel  [Esc]", command=self._on_cancel)
-        self._cancel_btn.grid(row=0, column=0, padx=4)
+        self.cancel_btn = ttk.Button(btn_frame, text="Cancel  [Esc]", command=self.on_cancel)
+        self.cancel_btn.grid(row=0, column=0, padx=4)
 
         verb = "Run" if not needs_review(action) else "Review & Run"
-        self._run_btn = ttk.Button(btn_frame, text=f"{verb}  [Enter]", command=self._on_run)
-        self._run_btn.grid(row=0, column=1, padx=4)
-        self.bind("<Return>", lambda _e: self._on_run())
+        self.run_btn = ttk.Button(btn_frame, text=f"{verb}  [Enter]", command=self.on_run)
+        self.run_btn.grid(row=0, column=1, padx=4)
+        self.bind("<Return>", lambda _e: self.on_run())
 
-        self._close_btn = ttk.Button(btn_frame, text="Close", command=self.destroy, state="disabled")
-        self._close_btn.grid(row=0, column=2, padx=4)
+        self.close_btn = ttk.Button(btn_frame, text="Close", command=self.destroy, state="disabled")
+        self.close_btn.grid(row=0, column=2, padx=4)
 
-        _size_and_center(self)
+        size_and_center(self)
 
     # ── Script helpers ───────────────────────────────────────────────────────
 
-    def _refresh_scripts(self) -> None:
-        if self._on_generate_scripts is None or self._cli_text is None:
+    def refresh_scripts(self) -> None:
+        """Update the script preview panels based on current form values."""
+        if self.on_generate_scripts is None or self.cli_text is None:
             return
         try:
-            cli, python = self._on_generate_scripts(self.action, self.form.values())
+            cli, python = self.on_generate_scripts(self.action, self.form.values())
         except Exception:
             return
-        self._set_text(self._cli_text, cli)
-        if self._python_text is not None:
-            self._set_text(self._python_text, python)
+        self.set_text(self.cli_text, cli)
+        if self.python_text is not None:
+            self.set_text(self.python_text, python)
 
     @staticmethod
-    def _set_text(widget: tk.Text, content: str) -> None:
+    def set_text(widget: tk.Text, content: str) -> None:
+        """Update a read-only text widget with the given content."""
         widget.configure(state="normal")
         widget.delete("1.0", "end")
         widget.insert("1.0", content)
         widget.configure(state="disabled")
 
-    def _copy_cli(self) -> None:
-        if self._cli_text is not None:
+    def copy_cli(self) -> None:
+        """Copy the generated AWS CLI script to the system clipboard."""
+        if self.cli_text is not None:
             self.clipboard_clear()
-            self.clipboard_append(self._cli_text.get("1.0", "end").strip())
+            self.clipboard_append(self.cli_text.get("1.0", "end").strip())
 
-    def _copy_python(self) -> None:
-        if self._python_text is not None:
+    def copy_python(self) -> None:
+        """Copy the generated Python (boto3) script to the system clipboard."""
+        if self.python_text is not None:
             self.clipboard_clear()
-            self.clipboard_append(self._python_text.get("1.0", "end").strip())
+            self.clipboard_append(self.python_text.get("1.0", "end").strip())
 
     # ── Button actions ───────────────────────────────────────────────────────
 
-    def _on_run(self) -> None:
-        if self._running:
+    def on_run(self) -> None:
+        """Validate the form and trigger the action execution."""
+        if self.running:
             return
         errors = self.form.validate()
         if errors:
             self.status_var.set("Required: " + "; ".join(errors))
             return
-        self._running = True
-        self._run_btn.configure(state="disabled")
+        self.running = True
+        self.run_btn.configure(state="disabled")
         self.status_var.set("Running…")
-        self._set_result_text("(waiting for result…)")
+        self.set_result_text("(waiting for result…)")
         if self.on_run is not None:
             self.on_run(self.action, self.form.values())
 
-    def _on_cancel(self) -> None:
+    def on_cancel(self) -> None:
+        """Close the dialog without running the action."""
         self.destroy()
 
     # ── External API (called by MainWindow) ──────────────────────────────────
@@ -267,10 +273,10 @@ class ActionDialog(tk.Toplevel):
     def set_status(self, text: str) -> None:
         """Update the status label and enable the Close button once done."""
         self.status_var.set(text)
-        if self._running:
-            self._running = False
-            self._run_btn.configure(state="normal")
-            self._close_btn.configure(state="normal")
+        if self.running:
+            self.running = False
+            self.run_btn.configure(state="normal")
+            self.close_btn.configure(state="normal")
 
     def set_result(self, raw: Any) -> None:
         """Display raw result data in the result panel."""
@@ -278,9 +284,10 @@ class ActionDialog(tk.Toplevel):
             text = json.dumps(raw, indent=2, default=str)
         except TypeError:
             text = repr(raw)
-        self._set_result_text(text)
+        self.set_result_text(text)
 
-    def _set_result_text(self, text: str) -> None:
+    def set_result_text(self, text: str) -> None:
+        """Update the result text panel with the given content."""
         self.result_text.configure(state="normal")
         self.result_text.delete("1.0", "end")
         self.result_text.insert("1.0", text)

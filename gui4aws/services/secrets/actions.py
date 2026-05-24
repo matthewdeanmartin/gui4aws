@@ -27,7 +27,7 @@ __all__ = [
 ]
 
 
-def _list_secrets_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+def list_secrets_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
     params: dict[str, Any] = {}
     include_deleted = inputs.get("include_deleted", "false").lower() == "true"
     if include_deleted:
@@ -38,7 +38,7 @@ def _list_secrets_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
     return params
 
 
-def _list_secrets_cli_args(inputs: Mapping[str, str]) -> list[str]:
+def list_secrets_cli_args(inputs: Mapping[str, str]) -> list[str]:
     args: list[str] = []
     if inputs.get("include_deleted", "false").lower() == "true":
         args += ["--include-planned-deletion"]
@@ -77,8 +77,8 @@ LIST_SECRETS = ActionDefinition(
     iam_permissions=("secretsmanager:ListSecrets",),
     description="List secrets. Enable 'Include deleted' to also show secrets pending deletion.",
     view=to_secret_summaries,
-    cli_args_builder=_list_secrets_cli_args,
-    boto3_params_builder=_list_secrets_boto3_params,
+    cli_args_builder=list_secrets_cli_args,
+    boto3_params_builder=list_secrets_boto3_params,
 )
 
 

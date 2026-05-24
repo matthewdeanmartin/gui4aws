@@ -1,4 +1,4 @@
-"""Allows `python -m gui4aws` invocation."""
+"""Main entry point for gui4aws when run via `python -m gui4aws`."""
 
 from gui4aws.cli import main
 

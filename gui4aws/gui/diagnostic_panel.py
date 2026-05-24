@@ -24,11 +24,11 @@ class DiagnosticPanel(ttk.Frame):
         super().__init__(parent, **kwargs)
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
-        self._last_text = ""
+        self.last_text = ""
 
         button_bar = ttk.Frame(self)
         button_bar.grid(row=0, column=0, sticky="ew", padx=4, pady=(4, 0))
-        ttk.Button(button_bar, text="Copy", command=self._copy).pack(side="left", padx=2)
+        ttk.Button(button_bar, text="Copy", command=self.copy).pack(side="left", padx=2)
         for label, callback in actions:
             ttk.Button(button_bar, text=label, command=callback).pack(side="left", padx=2)
 
@@ -42,20 +42,20 @@ class DiagnosticPanel(ttk.Frame):
 
     def set_text(self, text: str) -> None:
         """Replace the panel contents, preserving scroll position when possible."""
-        if text == self._last_text:
+        if text == self.last_text:
             return
         yview = self.text.yview()
         self.text.configure(state="normal")
         self.text.delete("1.0", "end")
         self.text.insert("1.0", text)
         self.text.configure(state="disabled")
-        if self._last_text and yview[1] < 1.0:
+        if self.last_text and yview[1] < 1.0:
             self.text.yview_moveto(yview[0])
         elif text:
             self.text.yview_moveto(1.0)
-        self._last_text = text
+        self.last_text = text
 
-    def _copy(self) -> None:
+    def copy(self) -> None:
         content = self.text.get("1.0", "end").strip()
         if content:
             self.clipboard_clear()
@@ -65,7 +65,7 @@ class DiagnosticPanel(ttk.Frame):
 class QueueDiagnosticsPanel(ttk.Frame):
     """Widget-based queue diagnostics."""
 
-    _STAT_FIELDS = (
+    STAT_FIELDS = (
         ("pending_jobs", "Pending jobs"),
         ("current_job", "Current job"),
         ("submitted_jobs", "Submitted"),
@@ -89,7 +89,7 @@ class QueueDiagnosticsPanel(ttk.Frame):
         super().__init__(parent, **kwargs)
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
-        self._last_snapshot: dict[str, Any] | None = None
+        self.last_snapshot: dict[str, Any] | None = None
 
         stats_frame = ttk.LabelFrame(self, text="Queue State")
         stats_frame.grid(row=0, column=0, sticky="ew", padx=4, pady=4)
@@ -98,11 +98,11 @@ class QueueDiagnosticsPanel(ttk.Frame):
             ttk.Button(stats_frame, text="Clear Queue", command=on_clear).grid(
                 row=0, column=2, rowspan=2, sticky="e", padx=4, pady=4
             )
-        self._vars: dict[str, tk.StringVar] = {}
-        for row, (key, label) in enumerate(self._STAT_FIELDS):
+        self.vars: dict[str, tk.StringVar] = {}
+        for row, (key, label) in enumerate(self.STAT_FIELDS):
             ttk.Label(stats_frame, text=f"{label}:").grid(row=row, column=0, sticky="w", padx=4, pady=2)
             var = tk.StringVar(value="")
-            self._vars[key] = var
+            self.vars[key] = var
             ttk.Label(stats_frame, textvariable=var).grid(row=row, column=1, sticky="w", padx=4, pady=2)
 
         events_frame = ttk.LabelFrame(self, text="Recent Events")
@@ -117,9 +117,9 @@ class QueueDiagnosticsPanel(ttk.Frame):
 
     def set_snapshot(self, snapshot: dict[str, Any]) -> None:
         """Refresh the queue panel if the data changed."""
-        if snapshot == self._last_snapshot:
+        if snapshot == self.last_snapshot:
             return
-        for key, _ in self._STAT_FIELDS:
+        for key, _ in self.STAT_FIELDS:
             value = snapshot.get(key)
             if key == "current_job":
                 display = "(idle)" if not value else str(value)
@@ -127,15 +127,15 @@ class QueueDiagnosticsPanel(ttk.Frame):
                 display = "(none)"
             else:
                 display = str(value)
-            self._vars[key].set(display)
-        _replace_listbox(self.events, snapshot.get("recent_events", ()))
-        self._last_snapshot = dict(snapshot)
+            self.vars[key].set(display)
+        replace_listbox(self.events, snapshot.get("recent_events", ()))
+        self.last_snapshot = dict(snapshot)
 
 
 class CacheDiagnosticsPanel(ttk.Frame):
     """Widget-based cache diagnostics."""
 
-    _SUMMARY_FIELDS = (
+    SUMMARY_FIELDS = (
         ("mode", "Mode"),
         ("profile", "Profile"),
         ("region", "Region"),
@@ -157,17 +157,17 @@ class CacheDiagnosticsPanel(ttk.Frame):
         self.grid_rowconfigure(1, weight=1)
         self.grid_rowconfigure(2, weight=2)
         self.grid_rowconfigure(3, weight=1)
-        self._last_snapshot: dict[str, Any] | None = None
-        self._entry_lookup: dict[str, dict[str, Any]] = {}
+        self.last_snapshot: dict[str, Any] | None = None
+        self.entry_lookup: dict[str, dict[str, Any]] = {}
 
         summary = ttk.LabelFrame(self, text="Context")
         summary.grid(row=0, column=0, sticky="ew", padx=4, pady=4)
         summary.grid_columnconfigure(1, weight=1)
-        self._summary_vars: dict[str, tk.StringVar] = {}
-        for row, (key, label) in enumerate(self._SUMMARY_FIELDS):
+        self.summary_vars: dict[str, tk.StringVar] = {}
+        for row, (key, label) in enumerate(self.SUMMARY_FIELDS):
             ttk.Label(summary, text=f"{label}:").grid(row=row, column=0, sticky="w", padx=4, pady=2)
             var = tk.StringVar(value="")
-            self._summary_vars[key] = var
+            self.summary_vars[key] = var
             ttk.Label(summary, textvariable=var).grid(row=row, column=1, sticky="w", padx=4, pady=2)
 
         stats_frame = ttk.LabelFrame(self, text="Stats")
@@ -225,12 +225,12 @@ class CacheDiagnosticsPanel(ttk.Frame):
 
     def set_snapshot(self, snapshot: dict[str, Any]) -> None:
         """Refresh the cache panel if the data changed."""
-        if snapshot == self._last_snapshot:
+        if snapshot == self.last_snapshot:
             return
-        for key, _ in self._SUMMARY_FIELDS:
-            self._summary_vars[key].set(str(snapshot.get(key, "")))
+        for key, _ in self.SUMMARY_FIELDS:
+            self.summary_vars[key].set(str(snapshot.get(key, "")))
         stats_rows = [(name, str(value)) for name, value in snapshot.get("stats", {}).items()]
-        _replace_tree(self.stats_tree, stats_rows)
+        replace_tree(self.stats_tree, stats_rows)
         entry_rows = [
             (
                 entry["service_id"],
@@ -240,17 +240,17 @@ class CacheDiagnosticsPanel(ttk.Frame):
             )
             for entry in snapshot.get("entries", ())
         ]
-        _replace_tree(self.entries_tree, entry_rows)
-        self._entry_lookup = {str(index): entry for index, entry in enumerate(snapshot.get("entries", ()))}
-        _replace_listbox(self.events, snapshot.get("recent_events", ()))
-        self._last_snapshot = dict(snapshot)
+        replace_tree(self.entries_tree, entry_rows)
+        self.entry_lookup = {str(index): entry for index, entry in enumerate(snapshot.get("entries", ()))}
+        replace_listbox(self.events, snapshot.get("recent_events", ()))
+        self.last_snapshot = dict(snapshot)
 
     def selected_entry(self) -> dict[str, Any] | None:
         """Return the currently selected cache entry, if any."""
         selected = self.entries_tree.selection()
         if not selected:
             return None
-        return self._entry_lookup.get(selected[0])
+        return self.entry_lookup.get(selected[0])
 
 
 class RobotocorePanel(ttk.Frame):
@@ -271,7 +271,7 @@ class RobotocorePanel(ttk.Frame):
         super().__init__(parent, **kwargs)
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
-        self._last_text = ""
+        self.last_text = ""
 
         # ── Button bar ────────────────────────────────────────────────────────
         controls = ttk.Frame(self)
@@ -292,7 +292,7 @@ class RobotocorePanel(ttk.Frame):
         self.pull_btn = ttk.Button(controls, text="Pull Docker Image", width=16, command=on_pull or (lambda: None))
         self.pull_btn.pack(side="left", padx=(16, 2))
 
-        ttk.Button(controls, text="Copy Log", width=10, command=self._copy).pack(side="left", padx=(16, 2))
+        ttk.Button(controls, text="Copy Log", width=10, command=self.copy).pack(side="left", padx=(16, 2))
 
         # ── "Use Moto instead" checkbox ───────────────────────────────────────
         self.use_moto_var = tk.BooleanVar(value=False)
@@ -300,14 +300,14 @@ class RobotocorePanel(ttk.Frame):
             controls,
             text="Use Moto instead",
             variable=self.use_moto_var,
-            command=self._on_use_moto_changed,
+            command=self.on_use_moto_changed,
         )
         cb.pack(side="right", padx=(16, 4))
-        self._on_use_moto_changed_cb = on_use_moto_changed
+        self.on_use_moto_changed_cb = on_use_moto_changed
 
         # ── Status label ──────────────────────────────────────────────────────
-        self._status_var = tk.StringVar(value="Not running")
-        ttk.Label(controls, textvariable=self._status_var, foreground="gray").pack(side="right", padx=(4, 16))
+        self.status_var = tk.StringVar(value="Not running")
+        ttk.Label(controls, textvariable=self.status_var, foreground="gray").pack(side="right", padx=(4, 16))
 
         # ── Log text area ─────────────────────────────────────────────────────
         self.text = tk.Text(self, wrap="none", font=("Courier", 9))
@@ -318,21 +318,21 @@ class RobotocorePanel(ttk.Frame):
 
     def set_text(self, text: str) -> None:
         """Replace log panel contents."""
-        if text == self._last_text:
+        if text == self.last_text:
             return
         yview = self.text.yview()
         self.text.configure(state="normal")
         self.text.delete("1.0", "end")
         self.text.insert("1.0", text)
         self.text.configure(state="disabled")
-        if self._last_text and yview[1] < 1.0:
+        if self.last_text and yview[1] < 1.0:
             self.text.yview_moveto(yview[0])
         elif text:
             self.text.yview_moveto(1.0)
-        self._last_text = text
+        self.last_text = text
 
     def set_status(self, text: str) -> None:
-        self._status_var.set(text)
+        self.status_var.set(text)
 
     def set_running(self, running: bool) -> None:
         """Update button states to reflect whether the container is up."""
@@ -341,30 +341,30 @@ class RobotocorePanel(ttk.Frame):
             self.stop_btn.configure(state="normal")
             self.restart_btn.configure(state="normal")
             self.reset_btn.configure(state="normal")
-            self._status_var.set("Running")
+            self.status_var.set("Running")
         else:
             self.start_btn.configure(state="normal")
             self.stop_btn.configure(state="disabled")
             self.restart_btn.configure(state="disabled")
             self.reset_btn.configure(state="disabled")
-            self._status_var.set("Not running")
+            self.status_var.set("Not running")
 
     @property
     def use_moto(self) -> bool:
         return self.use_moto_var.get()
 
-    def _on_use_moto_changed(self) -> None:
-        if self._on_use_moto_changed_cb:
-            self._on_use_moto_changed_cb(self.use_moto_var.get())
+    def on_use_moto_changed(self) -> None:
+        if self.on_use_moto_changed_cb:
+            self.on_use_moto_changed_cb(self.use_moto_var.get())
 
-    def _copy(self) -> None:
+    def copy(self) -> None:
         content = self.text.get("1.0", "end").strip()
         if content:
             self.clipboard_clear()
             self.clipboard_append(content)
 
 
-def _replace_listbox(widget: tk.Listbox, items: Any) -> None:
+def replace_listbox(widget: tk.Listbox, items: Any) -> None:
     new_items = [str(item) for item in items] or ["(none)"]
     current = list(widget.get(0, "end"))
     if current == new_items:
@@ -377,7 +377,7 @@ def _replace_listbox(widget: tk.Listbox, items: Any) -> None:
         widget.yview_moveto(yview[0])
 
 
-def _replace_tree(widget: ttk.Treeview, rows: Sequence[tuple[Any, ...]]) -> None:
+def replace_tree(widget: ttk.Treeview, rows: Sequence[tuple[Any, ...]]) -> None:
     current = [tuple(widget.item(item, "values")) for item in widget.get_children("")]
     new_rows: Sequence[tuple[Any, ...]]
     if rows:

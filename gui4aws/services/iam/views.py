@@ -10,7 +10,7 @@ from gui4aws.services.iam.models import GroupSummary, PolicySummary, RoleSummary
 __all__ = ["to_group_summaries", "to_policy_summaries", "to_role_summaries", "to_user_summaries"]
 
 
-def _fmt(value: Any) -> str | None:
+def fmt(value: Any) -> str | None:
     if value is None:
         return None
     return str(value)[:19]
@@ -24,8 +24,8 @@ def to_user_summaries(response: Mapping[str, Any]) -> list[UserSummary]:
             user_id=u.get("UserId") or None,
             arn=u.get("Arn") or None,
             path=u.get("Path") or None,
-            created=_fmt(u.get("CreateDate")),
-            password_last_used=_fmt(u.get("PasswordLastUsed")),
+            created=fmt(u.get("CreateDate")),
+            password_last_used=fmt(u.get("PasswordLastUsed")),
         )
         for u in users
     ]
@@ -39,7 +39,7 @@ def to_group_summaries(response: Mapping[str, Any]) -> list[GroupSummary]:
             group_id=g.get("GroupId") or None,
             arn=g.get("Arn") or None,
             path=g.get("Path") or None,
-            created=_fmt(g.get("CreateDate")),
+            created=fmt(g.get("CreateDate")),
         )
         for g in groups
     ]
@@ -53,7 +53,7 @@ def to_role_summaries(response: Mapping[str, Any]) -> list[RoleSummary]:
             role_id=r.get("RoleId") or None,
             arn=r.get("Arn") or None,
             path=r.get("Path") or None,
-            created=_fmt(r.get("CreateDate")),
+            created=fmt(r.get("CreateDate")),
             description=r.get("Description") or None,
         )
         for r in roles
@@ -69,8 +69,8 @@ def to_policy_summaries(response: Mapping[str, Any]) -> list[PolicySummary]:
             arn=p.get("Arn") or None,
             scope=p.get("Scope") or None,
             attachment_count=p.get("AttachmentCount"),
-            created=_fmt(p.get("CreateDate")),
-            updated=_fmt(p.get("UpdateDate")),
+            created=fmt(p.get("CreateDate")),
+            updated=fmt(p.get("UpdateDate")),
         )
         for p in policies
     ]

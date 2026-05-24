@@ -10,7 +10,7 @@ from gui4aws.services.s3.models import BucketSummary, S3ObjectSummary
 __all__ = ["to_bucket_summaries", "to_object_summaries"]
 
 
-def _fmt_date(value: Any) -> str | None:
+def fmt_date(value: Any) -> str | None:
     if value is None:
         return None
     return str(value)[:19]
@@ -24,7 +24,7 @@ def to_bucket_summaries(response: Mapping[str, Any]) -> list[BucketSummary]:
             BucketSummary(
                 name=str(b.get("Name", "")),
                 region=b.get("BucketRegion") or b.get("LocationConstraint") or None,
-                creation_date=_fmt_date(b.get("CreationDate")),
+                creation_date=fmt_date(b.get("CreationDate")),
                 versioning_enabled=False,
             )
         )
@@ -39,7 +39,7 @@ def to_object_summaries(response: Mapping[str, Any]) -> list[S3ObjectSummary]:
             S3ObjectSummary(
                 key=str(obj.get("Key", "")),
                 size=obj.get("Size"),
-                last_modified=_fmt_date(obj.get("LastModified")),
+                last_modified=fmt_date(obj.get("LastModified")),
                 storage_class=obj.get("StorageClass") or None,
             )
         )

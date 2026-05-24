@@ -118,7 +118,11 @@ class ActionHistory:
 
 
 def indent_inside_main(python_script: str) -> list[str]:
-    """Extract the body of ``def main()`` from a generated script, keeping its indentation."""
+    """Extract the body of ``def main()`` from a generated script, keeping its indentation.
+
+    This is used when concatenating multiple individual scripts into one larger
+    runbook while preserving the correct block structure.
+    """
     body: list[str] = []
     in_main = False
     for raw in python_script.splitlines():

@@ -45,7 +45,7 @@ _ENV_VARS = {
 }
 
 
-def _find_free_port() -> int:
+def find_free_port() -> int:
     """Ask the OS for an available TCP port."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("", 0))
@@ -68,9 +68,9 @@ class MotoServerManager:
         self.process: subprocess.Popen[str] | None = None
         self.saved_env: dict[str, str | None] = {}
         self.port: int = 0
-        self._output_lock = threading.RLock()
-        self._output_lines: deque[str] = deque(maxlen=2000)
-        self._reader_thread: threading.Thread | None = None
+        self.output_lock = threading.RLock()
+        self.output_lines: deque[str] = deque(maxlen=2000)
+        self.reader_thread: threading.Thread | None = None
 
     @property
     def running(self) -> bool:
@@ -100,11 +100,11 @@ class MotoServerManager:
         except ImportError as exc:
             raise RuntimeError("moto is not installed; add it to dev deps") from exc
 
-        self.port = _find_free_port()
+        self.port = find_free_port()
         cmd = [sys.executable, "-m", "moto.server", "-H", MOTO_HOST, "-p", str(self.port)]
         logger.info("starting moto server: %s", " ".join(cmd))
-        self._clear_output()
-        self._append_output(f"=== starting moto on {self.endpoint_url} ===")
+        self.clear_output()
+        self.append_output(f"=== starting moto on {self.endpoint_url} ===")
 
         self.process = subprocess.Popen(
             cmd,
@@ -116,13 +116,13 @@ class MotoServerManager:
             bufsize=1,
         )
         if self.process.stdout is not None:
-            self._reader_thread = threading.Thread(target=self._capture_output, name="moto-output", daemon=True)
-            self._reader_thread.start()
+            self.reader_thread = threading.Thread(target=self.capture_output, name="moto-output", daemon=True)
+            self.reader_thread.start()
 
-        self._inject_credentials()
+        self.inject_credentials()
 
         try:
-            self._wait_ready(timeout)
+            self.wait_ready(timeout)
         except RuntimeError as exc:
             stderr_output = self.output_text(max_lines=80)
             self.stop()
@@ -143,8 +143,8 @@ class MotoServerManager:
             except subprocess.TimeoutExpired:
                 self.process.kill()
             self.process = None
-        self._append_output("=== moto stopped ===")
-        self._restore_credentials()
+        self.append_output("=== moto stopped ===")
+        self.restore_credentials()
 
     def restart(self, timeout: float = 10.0) -> None:
         """Restart Moto, preserving the fake credential wiring."""
@@ -164,7 +164,7 @@ class MotoServerManager:
             with urllib.request.urlopen(req, timeout=10) as resp:  # nosec B310
 
                 body = resp.read()
-                self._append_output(f"=== moto state reset: {resp.status} {body!r} ===")
+                self.append_output(f"=== moto state reset: {resp.status} {body!r} ===")
         except urllib.error.HTTPError as exc:
             raise RuntimeError(f"Moto reset failed: HTTP {exc.code}") from exc
         except OSError as exc:
@@ -172,16 +172,16 @@ class MotoServerManager:
 
     def output_text(self, *, max_lines: int | None = None) -> str:
         """Return collected Moto stdout/stderr."""
-        with self._output_lock:
-            lines = list(self._output_lines)
+        with self.output_lock:
+            lines = list(self.output_lines)
         if max_lines is not None:
             lines = lines[-max_lines:]
         return "\n".join(lines)
 
     def snapshot(self) -> dict[str, Any]:
         """Return process state and output summary for diagnostics."""
-        with self._output_lock:
-            lines = list(self._output_lines)
+        with self.output_lock:
+            lines = list(self.output_lines)
         return {
             "running": self.running,
             "port": self.port,
@@ -190,12 +190,14 @@ class MotoServerManager:
             "recent_output": lines[-50:],
         }
 
-    def _inject_credentials(self) -> None:
+    def inject_credentials(self) -> None:
+        """Inject fake AWS credentials into the environment for the current process."""
         for key, value in _ENV_VARS.items():
             self.saved_env[key] = os.environ.get(key)
             os.environ[key] = value
 
-    def _restore_credentials(self) -> None:
+    def restore_credentials(self) -> None:
+        """Restore original AWS credentials to the environment."""
         for key, saved in self.saved_env.items():
             if saved is None:
                 os.environ.pop(key, None)
@@ -203,7 +205,8 @@ class MotoServerManager:
                 os.environ[key] = saved
         self.saved_env.clear()
 
-    def _wait_ready(self, timeout: float) -> None:
+    def wait_ready(self, timeout: float) -> None:
+        """Poll the moto endpoint until it responds or the timeout is reached."""
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             # Fail fast if the process already exited.
@@ -217,19 +220,22 @@ class MotoServerManager:
                 time.sleep(0.25)
         raise RuntimeError(f"moto server did not respond within {timeout}s")
 
-    def _capture_output(self) -> None:
+    def capture_output(self) -> None:
+        """Background loop that reads moto stdout/stderr and appends to the buffer."""
         process = self.process
         if process is None or process.stdout is None:
             return
         for line in process.stdout:
             text = line.rstrip()
             if text:
-                self._append_output(text)
+                self.append_output(text)
 
-    def _append_output(self, line: str) -> None:
-        with self._output_lock:
-            self._output_lines.append(line)
+    def append_output(self, line: str) -> None:
+        """Thread-safe append to the rolling output buffer."""
+        with self.output_lock:
+            self.output_lines.append(line)
 
-    def _clear_output(self) -> None:
-        with self._output_lock:
-            self._output_lines.clear()
+    def clear_output(self) -> None:
+        """Wipe the rolling output buffer."""
+        with self.output_lock:
+            self.output_lines.clear()

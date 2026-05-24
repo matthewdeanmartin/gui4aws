@@ -46,30 +46,35 @@ __all__ = [
 ]
 
 
-def _truthy(value: str | None) -> bool:
+def truthy(value: str | None) -> bool:
+    """Return True if the value represents a boolean true in the GUI or CLI."""
     return str(value or "").strip().lower() in {"true", "yes", "1", "on"}
 
 
-def _append_cli_value(argv: list[str], flag: str, value: str | None) -> None:
+def append_cli_value(argv: list[str], flag: str, value: str | None) -> None:
+    """Append a flag and its value to argv if the value is non-empty."""
     text = str(value or "").strip()
     if text:
         argv.extend([f"--{flag}", text])
 
 
-def _append_cli_bool(argv: list[str], flag: str, value: str | None) -> None:
+def append_cli_bool(argv: list[str], flag: str, value: str | None) -> None:
+    """Append a boolean flag or its --no- counterpart to argv."""
     if value is None or not str(value).strip():
         return
-    argv.append(f"--{flag}" if _truthy(value) else f"--no-{flag}")
+    argv.append(f"--{flag}" if truthy(value) else f"--no-{flag}")
 
 
-def _append_cli_list(argv: list[str], flag: str, value: str | None) -> None:
+def append_cli_list(argv: list[str], flag: str, value: str | None) -> None:
+    """Append a flag followed by a list of comma-separated values to argv."""
     items = [item.strip() for item in str(value or "").split(",") if item.strip()]
     if items:
         argv.append(f"--{flag}")
         argv.extend(items)
 
 
-def _common_cluster_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+def common_cluster_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+    """Build a base dictionary of Boto3 parameters shared by Aurora cluster operations."""
     params: dict[str, Any] = {
         "DBClusterIdentifier": inputs["cluster_identifier"],
         "Engine": inputs["engine"],
@@ -87,15 +92,16 @@ def _common_cluster_params(inputs: Mapping[str, str]) -> dict[str, Any]:
     if inputs.get("db_cluster_parameter_group_name"):
         params["DBClusterParameterGroupName"] = inputs["db_cluster_parameter_group_name"]
     if inputs.get("storage_encrypted"):
-        params["StorageEncrypted"] = _truthy(inputs.get("storage_encrypted"))
+        params["StorageEncrypted"] = truthy(inputs.get("storage_encrypted"))
     if inputs.get("deletion_protection"):
-        params["DeletionProtection"] = _truthy(inputs.get("deletion_protection"))
+        params["DeletionProtection"] = truthy(inputs.get("deletion_protection"))
     if inputs.get("enable_http_endpoint"):
-        params["EnableHttpEndpoint"] = _truthy(inputs.get("enable_http_endpoint"))
+        params["EnableHttpEndpoint"] = truthy(inputs.get("enable_http_endpoint"))
     return params
 
 
-def _cluster_scaling_params(inputs: Mapping[str, str], kind: str) -> dict[str, Any]:
+def cluster_scaling_params(inputs: Mapping[str, str], kind: str) -> dict[str, Any]:
+    """Calculate scaling configuration parameters for Serverless v1 or v2."""
     scaling: dict[str, float] = {}
     if inputs.get("serverless_min_capacity"):
         scaling["MinCapacity"] = float(inputs["serverless_min_capacity"])
@@ -110,29 +116,31 @@ def _cluster_scaling_params(inputs: Mapping[str, str], kind: str) -> dict[str, A
     return {}
 
 
-def _cluster_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
-    params = _common_cluster_params(inputs)
+def cluster_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+    """Map GUI inputs to Boto3 parameters for cluster creation."""
+    params = common_cluster_params(inputs)
     cluster_kind = inputs.get("cluster_kind", "provisioned")
     params["EngineMode"] = "serverless" if cluster_kind == "serverless-v1" else "provisioned"
-    params.update(_cluster_scaling_params(inputs, cluster_kind))
+    params.update(cluster_scaling_params(inputs, cluster_kind))
     return params
 
 
-def _cluster_cli_args(inputs: Mapping[str, str]) -> list[str]:
+def cluster_cli_args(inputs: Mapping[str, str]) -> list[str]:
+    """Map GUI inputs to AWS CLI arguments for cluster creation."""
     argv: list[str] = []
-    _append_cli_value(argv, "db-cluster-identifier", inputs.get("cluster_identifier"))
-    _append_cli_value(argv, "engine", inputs.get("engine"))
+    append_cli_value(argv, "db-cluster-identifier", inputs.get("cluster_identifier"))
+    append_cli_value(argv, "engine", inputs.get("engine"))
     cluster_kind = inputs.get("cluster_kind", "provisioned")
-    _append_cli_value(argv, "engine-mode", "serverless" if cluster_kind == "serverless-v1" else "provisioned")
-    _append_cli_value(argv, "master-username", inputs.get("master_username"))
-    _append_cli_value(argv, "master-user-password", inputs.get("master_user_password"))
-    _append_cli_value(argv, "engine-version", inputs.get("engine_version"))
-    _append_cli_value(argv, "db-subnet-group-name", inputs.get("db_subnet_group_name"))
-    _append_cli_list(argv, "vpc-security-group-ids", inputs.get("vpc_security_group_ids"))
-    _append_cli_value(argv, "db-cluster-parameter-group-name", inputs.get("db_cluster_parameter_group_name"))
-    _append_cli_bool(argv, "storage-encrypted", inputs.get("storage_encrypted"))
-    _append_cli_bool(argv, "deletion-protection", inputs.get("deletion_protection"))
-    _append_cli_bool(argv, "enable-http-endpoint", inputs.get("enable_http_endpoint"))
+    append_cli_value(argv, "engine-mode", "serverless" if cluster_kind == "serverless-v1" else "provisioned")
+    append_cli_value(argv, "master-username", inputs.get("master_username"))
+    append_cli_value(argv, "master-user-password", inputs.get("master_user_password"))
+    append_cli_value(argv, "engine-version", inputs.get("engine_version"))
+    append_cli_value(argv, "db-subnet-group-name", inputs.get("db_subnet_group_name"))
+    append_cli_list(argv, "vpc-security-group-ids", inputs.get("vpc_security_group_ids"))
+    append_cli_value(argv, "db-cluster-parameter-group-name", inputs.get("db_cluster_parameter_group_name"))
+    append_cli_bool(argv, "storage-encrypted", inputs.get("storage_encrypted"))
+    append_cli_bool(argv, "deletion-protection", inputs.get("deletion_protection"))
+    append_cli_bool(argv, "enable-http-endpoint", inputs.get("enable_http_endpoint"))
 
     min_capacity = inputs.get("serverless_min_capacity", "").strip()
     max_capacity = inputs.get("serverless_max_capacity", "").strip()
@@ -151,7 +159,7 @@ def _cluster_cli_args(inputs: Mapping[str, str]) -> list[str]:
             else "serverless-v2-scaling-configuration" if cluster_kind == "serverless-v2" else ""
         )
         if flag:
-            _append_cli_value(argv, flag, ",".join(scaling_parts))
+            append_cli_value(argv, flag, ",".join(scaling_parts))
     return argv
 
 
@@ -462,8 +470,8 @@ CREATE_DB_CLUSTER = ActionDefinition(
         "v1 and v2; serverless v2 uses the capacity range while the cluster stays provisioned."
     ),
     cache_refresh_nav_ids=("clusters", "instances"),
-    cli_args_builder=_cluster_cli_args,
-    boto3_params_builder=_cluster_boto3_params,
+    cli_args_builder=cluster_cli_args,
+    boto3_params_builder=cluster_boto3_params,
 )
 
 

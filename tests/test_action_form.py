@@ -31,7 +31,7 @@ def test_action_form_multiline_prefill_and_values(tk_root: tk.Tk) -> None:
     form = ActionForm(tk_root, CREATE_SECRET, prefill={"name": "demo-secret", "secret_string": '{"demo": true}'})
     assert form.values()["secret_string"] == '{"demo": true}'
 
-    widget = form._text_widgets["secret_string"]
+    widget = form.text_widgets["secret_string"]
     widget.delete("1.0", "end")
     widget.insert("1.0", "rotated-value")
 
@@ -44,7 +44,7 @@ def test_action_form_requires_multiline_content(tk_root: tk.Tk) -> None:
     form = ActionForm(tk_root, PUT_PARAMETER)
     assert "Value is required" in form.validate()
 
-    widget = form._text_widgets["value"]
+    widget = form.text_widgets["value"]
     widget.insert("1.0", "parameter body")
 
     assert "Value is required" not in form.validate()
@@ -62,11 +62,11 @@ def test_action_dialog_refreshes_multiline_scripts(tk_root: tk.Tk) -> None:
         tk_root.update_idletasks()
 
         # Dialog must expose the CLI text widget (script preview for write actions).
-        cli_text = cast(tk.Text, dialog._cli_text)
+        cli_text = cast(tk.Text, dialog.cli_text)
         assert cli_text is not None
 
         # Editing the multiline field should refresh the script preview.
-        widget = dialog.form._text_widgets["secret_string"]
+        widget = dialog.form.text_widgets["secret_string"]
         widget.insert("1.0", "updated secret")
         tk_root.update()
 

@@ -34,7 +34,7 @@ class ResourceTable(ttk.Frame):
         super().__init__(parent, **kwargs)
         self.columns = tuple(columns)
         self.on_select = on_select
-        self._rows: list[Any] = []
+        self.rows: list[Any] = []
 
         self.tree = ttk.Treeview(self, columns=self.columns, show="headings", height=10)
         for column in self.columns:
@@ -55,34 +55,34 @@ class ResourceTable(ttk.Frame):
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
-        self.tree.bind("<<TreeviewSelect>>", self._on_tree_select)
+        self.tree.bind("<<TreeviewSelect>>", self.on_tree_select)
 
     def set_rows(self, rows: Sequence[Any]) -> None:
         """Replace all rows and auto-select the first one."""
-        self._rows = list(rows)
+        self.rows = list(rows)
         for child in self.tree.get_children():
             self.tree.delete(child)
         for idx, row in enumerate(rows):
             values = tuple(format_cell(getattr(row, column, "")) for column in self.columns)
             tags = ("deleted",) if getattr(row, "deleted", False) else ()
             self.tree.insert("", "end", iid=str(idx), values=values, tags=tags)
-        if self._rows:
+        if self.rows:
             self.tree.selection_set("0")
             self.tree.focus("0")
             if self.on_select is not None:
-                self.on_select(self._rows[0])
+                self.on_select(self.rows[0])
 
     def set_selected_index(self, index: int) -> None:
         """Select an existing row by index and fire the selection callback."""
-        if index < 0 or index >= len(self._rows):
+        if index < 0 or index >= len(self.rows):
             return
         iid = str(index)
         self.tree.selection_set(iid)
         self.tree.focus(iid)
         if self.on_select is not None:
-            self.on_select(self._rows[index])
+            self.on_select(self.rows[index])
 
-    def _on_tree_select(self, event: object = None) -> None:
+    def on_tree_select(self, event: object = None) -> None:
         del event
         if self.on_select is None:
             return
@@ -91,7 +91,7 @@ class ResourceTable(ttk.Frame):
             return
         try:
             idx = int(selected[0])
-            row = self._rows[idx]
+            row = self.rows[idx]
         except (ValueError, IndexError):
             return
         self.on_select(row)

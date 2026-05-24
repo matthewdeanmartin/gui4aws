@@ -43,7 +43,7 @@ __all__ = [
 ]
 
 
-def _create_service_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+def create_service_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
     params: dict[str, Any] = {
         "cluster": inputs["cluster"],
         "serviceName": inputs["service_name"],
@@ -56,7 +56,7 @@ def _create_service_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
     return params
 
 
-def _create_service_cli_args(inputs: Mapping[str, str]) -> list[str]:
+def create_service_cli_args(inputs: Mapping[str, str]) -> list[str]:
     args = [
         "--cluster",
         inputs["cluster"],
@@ -72,7 +72,7 @@ def _create_service_cli_args(inputs: Mapping[str, str]) -> list[str]:
     return args
 
 
-def _register_task_def_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+def register_task_def_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
     import json
 
     raw = inputs.get("task_definition_json", "{}")
@@ -85,11 +85,11 @@ def _register_task_def_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]
         return {}
 
 
-def _register_task_def_cli_args(inputs: Mapping[str, str]) -> list[str]:
+def register_task_def_cli_args(inputs: Mapping[str, str]) -> list[str]:
     return ["--cli-input-json", inputs.get("task_definition_json", "{}")]
 
 
-def _run_task_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+def run_task_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
     params: dict[str, Any] = {"taskDefinition": inputs["task_definition"]}
     if inputs.get("cluster"):
         params["cluster"] = inputs["cluster"]
@@ -102,7 +102,7 @@ def _run_task_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
     return params
 
 
-def _run_task_cli_args(inputs: Mapping[str, str]) -> list[str]:
+def run_task_cli_args(inputs: Mapping[str, str]) -> list[str]:
     args = ["--task-definition", inputs["task_definition"]]
     if inputs.get("cluster"):
         args += ["--cluster", inputs["cluster"]]
@@ -372,8 +372,8 @@ CREATE_SERVICE = ActionDefinition(
         "load balancer) is not exposed here — use the CLI or console for production services."
     ),
     cache_refresh_nav_ids=("clusters", "services"),
-    cli_args_builder=_create_service_cli_args,
-    boto3_params_builder=_create_service_boto3_params,
+    cli_args_builder=create_service_cli_args,
+    boto3_params_builder=create_service_boto3_params,
 )
 
 
@@ -542,8 +542,8 @@ RUN_TASK = ActionDefinition(
         "is not exposed here — use the CLI or console for production tasks."
     ),
     cache_refresh_nav_ids=("clusters", "tasks"),
-    cli_args_builder=_run_task_cli_args,
-    boto3_params_builder=_run_task_boto3_params,
+    cli_args_builder=run_task_cli_args,
+    boto3_params_builder=run_task_boto3_params,
 )
 
 
@@ -645,8 +645,8 @@ REGISTER_TASK_DEFINITION = ActionDefinition(
     iam_permissions=("ecs:RegisterTaskDefinition",),
     description="Register a new ECS task definition from JSON.",
     cache_refresh_nav_ids=("task_definitions",),
-    cli_args_builder=_register_task_def_cli_args,
-    boto3_params_builder=_register_task_def_boto3_params,
+    cli_args_builder=register_task_def_cli_args,
+    boto3_params_builder=register_task_def_boto3_params,
 )
 
 

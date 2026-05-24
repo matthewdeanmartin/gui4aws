@@ -58,21 +58,13 @@ class RobotocoreManager:
     """
 
     def __init__(self) -> None:
-        self._endpoint_url: str = ROBOTOCORE_DEFAULT_URL
-        self._running: bool = False
+        self.endpoint_url: str = ROBOTOCORE_DEFAULT_URL
+        self.running: bool = False
         self.saved_env: dict[str, str | None] = {}
-        self._output_lock = threading.RLock()
-        self._output_lines: deque[str] = deque(maxlen=2000)
-        self._log_reader_thread: threading.Thread | None = None
-        self._container_name: str = _CONTAINER_NAME
-
-    @property
-    def running(self) -> bool:
-        return self._running
-
-    @property
-    def endpoint_url(self) -> str:
-        return self._endpoint_url
+        self.output_lock = threading.RLock()
+        self.output_lines: deque[str] = deque(maxlen=2000)
+        self.log_reader_thread: threading.Thread | None = None
+        self.container_name: str = _CONTAINER_NAME
 
     # ── Public API ────────────────────────────────────────────────────────────
 
@@ -92,35 +84,35 @@ class RobotocoreManager:
         Raises RuntimeError if Docker is unavailable or the endpoint does not
         respond within *timeout* seconds.
         """
-        if self._running:
+        if self.running:
             return
 
         url = endpoint_url or ROBOTOCORE_DEFAULT_URL
-        self._endpoint_url = url
+        self.endpoint_url = url
 
         # ── Step 1: probe for an already-running instance ─────────────────────
-        if self._is_reachable(probe_timeout=2.0):
-            self._append_output(f"=== robotocore already running at {url} — adopting ===")
-            self._inject_credentials()
-            self._running = True
+        if self.is_reachable(probe_timeout=2.0):
+            self.append_output(f"=== robotocore already running at {url} — adopting ===")
+            self.inject_credentials()
+            self.running = True
             logger.info("robotocore adopted at %s", url)
             return
 
         # ── Step 2: launch a new container ────────────────────────────────────
-        self._clear_output()
-        self._append_output(f"=== starting robotocore at {url} ===")
-        self._append_output(f"(waiting up to {timeout}s — first run may pull the image)")
+        self.clear_output()
+        self.append_output(f"=== starting robotocore at {url} ===")
+        self.append_output(f"(waiting up to {timeout}s — first run may pull the image)")
 
-        self._docker_run(url)
-        self._inject_credentials()
+        self.docker_run(url)
+        self.inject_credentials()
 
         try:
-            self._wait_ready(timeout)
+            self.wait_ready(timeout)
         except RuntimeError as exc:
             output = self.output_text(max_lines=80)
             # Don't stop the container — it may still be pulling the image.
             # Just reset Python state so the user can retry.
-            self._restore_credentials()
+            self.restore_credentials()
             raise RuntimeError(
                 f"robotocore did not respond within {timeout}s at {url}.\n"
                 "The container may still be starting (first-run image pull can take a minute).\n"
@@ -128,18 +120,18 @@ class RobotocoreManager:
                 f"Output:\n{output or '(none)'}"
             ) from exc
 
-        self._running = True
-        self._append_output(f"=== robotocore ready at {url} ===")
+        self.running = True
+        self.append_output(f"=== robotocore ready at {url} ===")
         logger.info("robotocore running at %s", url)
 
     def stop(self) -> None:
         """Stop and remove the robotocore Docker container."""
-        self._append_output("=== stopping robotocore ===")
-        self._docker_stop()
+        self.append_output("=== stopping robotocore ===")
+        self.docker_stop()
         if self.saved_env:
-            self._restore_credentials()
-        self._running = False
-        self._append_output("=== robotocore stopped ===")
+            self.restore_credentials()
+        self.running = False
+        self.append_output("=== robotocore stopped ===")
         logger.info("robotocore stopped")
 
     def restart(self, endpoint_url: str | None = None, timeout: float = 30.0) -> None:
@@ -152,15 +144,15 @@ class RobotocoreManager:
 
         Raises RuntimeError if robotocore is not running or the request fails.
         """
-        if not self._running:
+        if not self.running:
             raise RuntimeError("Robotocore is not running")
-        url = f"{self._endpoint_url}/_localstack/state/reset"
+        url = f"{self.endpoint_url}/_localstack/state/reset"
         req = urllib.request.Request(url, method="POST", data=b"")
         try:
             with urllib.request.urlopen(req, timeout=10) as resp:  # nosec B310
                 body = resp.read()
 
-                self._append_output(f"=== robotocore state reset: {resp.status} {body!r} ===")
+                self.append_output(f"=== robotocore state reset: {resp.status} {body!r} ===")
         except urllib.error.HTTPError as exc:
             raise RuntimeError(f"Robotocore reset failed: HTTP {exc.code}") from exc
         except OSError as exc:
@@ -172,7 +164,7 @@ class RobotocoreManager:
         Output is captured to the log. Raises RuntimeError if Docker is
         not available.
         """
-        self._append_output(f"=== pulling {ROBOTOCORE_IMAGE} ===")
+        self.append_output(f"=== pulling {ROBOTOCORE_IMAGE} ===")
         try:
             proc = subprocess.Popen(
                 ["docker", "pull", ROBOTOCORE_IMAGE],
@@ -188,33 +180,36 @@ class RobotocoreManager:
             for line in proc.stdout:
                 text = line.rstrip()
                 if text:
-                    self._append_output(text)
+                    self.append_output(text)
         proc.wait()
         if proc.returncode != 0:
             raise RuntimeError(f"docker pull exited with code {proc.returncode}")
-        self._append_output("=== pull complete ===")
+        self.append_output("=== pull complete ===")
 
     def output_text(self, *, max_lines: int | None = None) -> str:
-        with self._output_lock:
-            lines = list(self._output_lines)
+        """Return the collected log output as a single string."""
+        with self.output_lock:
+            lines = list(self.output_lines)
         if max_lines is not None:
             lines = lines[-max_lines:]
         return "\n".join(lines)
 
     def snapshot(self) -> dict[str, Any]:
-        with self._output_lock:
-            lines = list(self._output_lines)
+        """Return a diagnostic summary of the container state and recent logs."""
+        with self.output_lock:
+            lines = list(self.output_lines)
         return {
-            "running": self._running,
-            "endpoint_url": self._endpoint_url,
-            "container_name": self._container_name,
+            "running": self.running,
+            "endpoint_url": self.endpoint_url,
+            "container_name": self.container_name,
             "output_line_count": len(lines),
             "recent_output": lines[-50:],
         }
 
     # ── Docker helpers ────────────────────────────────────────────────────────
 
-    def _docker_run(self, url: str) -> None:
+    def docker_run(self, url: str) -> None:
+        """Launch the robotocore container via `docker run`."""
         # Parse port from URL (e.g. http://localhost:4566 → 4566).
         try:
             port = url.split(":")[-1].strip("/") or "4566"
@@ -223,7 +218,7 @@ class RobotocoreManager:
 
         # Remove any existing stopped container with the same name.
         subprocess.run(
-            ["docker", "rm", "-f", self._container_name],
+            ["docker", "rm", "-f", self.container_name],
             capture_output=True,
             check=False,
         )
@@ -233,41 +228,43 @@ class RobotocoreManager:
             "run",
             "-d",
             "--name",
-            self._container_name,
+            self.container_name,
             "-p",
             f"{port}:4566",
             ROBOTOCORE_IMAGE,
         ]
-        self._append_output("$ " + " ".join(cmd))
+        self.append_output("$ " + " ".join(cmd))
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", check=False)
         except FileNotFoundError as exc:
             raise RuntimeError("docker not found — is Docker Desktop installed and running?") from exc
 
         if result.stdout.strip():
-            self._append_output(result.stdout.strip())
+            self.append_output(result.stdout.strip())
         if result.stderr.strip():
-            self._append_output(result.stderr.strip())
+            self.append_output(result.stderr.strip())
 
         if result.returncode != 0:
             raise RuntimeError(f"docker run failed (exit {result.returncode}):\n{result.stderr.strip()}")
 
         # Stream docker logs in background so the user can see what's happening.
-        self._start_log_reader()
+        self.start_log_reader()
 
-    def _docker_stop(self) -> None:
-        for subcmd in (["docker", "stop", self._container_name], ["docker", "rm", self._container_name]):
+    def docker_stop(self) -> None:
+        """Stop and remove the named robotocore container."""
+        for subcmd in (["docker", "stop", self.container_name], ["docker", "rm", self.container_name]):
             result = subprocess.run(subcmd, capture_output=True, text=True, encoding="utf-8", check=False)
             if result.stdout.strip():
-                self._append_output(result.stdout.strip())
+                self.append_output(result.stdout.strip())
             if result.stderr.strip():
-                self._append_output(result.stderr.strip())
+                self.append_output(result.stderr.strip())
 
-    def _start_log_reader(self) -> None:
+    def start_log_reader(self) -> None:
+        """Start a background thread that streams `docker logs -f` into the buffer."""
         def read_logs() -> None:
             try:
                 proc = subprocess.Popen(
-                    ["docker", "logs", "-f", self._container_name],
+                    ["docker", "logs", "-f", self.container_name],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     text=True,
@@ -278,18 +275,18 @@ class RobotocoreManager:
                     for line in proc.stdout:
                         text = line.rstrip()
                         if text:
-                            self._append_output(text)
-                        if not self._running and self._output_lines:
+                            self.append_output(text)
+                        if not self.running and self.output_lines:
                             break
             except Exception as exc:
-                self._append_output(f"[log reader error: {exc}]")
+                self.append_output(f"[log reader error: {exc}]")
 
-        self._log_reader_thread = threading.Thread(target=read_logs, name="robotocore-logs", daemon=True)
-        self._log_reader_thread.start()
+        self.log_reader_thread = threading.Thread(target=read_logs, name="robotocore-logs", daemon=True)
+        self.log_reader_thread.start()
 
     # ── Health check ──────────────────────────────────────────────────────────
 
-    def _is_reachable(self, *, probe_timeout: float = 2.0) -> bool:
+    def is_reachable(self, *, probe_timeout: float = 2.0) -> bool:
         """Return True if the endpoint is already responding.
 
         Any HTTP response (including 4xx/5xx) means the server is up.
@@ -298,7 +295,7 @@ class RobotocoreManager:
         still counts as reachable.
         """
         try:
-            urllib.request.urlopen(self._endpoint_url, timeout=probe_timeout)  # nosec B310
+            urllib.request.urlopen(self.endpoint_url, timeout=probe_timeout)  # nosec B310
             return True
         except urllib.error.HTTPError:
             # Server answered with an error code — it is listening.
@@ -306,22 +303,25 @@ class RobotocoreManager:
         except (urllib.error.URLError, OSError):
             return False
 
-    def _wait_ready(self, timeout: float) -> None:
+    def wait_ready(self, timeout: float) -> None:
+        """Poll the endpoint until it is reachable or the timeout is reached."""
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
-            if self._is_reachable(probe_timeout=1.0):
+            if self.is_reachable(probe_timeout=1.0):
                 return
             time.sleep(0.5)
         raise RuntimeError(f"robotocore did not respond within {timeout}s")
 
     # ── Credential helpers ────────────────────────────────────────────────────
 
-    def _inject_credentials(self) -> None:
+    def inject_credentials(self) -> None:
+        """Inject fake AWS credentials into the environment."""
         for key, value in _ENV_VARS.items():
             self.saved_env[key] = os.environ.get(key)
             os.environ[key] = value
 
-    def _restore_credentials(self) -> None:
+    def restore_credentials(self) -> None:
+        """Restore original AWS credentials to the environment."""
         for key, saved in self.saved_env.items():
             if saved is None:
                 os.environ.pop(key, None)
@@ -331,10 +331,12 @@ class RobotocoreManager:
 
     # ── Output buffer ─────────────────────────────────────────────────────────
 
-    def _append_output(self, line: str) -> None:
-        with self._output_lock:
-            self._output_lines.append(line)
+    def append_output(self, line: str) -> None:
+        """Thread-safe append to the rolling log buffer."""
+        with self.output_lock:
+            self.output_lines.append(line)
 
-    def _clear_output(self) -> None:
-        with self._output_lock:
-            self._output_lines.clear()
+    def clear_output(self) -> None:
+        """Wipe the rolling log buffer."""
+        with self.output_lock:
+            self.output_lines.clear()

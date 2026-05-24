@@ -34,7 +34,8 @@ __all__ = [
 ]
 
 
-def _list_policies_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+def list_policies_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+    """Build boto3 parameters for list_policies, filtering by scope."""
     params: dict[str, Any] = {}
     scope = inputs.get("scope", "Local").strip()
     if scope:
@@ -42,7 +43,7 @@ def _list_policies_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
     return params
 
 
-def _list_policies_cli_args(inputs: Mapping[str, str]) -> list[str]:
+def list_policies_cli_args(inputs: Mapping[str, str]) -> list[str]:
     args: list[str] = []
     scope = inputs.get("scope", "Local").strip()
     if scope:
@@ -284,8 +285,8 @@ LIST_POLICIES = ActionDefinition(
     iam_permissions=("iam:ListPolicies",),
     description="List IAM policies (default: customer-managed only).",
     view=to_policy_summaries,
-    cli_args_builder=_list_policies_cli_args,
-    boto3_params_builder=_list_policies_boto3_params,
+    cli_args_builder=list_policies_cli_args,
+    boto3_params_builder=list_policies_boto3_params,
 )
 
 GET_POLICY = ActionDefinition(
@@ -316,3 +317,4 @@ ALL_ACTIONS = (
     LIST_POLICIES,
     GET_POLICY,
 )
+

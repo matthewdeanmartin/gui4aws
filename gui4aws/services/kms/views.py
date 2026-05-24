@@ -14,14 +14,14 @@ __all__ = [
 ]
 
 
-def _optional_str(value: Any) -> str | None:
+def optional_str(value: Any) -> str | None:
     if value is None:
         return None
     text = str(value)
     return text or None
 
 
-def _fmt_date(value: Any) -> str | None:
+def fmt_date(value: Any) -> str | None:
     if value is None:
         return None
     return str(value)[:19]
@@ -35,14 +35,14 @@ def to_key_summaries(response: Mapping[str, Any]) -> list[KmsKeySummary]:
         summaries.append(
             KmsKeySummary(
                 key_id=str(meta.get("KeyId", k.get("KeyId", ""))),
-                key_arn=_optional_str(meta.get("Arn", k.get("KeyArn"))),
-                description=_optional_str(meta.get("Description")),
-                key_state=_optional_str(meta.get("KeyState")),
-                key_usage=_optional_str(meta.get("KeyUsage")),
-                key_spec=_optional_str(meta.get("KeySpec")),
-                origin=_optional_str(meta.get("Origin")),
+                key_arn=optional_str(meta.get("Arn", k.get("KeyArn"))),
+                description=optional_str(meta.get("Description")),
+                key_state=optional_str(meta.get("KeyState")),
+                key_usage=optional_str(meta.get("KeyUsage")),
+                key_spec=optional_str(meta.get("KeySpec")),
+                origin=optional_str(meta.get("Origin")),
                 enabled=bool(meta.get("Enabled", False)),
-                creation_date=_fmt_date(meta.get("CreationDate")),
+                creation_date=fmt_date(meta.get("CreationDate")),
             )
         )
     # describe_key returns a single key under KeyMetadata
@@ -51,14 +51,14 @@ def to_key_summaries(response: Mapping[str, Any]) -> list[KmsKeySummary]:
         summaries.append(
             KmsKeySummary(
                 key_id=str(meta.get("KeyId", "")),
-                key_arn=_optional_str(meta.get("Arn")),
-                description=_optional_str(meta.get("Description")),
-                key_state=_optional_str(meta.get("KeyState")),
-                key_usage=_optional_str(meta.get("KeyUsage")),
-                key_spec=_optional_str(meta.get("KeySpec")),
-                origin=_optional_str(meta.get("Origin")),
+                key_arn=optional_str(meta.get("Arn")),
+                description=optional_str(meta.get("Description")),
+                key_state=optional_str(meta.get("KeyState")),
+                key_usage=optional_str(meta.get("KeyUsage")),
+                key_spec=optional_str(meta.get("KeySpec")),
+                origin=optional_str(meta.get("Origin")),
                 enabled=bool(meta.get("Enabled", False)),
-                creation_date=_fmt_date(meta.get("CreationDate")),
+                creation_date=fmt_date(meta.get("CreationDate")),
             )
         )
     return summaries
@@ -71,10 +71,10 @@ def to_alias_summaries(response: Mapping[str, Any]) -> list[KmsAliasSummary]:
         summaries.append(
             KmsAliasSummary(
                 alias_name=str(a.get("AliasName", "")),
-                target_key_id=_optional_str(a.get("TargetKeyId")),
-                alias_arn=_optional_str(a.get("AliasArn")),
-                creation_date=_fmt_date(a.get("CreationDate")),
-                last_updated_date=_fmt_date(a.get("LastUpdatedDate")),
+                target_key_id=optional_str(a.get("TargetKeyId")),
+                alias_arn=optional_str(a.get("AliasArn")),
+                creation_date=fmt_date(a.get("CreationDate")),
+                last_updated_date=fmt_date(a.get("LastUpdatedDate")),
             )
         )
     return summaries
@@ -88,11 +88,11 @@ def to_grant_summaries(response: Mapping[str, Any]) -> list[KmsGrantSummary]:
         summaries.append(
             KmsGrantSummary(
                 grant_id=str(g.get("GrantId", "")),
-                key_id=_optional_str(g.get("KeyId")),
-                name=_optional_str(g.get("Name")),
-                grantee_principal=_optional_str(g.get("GranteePrincipal")),
+                key_id=optional_str(g.get("KeyId")),
+                name=optional_str(g.get("Name")),
+                grantee_principal=optional_str(g.get("GranteePrincipal")),
                 operations=", ".join(ops),
-                creation_date=_fmt_date(g.get("CreationDate")),
+                creation_date=fmt_date(g.get("CreationDate")),
             )
         )
     return summaries

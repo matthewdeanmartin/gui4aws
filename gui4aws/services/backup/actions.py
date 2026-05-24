@@ -42,7 +42,8 @@ __all__ = [
 ]
 
 
-def _build_backup_plan_document(inputs: Mapping[str, str]) -> dict[str, Any]:
+def build_backup_plan_document(inputs: Mapping[str, str]) -> dict[str, Any]:
+    """Build a backup plan JSON document from GUI inputs."""
     rule: dict[str, Any] = {
         "RuleName": inputs["rule_name"],
         "TargetBackupVaultName": inputs["target_vault_name"],
@@ -65,31 +66,36 @@ def _build_backup_plan_document(inputs: Mapping[str, str]) -> dict[str, Any]:
     }
 
 
-def _backup_plan_cli_json(inputs: Mapping[str, str]) -> str:
-    return json.dumps(_build_backup_plan_document(inputs), separators=(",", ":"))
+def backup_plan_cli_json(inputs: Mapping[str, str]) -> str:
+    """Format the backup plan document as a compact JSON string for CLI usage."""
+    return json.dumps(build_backup_plan_document(inputs), separators=(",", ":"))
 
 
-def _create_backup_plan_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
-    return {"BackupPlan": _build_backup_plan_document(inputs)}
+def create_backup_plan_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+    """Map GUI inputs to Boto3 parameters for creating a backup plan."""
+    return {"BackupPlan": build_backup_plan_document(inputs)}
 
 
-def _create_backup_plan_cli_args(inputs: Mapping[str, str]) -> list[str]:
-    return ["--backup-plan", _backup_plan_cli_json(inputs)]
+def create_backup_plan_cli_args(inputs: Mapping[str, str]) -> list[str]:
+    """Map GUI inputs to AWS CLI arguments for creating a backup plan."""
+    return ["--backup-plan", backup_plan_cli_json(inputs)]
 
 
-def _update_backup_plan_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+def update_backup_plan_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+    """Map GUI inputs to Boto3 parameters for updating a backup plan."""
     return {
         "BackupPlanId": inputs["plan_id"],
-        "BackupPlan": _build_backup_plan_document(inputs),
+        "BackupPlan": build_backup_plan_document(inputs),
     }
 
 
-def _update_backup_plan_cli_args(inputs: Mapping[str, str]) -> list[str]:
+def update_backup_plan_cli_args(inputs: Mapping[str, str]) -> list[str]:
+    """Map GUI inputs to AWS CLI arguments for updating a backup plan."""
     return [
         "--backup-plan-id",
         inputs["plan_id"],
         "--backup-plan",
-        _backup_plan_cli_json(inputs),
+        backup_plan_cli_json(inputs),
     ]
 
 
@@ -329,8 +335,8 @@ CREATE_BACKUP_PLAN = ActionDefinition(
     iam_permissions=("backup:CreateBackupPlan", "backup:ListBackupPlans"),
     description="Create a backup plan with one schedule rule.",
     cache_refresh_nav_ids=("plans",),
-    cli_args_builder=_create_backup_plan_cli_args,
-    boto3_params_builder=_create_backup_plan_boto3_params,
+    cli_args_builder=create_backup_plan_cli_args,
+    boto3_params_builder=create_backup_plan_boto3_params,
 )
 
 
@@ -363,8 +369,8 @@ UPDATE_BACKUP_PLAN = ActionDefinition(
         "path yet, but the UI and generated scripts are ready for real AWS."
     ),
     cache_refresh_nav_ids=("plans",),
-    cli_args_builder=_update_backup_plan_cli_args,
-    boto3_params_builder=_update_backup_plan_boto3_params,
+    cli_args_builder=update_backup_plan_cli_args,
+    boto3_params_builder=update_backup_plan_boto3_params,
 )
 
 
@@ -391,7 +397,8 @@ DELETE_BACKUP_PLAN = ActionDefinition(
 )
 
 
-def _start_backup_job_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+def start_backup_job_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+    """Map GUI inputs to Boto3 parameters for starting a backup job."""
     params: dict[str, Any] = {
         "BackupVaultName": inputs["vault_name"],
         "ResourceArn": inputs["resource_arn"],
@@ -402,7 +409,8 @@ def _start_backup_job_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
     return params
 
 
-def _start_backup_job_cli_args(inputs: Mapping[str, str]) -> list[str]:
+def start_backup_job_cli_args(inputs: Mapping[str, str]) -> list[str]:
+    """Map GUI inputs to AWS CLI arguments for starting a backup job."""
     args = [
         "--backup-vault-name",
         inputs["vault_name"],
@@ -485,12 +493,13 @@ START_BACKUP_JOB = ActionDefinition(
     iam_permissions=("backup:StartBackupJob",),
     description="Trigger an on-demand AWS Backup job for any supported resource.",
     cache_refresh_nav_ids=("jobs", "recovery_points"),
-    cli_args_builder=_start_backup_job_cli_args,
-    boto3_params_builder=_start_backup_job_boto3_params,
+    cli_args_builder=start_backup_job_cli_args,
+    boto3_params_builder=start_backup_job_boto3_params,
 )
 
 
-def _start_restore_job_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+def start_restore_job_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+    """Map GUI inputs to Boto3 parameters for starting a restore job."""
     metadata: dict[str, str] = {}
     if inputs.get("new_cluster_identifier"):
         metadata["DBClusterIdentifier"] = inputs["new_cluster_identifier"]
@@ -504,7 +513,8 @@ def _start_restore_job_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]
     }
 
 
-def _start_restore_job_cli_args(inputs: Mapping[str, str]) -> list[str]:
+def start_restore_job_cli_args(inputs: Mapping[str, str]) -> list[str]:
+    """Map GUI inputs to AWS CLI arguments for starting a restore job."""
     meta_parts: list[str] = []
     if inputs.get("new_cluster_identifier"):
         meta_parts.append(f"DBClusterIdentifier={inputs['new_cluster_identifier']}")
@@ -569,8 +579,8 @@ START_RESTORE_JOB = ActionDefinition(
         "The recovery point ARN is prefilled when launched from the Recovery Points tab."
     ),
     cache_refresh_nav_ids=("restore_jobs",),
-    cli_args_builder=_start_restore_job_cli_args,
-    boto3_params_builder=_start_restore_job_boto3_params,
+    cli_args_builder=start_restore_job_cli_args,
+    boto3_params_builder=start_restore_job_boto3_params,
 )
 
 

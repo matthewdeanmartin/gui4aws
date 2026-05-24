@@ -94,7 +94,7 @@ def test_resource_table(tk_root: tk.Tk) -> None:
 
     # Simulate manual selection
     table.tree.selection_set("1")
-    table._on_tree_select()
+    table.on_tree_select()
     assert on_select.call_count == 2
     on_select.assert_called_with(items[1])
 
@@ -162,7 +162,7 @@ def test_filter_bar(tk_root: tk.Tk) -> None:
     assert bar.values()["f2"] == ""
 
     # Simulate change
-    bar._variables["f1"].set("new-v")
+    bar.variables["f1"].set("new-v")
     on_change.assert_called_with("f1", "new-v")
 
     # Simulate choices update
@@ -171,5 +171,5 @@ def test_filter_bar(tk_root: tk.Tk) -> None:
     on_refresh.assert_called_once()
 
     # Client filter (JMESPath)
-    bar._client_var.set("some-expr")
+    bar.client_var.set("some-expr")
     assert bar.client_filter() == "some-expr"

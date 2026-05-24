@@ -18,7 +18,7 @@ class OutputPanel(ttk.LabelFrame):
 
         btn_bar = ttk.Frame(self)
         btn_bar.grid(row=0, column=0, columnspan=2, sticky="ew", padx=4, pady=(4, 0))
-        ttk.Button(btn_bar, text="Copy", command=self._copy_text).pack(side="left", padx=2)
+        ttk.Button(btn_bar, text="Copy", command=self.copy_text).pack(side="left", padx=2)
         ttk.Button(btn_bar, text="View raw JSON", command=self.toggle_raw).pack(side="left", padx=2)
 
         self.text = tk.Text(self, height=8, wrap="word", font=("Courier", 9))
@@ -31,42 +31,42 @@ class OutputPanel(ttk.LabelFrame):
         self.grid_rowconfigure(1, weight=1)
 
         self.raw_visible = False
-        self._raw_payload: Any = None
-        self._summary_text: str = ""
+        self.raw_payload: Any = None
+        self.summary_text: str = ""
 
     def set_result(self, summary: str, raw_payload: Any) -> None:
         """Show a success result — summary in text area, raw available via toggle."""
-        self._summary_text = summary
-        self._raw_payload = raw_payload
+        self.summary_text = summary
+        self.raw_payload = raw_payload
         self.raw_visible = False
-        self._render()
+        self.render()
 
     def set_error(self, message: str) -> None:
         """Show an error message in the text area so it is copyable."""
-        self._summary_text = message
-        self._raw_payload = None
+        self.summary_text = message
+        self.raw_payload = None
         self.raw_visible = False
-        self._render()
+        self.render()
 
     def toggle_raw(self) -> None:
         """Switch between summary text and raw JSON."""
         self.raw_visible = not self.raw_visible
-        self._render()
+        self.render()
 
-    def _copy_text(self) -> None:
+    def copy_text(self) -> None:
         content = self.text.get("1.0", "end").strip()
         if content:
             self.clipboard_clear()
             self.clipboard_append(content)
 
-    def _render(self) -> None:
+    def render(self) -> None:
         self.text.configure(state="normal")
         self.text.delete("1.0", "end")
-        if self.raw_visible and self._raw_payload is not None:
+        if self.raw_visible and self.raw_payload is not None:
             try:
-                self.text.insert("1.0", json.dumps(self._raw_payload, indent=2, default=str))
+                self.text.insert("1.0", json.dumps(self.raw_payload, indent=2, default=str))
             except TypeError:
-                self.text.insert("1.0", repr(self._raw_payload))
+                self.text.insert("1.0", repr(self.raw_payload))
         else:
-            self.text.insert("1.0", self._summary_text)
+            self.text.insert("1.0", self.summary_text)
         self.text.configure(state="disabled")

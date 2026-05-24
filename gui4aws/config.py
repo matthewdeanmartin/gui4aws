@@ -64,7 +64,7 @@ def load_config(path: Path | None = None) -> AppConfig:
         except ImportError:  # pragma: no cover
             # Fallback if neither is available (should not happen with our deps)
             data = json.loads(raw)
-    return _apply(data)
+    return apply(data)
 
 
 def save_config(config: AppConfig, path: Path | None = None) -> None:
@@ -72,10 +72,11 @@ def save_config(config: AppConfig, path: Path | None = None) -> None:
     if path is None:
         path = config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(_render_toml(config), encoding="utf-8")
+    path.write_text(render_toml(config), encoding="utf-8")
 
 
-def _apply(data: dict[str, Any]) -> AppConfig:
+def apply(data: dict[str, Any]) -> AppConfig:
+    """Map a raw dictionary (from TOML/JSON) onto an AppConfig instance."""
     config = AppConfig()
     for key in (
         "default_profile",
@@ -107,7 +108,8 @@ def _apply(data: dict[str, Any]) -> AppConfig:
     return config
 
 
-def _render_toml(config: AppConfig) -> str:
+def render_toml(config: AppConfig) -> str:
+    """Serialize AppConfig to a TOML string."""
     lines = [
         f'default_profile = "{config.default_profile}"',
         f'default_region = "{config.default_region}"',

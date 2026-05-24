@@ -14,7 +14,7 @@ from gui4aws.services.service_registry import ServiceRegistry
 
 
 @dataclass
-class _FakeQueue:
+class FakeQueue:
     jobs: list[Any] = field(default_factory=list)
     cleared: int = 0
 
@@ -42,7 +42,7 @@ class _FakeQueue:
 
 
 @dataclass
-class _FakePanel:
+class FakePanel:
     values: dict[str, str]
     row: Any = None
 
@@ -54,7 +54,7 @@ class _FakePanel:
 
 
 @dataclass
-class _FakeContext:
+class FakeContext:
     registry: ServiceRegistry
     invalidations: list[str | None] = field(default_factory=list)
     calls: list[tuple[str, dict[str, str]]] = field(default_factory=list)
@@ -92,14 +92,14 @@ class _FakeContext:
 def test_write_refresh_warms_target_nav_caches() -> None:
     """ECS writes invalidate cached reads and prewarm affected navs."""
     window = object.__new__(MainWindow)
-    window.context = _FakeContext(ServiceRegistry((ECS_SERVICE,)))  # type: ignore[assignment]
-    window.main_panel = _FakePanel({})  # type: ignore[assignment]
-    window._current_service_id = "ecs"
-    window._action_queue = _FakeQueue()  # type: ignore[assignment]
+    window.context = FakeContext(ServiceRegistry((ECS_SERVICE,)))  # type: ignore[assignment]
+    window.main_panel = FakePanel({})  # type: ignore[assignment]
+    window.current_service_id = "ecs"
+    window.action_queue = FakeQueue()  # type: ignore[assignment]
 
-    window._schedule_cache_refreshes_for_action(UPDATE_SERVICE)
+    window.schedule_cache_refreshes_for_action(UPDATE_SERVICE)
 
-    for job in list(window._action_queue.jobs):  # type: ignore[attr-defined]
+    for job in list(window.action_queue.jobs):  # type: ignore[attr-defined]
         job()
 
     assert window.context.invalidations == ["ecs"]  # type: ignore[attr-defined]
@@ -111,13 +111,13 @@ def test_write_refresh_warms_target_nav_caches() -> None:
 def test_refresh_visible_data_after_write_reloads_current_nav() -> None:
     """Successful writes affecting the selected nav trigger a visible refresh."""
     window = object.__new__(MainWindow)
-    window._current_service_id = "ecs"
-    window._current_nav = type("_Nav", (), {"item_id": "services"})()
-    window.main_panel = _FakePanel({"cluster": "demo-cluster"})  # type: ignore[assignment]
+    window.current_service_id = "ecs"
+    window.current_nav = type("_Nav", (), {"item_id": "services"})()
+    window.main_panel = FakePanel({"cluster": "demo-cluster"})  # type: ignore[assignment]
     refreshed: list[dict[str, str]] = []
-    window._refresh_current_nav = lambda values: refreshed.append(dict(values))  # type: ignore[method-assign]
+    window.refresh_current_nav = lambda values: refreshed.append(dict(values))  # type: ignore[method-assign]
 
-    window._refresh_visible_data_after_write(UPDATE_SERVICE)
+    window.refresh_visible_data_after_write(UPDATE_SERVICE)
 
     assert refreshed == [{"cluster": "demo-cluster"}]
 
@@ -125,29 +125,29 @@ def test_refresh_visible_data_after_write_reloads_current_nav() -> None:
 def test_clear_request_queue_drains_pending_and_ready_work() -> None:
     """Clearing the request queue removes pending jobs and ready results."""
     window = object.__new__(MainWindow)
-    window._action_queue = _FakeQueue(jobs=[object(), object()])  # type: ignore[assignment]
+    window.action_queue = FakeQueue(jobs=[object(), object()])  # type: ignore[assignment]
     window.results_queue = queue.Queue()
     window.results_queue.put(("ok", None, None))
     window.results_queue.put(("ok", None, None))
-    window.status_bar = _FakeStatusBar()  # type: ignore[assignment]
-    window.moto_output_panel = _FakeDiagnosticText()  # type: ignore[assignment]
-    window.robotocore_panel = _FakeRobotocorePanel()  # type: ignore[assignment]
-    window.queue_panel = _FakeSnapshotPanel()  # type: ignore[assignment]
-    window.cache_panel = _FakeSnapshotPanel()  # type: ignore[assignment]
-    window.moto_manager = _FakeMotoManager()  # type: ignore[assignment]
-    window.robotocore_manager = _FakeRobotocoreManager()  # type: ignore[assignment]
-    window.context = _FakeContext(  # type: ignore[assignment]
+    window.status_bar = FakeStatusBar()  # type: ignore[assignment]
+    window.moto_output_panel = FakeDiagnosticText()  # type: ignore[assignment]
+    window.robotocore_panel = FakeRobotocorePanel()  # type: ignore[assignment]
+    window.queue_panel = FakeSnapshotPanel()  # type: ignore[assignment]
+    window.cache_panel = FakeSnapshotPanel()  # type: ignore[assignment]
+    window.moto_manager = FakeMotoManager()  # type: ignore[assignment]
+    window.robotocore_manager = FakeRobotocoreManager()  # type: ignore[assignment]
+    window.context = FakeContext(  # type: ignore[assignment]
         ServiceRegistry((ECS_SERVICE,)),
-        endpoint_config=_FakeEndpointConfig(),
-        action_cache=_FakeActionCache(),
+        endpoint_config=FakeEndpointConfig(),
+        action_cache=FakeActionCache(),
     )
-    window._nav_generation = 1
-    window._current_service_id = "ecs"
-    window._current_nav = type("_Nav", (), {"item_id": "services"})()
+    window.nav_generation = 1
+    window.current_service_id = "ecs"
+    window.current_nav = type("_Nav", (), {"item_id": "services"})()
 
     window.clear_request_queue()
 
-    assert window._action_queue.cleared == 2  # type: ignore[attr-defined]
+    assert window.action_queue.cleared == 2  # type: ignore[attr-defined]
     assert window.results_queue.qsize() == 0
     assert window.status_bar.status == "Cleared queue (2 pending, 2 ready)"  # type: ignore[attr-defined]
 
@@ -155,12 +155,12 @@ def test_clear_request_queue_drains_pending_and_ready_work() -> None:
 def test_clear_selected_cache_entry_removes_only_current_selection() -> None:
     """Clearing one cache entry delegates to the action cache with the selected row."""
     window = object.__new__(MainWindow)
-    window.context = _FakeContext(  # type: ignore[assignment]
+    window.context = FakeContext(  # type: ignore[assignment]
         ServiceRegistry((ECS_SERVICE,)),
-        endpoint_config=_FakeEndpointConfig(),
-        action_cache=_MutableFakeActionCache(),
+        endpoint_config=FakeEndpointConfig(),
+        action_cache=MutableFakeActionCache(),
     )
-    window.cache_panel = _FakeCachePanel(  # type: ignore[assignment]
+    window.cache_panel = FakeCachePanel(  # type: ignore[assignment]
         {
             "service_id": "ecs",
             "action_id": "ecs.list_services",
@@ -168,17 +168,17 @@ def test_clear_selected_cache_entry_removes_only_current_selection() -> None:
             "inputs": {"cluster": "demo-cluster"},
         }
     )
-    window.status_bar = _FakeStatusBar()  # type: ignore[assignment]
-    window.moto_output_panel = _FakeDiagnosticText()  # type: ignore[assignment]
-    window.robotocore_panel = _FakeRobotocorePanel()  # type: ignore[assignment]
-    window.queue_panel = _FakeSnapshotPanel()  # type: ignore[assignment]
-    window._action_queue = _FakeQueue()  # type: ignore[assignment]
-    window.results_queue = _QueueWithSize(0)  # type: ignore[assignment]
-    window._nav_generation = 2
-    window._current_service_id = "ecs"
-    window._current_nav = type("_Nav", (), {"item_id": "services"})()
-    window.moto_manager = _FakeMotoManager()  # type: ignore[assignment]
-    window.robotocore_manager = _FakeRobotocoreManager()  # type: ignore[assignment]
+    window.status_bar = FakeStatusBar()  # type: ignore[assignment]
+    window.moto_output_panel = FakeDiagnosticText()  # type: ignore[assignment]
+    window.robotocore_panel = FakeRobotocorePanel()  # type: ignore[assignment]
+    window.queue_panel = FakeSnapshotPanel()  # type: ignore[assignment]
+    window.action_queue = FakeQueue()  # type: ignore[assignment]
+    window.results_queue = QueueWithSize(0)  # type: ignore[assignment]
+    window.nav_generation = 2
+    window.current_service_id = "ecs"
+    window.current_nav = type("_Nav", (), {"item_id": "services"})()
+    window.moto_manager = FakeMotoManager()  # type: ignore[assignment]
+    window.robotocore_manager = FakeRobotocoreManager()  # type: ignore[assignment]
 
     window.clear_selected_cache_entry()
 
@@ -192,8 +192,8 @@ def test_open_moto_dashboard_uses_dashboard_endpoint(monkeypatch: Any) -> None:
     monkeypatch.setattr("webbrowser.open", lambda url: opened.append(url))
 
     window = object.__new__(MainWindow)
-    window.moto_manager = _FakeMotoManager()  # type: ignore[assignment]
-    window.status_bar = _FakeStatusBar()  # type: ignore[assignment]
+    window.moto_manager = FakeMotoManager()  # type: ignore[assignment]
+    window.status_bar = FakeStatusBar()  # type: ignore[assignment]
 
     window.open_moto_dashboard()
 
@@ -204,21 +204,21 @@ def test_open_moto_dashboard_uses_dashboard_endpoint(monkeypatch: Any) -> None:
 def test_diagnostic_snapshots_include_live_state() -> None:
     """Diagnostic helpers expose live Moto, queue, and cache state."""
     window = object.__new__(MainWindow)
-    window.results_queue = _QueueWithSize(2)  # type: ignore[assignment]
-    window._nav_generation = 7
-    window._current_service_id = "ecs"
-    window._current_nav = type("_Nav", (), {"item_id": "services"})()
-    window._action_queue = _FakeQueue()  # type: ignore[assignment]
-    window.moto_manager = _FakeMotoManager()  # type: ignore[assignment]
-    window.context = _FakeContext(  # type: ignore[assignment]
+    window.results_queue = QueueWithSize(2)  # type: ignore[assignment]
+    window.nav_generation = 7
+    window.current_service_id = "ecs"
+    window.current_nav = type("_Nav", (), {"item_id": "services"})()
+    window.action_queue = FakeQueue()  # type: ignore[assignment]
+    window.moto_manager = FakeMotoManager()  # type: ignore[assignment]
+    window.context = FakeContext(  # type: ignore[assignment]
         ServiceRegistry((ECS_SERVICE,)),
-        endpoint_config=_FakeEndpointConfig(),
-        action_cache=_FakeActionCache(),
+        endpoint_config=FakeEndpointConfig(),
+        action_cache=FakeActionCache(),
     )
 
-    moto_text = window._render_moto_output()
-    queue_snapshot = window._queue_diagnostics_snapshot()
-    cache_snapshot = window._cache_diagnostics_snapshot()
+    moto_text = window.render_moto_output()
+    queue_snapshot = window.queue_diagnostics_snapshot()
+    cache_snapshot = window.cache_diagnostics_snapshot()
 
     assert "Running: True" in moto_text
     assert "GET /moto-api/" in moto_text
@@ -231,14 +231,14 @@ def test_diagnostic_snapshots_include_live_state() -> None:
 
 
 @dataclass
-class _QueueWithSize:
+class QueueWithSize:
     size: int
 
     def qsize(self) -> int:
         return self.size
 
 
-class _FakeMotoManager:
+class FakeMotoManager:
     running = True
     dashboard_url = "http://127.0.0.1:5001/moto-api/"
 
@@ -252,7 +252,7 @@ class _FakeMotoManager:
         }
 
 
-class _FakeRobotocoreManager:
+class FakeRobotocoreManager:
     running = False
     endpoint_url = "http://localhost:4566"
 
@@ -266,7 +266,7 @@ class _FakeRobotocoreManager:
         }
 
 
-class _FakeRobotocorePanel:
+class FakeRobotocorePanel:
     def set_text(self, text: str) -> None:
         del text
 
@@ -277,12 +277,12 @@ class _FakeRobotocorePanel:
         del running
 
 
-class _FakeEndpointConfig:
+class FakeEndpointConfig:
     def resolved_url(self) -> str:
         return "http://127.0.0.1:5001"
 
 
-class _FakeActionCache:
+class FakeActionCache:
     def snapshot(self) -> dict[str, Any]:
         return {
             "ttl_seconds": 1800,
@@ -309,25 +309,25 @@ class _FakeActionCache:
 
 
 @dataclass
-class _FakeStatusBar:
+class FakeStatusBar:
     status: str = ""
 
     def set_status(self, status: str) -> None:
         self.status = status
 
 
-class _FakeDiagnosticText:
+class FakeDiagnosticText:
     def set_text(self, text: str) -> None:
         del text
 
 
-class _FakeSnapshotPanel:
+class FakeSnapshotPanel:
     def set_snapshot(self, snapshot: dict[str, Any]) -> None:
         del snapshot
 
 
 @dataclass
-class _FakeCachePanel:
+class FakeCachePanel:
     entry: dict[str, Any] | None
 
     def selected_entry(self) -> dict[str, Any] | None:
@@ -338,7 +338,7 @@ class _FakeCachePanel:
 
 
 @dataclass
-class _MutableFakeActionCache(_FakeActionCache):
+class MutableFakeActionCache(FakeActionCache):
     removed: list[tuple[str, str, str, dict[str, str]]] = field(default_factory=list)
 
     def invalidate_entry(

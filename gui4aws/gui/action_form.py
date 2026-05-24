@@ -29,10 +29,14 @@ class ActionForm(ttk.Frame):
         on_change: Callable[[], None] | None = None,
         **kwargs: Any,
     ) -> None:
+        """Initialize the action form.
+
+        Renders input fields based on the provided ``ActionDefinition``.
+        """
         super().__init__(parent, **kwargs)
         self.action = action
         self.variables: dict[str, tk.StringVar] = {}
-        self._text_widgets: dict[str, tk.Text] = {}
+        self.text_widgets: dict[str, tk.Text] = {}
         effective_prefill = prefill or {}
 
         ttk.Label(self, text=action.display_name, font=("TkDefaultFont", 10, "bold")).grid(
@@ -55,9 +59,9 @@ class ActionForm(ttk.Frame):
                 if initial:
                     widget.insert("1.0", initial)
                 widget.edit_modified(False)
-                self._text_widgets[field.name] = widget
+                self.text_widgets[field.name] = widget
                 if on_change is not None:
-                    widget.bind("<<Modified>>", self._on_text_modified(widget, on_change), add="+")
+                    widget.bind("<<Modified>>", self.on_text_modified(widget, on_change), add="+")
             else:
                 widget = ttk.Entry(self, textvariable=var, width=40)
             if field.kind != "multiline" and on_change is not None:
@@ -73,7 +77,7 @@ class ActionForm(ttk.Frame):
     def values(self) -> dict[str, str]:
         """Snapshot of current input values."""
         values = {name: var.get() for name, var in self.variables.items()}
-        values.update({name: widget.get("1.0", "end-1c") for name, widget in self._text_widgets.items()})
+        values.update({name: widget.get("1.0", "end-1c") for name, widget in self.text_widgets.items()})
         return values
 
     def validate(self) -> list[str]:
@@ -86,8 +90,8 @@ class ActionForm(ttk.Frame):
         return errors
 
     @staticmethod
-    def _on_text_modified(widget: tk.Text, callback: Callable[[], None]) -> Callable[[Any], None]:
-        """Notify the dialog when a multiline field changes."""
+    def on_text_modified(widget: tk.Text, callback: Callable[[], None]) -> Callable[[Any], None]:
+        """Create a handler to notify when a multiline text field changes."""
 
         def handle(_event: Any) -> None:
             if not widget.edit_modified():

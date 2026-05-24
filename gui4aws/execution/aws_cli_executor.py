@@ -170,7 +170,11 @@ class AwsCliExecutor:
 
 
 def parse_aws_cli_error(stderr: str) -> str:
-    """Best-effort one-line summary of an aws-cli error."""
+    """Best-effort one-line summary of an aws-cli error.
+
+    It typically looks for the first non-empty line in stderr, which for the
+    AWS CLI is often the most descriptive part of the traceback or error message.
+    """
     for line in stderr.splitlines():
         stripped = line.strip()
         if stripped:
@@ -179,7 +183,11 @@ def parse_aws_cli_error(stderr: str) -> str:
 
 
 def quote_for_shell(parts: Sequence[str]) -> str:
-    """Shell-quote a sequence of argv parts for display in the script viewer."""
+    """Shell-quote a sequence of argv parts for display in the script viewer.
+
+    This ensures that characters like spaces or shell metacharacters are correctly
+    escaped so the resulting string can be copy-pasted directly into a terminal.
+    """
     quoted: list[str] = []
     for part in parts:
         if not part or any(ch in part for ch in " \t\"'$`\\!*?[](){}<>|;&"):

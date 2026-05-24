@@ -46,44 +46,50 @@ class SerialWorker:
     """
 
     def __init__(self) -> None:
-        self._queue: queue.Queue[Any] = queue.Queue()
-        self._closed = False
-        self._lock = threading.RLock()
-        self._current_description: str | None = None
-        self._submitted_jobs = 0
-        self._started_jobs = 0
-        self._completed_jobs = 0
-        self._dropped_jobs = 0
-        self._failed_jobs = 0
-        self._recent_events: deque[str] = deque(maxlen=100)
-        self._thread = threading.Thread(target=self._loop, name="action-worker", daemon=True)
-        self._thread.start()
+        """Initialize the serial worker and start its background thread."""
+        self.queue: queue.Queue[Any] = queue.Queue()
+        self.closed = False
+        self.lock = threading.RLock()
+        self.current_description: str | None = None
+        self.submitted_jobs = 0
+        self.started_jobs = 0
+        self.completed_jobs = 0
+        self.dropped_jobs = 0
+        self.failed_jobs = 0
+        self.recent_events: deque[str] = deque(maxlen=100)
+        self.thread = threading.Thread(target=self.loop, name="action-worker", daemon=True)
+        self.thread.start()
 
     def submit(self, fn: Any, is_current: Any, description: str = "job") -> None:
         """Queue ``fn`` for serial execution.
 
         ``is_current`` is a 0-arg callable returning bool, checked just before
-        dispatch. If it returns False, the job is dropped.
+        dispatch. If it returns False, the job is dropped. This prevents stale
+        background tasks from updating the UI after navigation has changed.
         """
-        if self._closed:
+        if self.closed:
             return
-        with self._lock:
-            self._submitted_jobs += 1
-            self._record_event(f"queued {description}")
-        self._queue.put((fn, is_current, description))
+        with self.lock:
+            self.submitted_jobs += 1
+            self.record_event(f"queued {description}")
+        self.queue.put((fn, is_current, description))
 
     def close(self) -> None:
-        self._closed = True
+        """Shut down the worker and its background thread."""
+        self.closed = True
         # Wake the loop so it can notice.
-        self._queue.put((None, None, "shutdown"))
+        self.queue.put((None, None, "shutdown"))
 
     def clear_pending(self) -> int:
-        """Drop queued jobs that have not started yet."""
+        """Drop queued jobs that have not started yet.
+
+        Returns the number of jobs removed from the queue.
+        """
         removed = 0
         drained: list[tuple[Any, Any, str]] = []
         while True:
             try:
-                job = self._queue.get_nowait()
+                job = self.queue.get_nowait()
             except queue.Empty:
                 break
             if job[2] == "shutdown":
@@ -91,67 +97,69 @@ class SerialWorker:
                 continue
             removed += 1
         for job in drained:
-            self._queue.put(job)
+            self.queue.put(job)
         if removed:
-            with self._lock:
-                self._dropped_jobs += removed
-                self._record_event(f"cleared pending count={removed}")
+            with self.lock:
+                self.dropped_jobs += removed
+                self.record_event(f"cleared pending count={removed}")
         return removed
 
-    def _loop(self) -> None:
+    def loop(self) -> None:
+        """Main worker loop that pulls jobs from the queue and runs them."""
         while True:
-            fn, is_current, description = self._queue.get()
-            if self._closed:
+            fn, is_current, description = self.queue.get()
+            if self.closed:
                 return
             if is_current is not None:
                 try:
                     if not is_current():
-                        with self._lock:
-                            self._dropped_jobs += 1
-                            self._record_event(f"dropped stale {description}")
+                        with self.lock:
+                            self.dropped_jobs += 1
+                            self.record_event(f"dropped stale {description}")
                         continue
                 except Exception:
                     logger.exception("worker is_current check raised — dropping job")
-                    with self._lock:
-                        self._dropped_jobs += 1
-                        self._record_event(f"dropped error-check {description}")
+                    with self.lock:
+                        self.dropped_jobs += 1
+                        self.record_event(f"dropped error-check {description}")
                     continue
-            with self._lock:
-                self._started_jobs += 1
-                self._current_description = description
-                self._record_event(f"started {description}")
+            with self.lock:
+                self.started_jobs += 1
+                self.current_description = description
+                self.record_event(f"started {description}")
             try:
                 fn()
             except Exception:
                 logger.exception("worker job raised")
-                with self._lock:
-                    self._failed_jobs += 1
-                    self._record_event(f"failed {description}")
+                with self.lock:
+                    self.failed_jobs += 1
+                    self.record_event(f"failed {description}")
             else:
-                with self._lock:
-                    self._completed_jobs += 1
-                    self._record_event(f"completed {description}")
+                with self.lock:
+                    self.completed_jobs += 1
+                    self.record_event(f"completed {description}")
             finally:
-                with self._lock:
-                    self._current_description = None
+                with self.lock:
+                    self.current_description = None
 
     def snapshot(self) -> dict[str, Any]:
-        """Return queue state for diagnostics."""
-        with self._lock:
+        """Return a snapshot of the worker's current state for diagnostics."""
+        with self.lock:
             return {
-                "pending_jobs": self._queue.qsize(),
-                "current_job": self._current_description,
-                "submitted_jobs": self._submitted_jobs,
-                "started_jobs": self._started_jobs,
-                "completed_jobs": self._completed_jobs,
-                "dropped_jobs": self._dropped_jobs,
-                "failed_jobs": self._failed_jobs,
-                "recent_events": list(self._recent_events),
+                "pending_jobs": self.queue.qsize(),
+                "current_job": self.current_description,
+                "submitted_jobs": self.submitted_jobs,
+                "started_jobs": self.started_jobs,
+                "completed_jobs": self.completed_jobs,
+                "dropped_jobs": self.dropped_jobs,
+                "failed_jobs": self.failed_jobs,
+                "recent_events": list(self.recent_events),
             }
 
-    def _record_event(self, message: str) -> None:
+    def record_event(self, message: str) -> None:
+        """Record a timestamped event for diagnostic history."""
         stamp = time.strftime("%H:%M:%S")
-        self._recent_events.append(f"{stamp} {message}")
+        self.recent_events.append(f"{stamp} {message}")
 
 
 class MainWindow:
@@ -165,6 +173,10 @@ class MainWindow:
         profiles: list[str] | None = None,
         regions: list[str] | None = None,
     ) -> None:
+        """Initialize the main window and all its sub-panels.
+
+        If ``root`` is not provided, a new ``tk.Tk`` instance is created.
+        """
         self.context = context
         self.root = root or tk.Tk()
         self.root.title("gui4aws — AWS Think Console")
@@ -176,7 +188,7 @@ class MainWindow:
         # Track the last opened ActionDialog so we can update its status label.
         self.active_dialog: ActionDialog | None = None
 
-        self._build_menu()
+        self.build_menu()
 
         self.toolbar = Toolbar(
             self.root,
@@ -207,12 +219,12 @@ class MainWindow:
         )
         self.robotocore_panel = RobotocorePanel(
             self.content_tabs,
-            on_start=self._robotocore_start,
-            on_stop=self._robotocore_stop,
-            on_restart=self._robotocore_restart,
-            on_reset=self._robotocore_reset_state,
-            on_pull=self._robotocore_pull,
-            on_use_moto_changed=self._robotocore_use_moto_changed,
+            on_start=self.robotocore_start,
+            on_stop=self.robotocore_stop,
+            on_restart=self.robotocore_restart,
+            on_reset=self.robotocore_reset_state,
+            on_pull=self.robotocore_pull,
+            on_use_moto_changed=self.robotocore_use_moto_changed,
         )
         self.queue_panel = QueueDiagnosticsPanel(self.content_tabs, on_clear=self.clear_request_queue)
         self.cache_panel = CacheDiagnosticsPanel(
@@ -234,27 +246,28 @@ class MainWindow:
 
         self.current_action: ActionDefinition | None = None
         self.current_inputs: dict[str, str] = {}
-        self._current_sub_action: Any = None  # SubAction | None
-        self._current_service_id: str | None = None
-        self._current_nav: Any = None  # NavigationItem | None
+        self.current_sub_action: Any = None  # SubAction | None
+        self.current_service_id: str | None = None
+        self.current_nav: Any = None  # NavigationItem | None
         # Monotonic nav-transition counter — bumped every time the user switches
         # nav item OR triggers a refresh. Workers capture the generation they
         # were launched in; results from older generations are dropped without
         # touching the loading overlay so we don't get a stuck overlay race.
-        self._nav_generation: int = 0
+        self.nav_generation: int = 0
         # Serialise default-action / eager-choice / sub-action workers through
         # a single background thread. Rapid arrow-key bouncing previously
         # spawned a daemon thread per nav, all blocked waiting for moto's
         # single-threaded dev server — pile-ups of 100+ threads stalled every
         # panel. Now we run one HTTP call at a time and skip jobs whose nav
         # generation is no longer current at dispatch time.
-        self._action_queue = SerialWorker()
+        self.action_queue = SerialWorker()
         self.root.after(50, self.poll_queue)
         self.root.after(1000, self.refresh_diagnostics)
 
     # ── Menu ─────────────────────────────────────────────────────────────────
 
-    def _build_menu(self) -> None:
+    def build_menu(self) -> None:
+        """Create the top-level menu bar."""
         menubar = tk.Menu(self.root)
         self.root.configure(menu=menubar)
 
@@ -274,16 +287,18 @@ class MainWindow:
 
         help_menu = tk.Menu(menubar, tearoff=False)
         menubar.add_cascade(label="Help", menu=help_menu)
-        help_menu.add_command(label="Documentation", command=self._open_docs)
+        help_menu.add_command(label="Documentation", command=self.open_docs)
         help_menu.add_separator()
-        help_menu.add_command(label="About gui4aws", command=self._show_about)
+        help_menu.add_command(label="About gui4aws", command=self.show_about)
 
-    def _open_docs(self) -> None:
+    def open_docs(self) -> None:
+        """Open the documentation website in the default browser."""
         import webbrowser
 
         webbrowser.open("https://gui4aws.readthedocs.io/en/latest/")
 
-    def _show_about(self) -> None:
+    def show_about(self) -> None:
+        """Show the 'About' dialog with version and dependency information."""
         import sys
 
         import boto3
@@ -327,6 +342,7 @@ class MainWindow:
     # ── Moto ─────────────────────────────────────────────────────────────────
 
     def seed_demo_resources(self) -> None:
+        """Seed Moto or Robotocore with dummy resources for demonstration."""
         from gui4aws.demo_resources import seed_demo_resources
 
         endpoint_url = self.context.endpoint_config.resolved_url()
@@ -388,6 +404,7 @@ class MainWindow:
         self.status_bar.set_status("Opened Moto dashboard")
 
     def on_moto_toggle(self, start: bool) -> None:
+        """Start or stop the Moto server based on the toolbar toggle state."""
         if start:
             self.status_bar.set_status("Starting moto server…")
 
@@ -410,16 +427,20 @@ class MainWindow:
     # ── Robotocore ────────────────────────────────────────────────────────────
 
     def on_robotocore_toggle(self, currently_running: bool) -> None:
-        """Called by the toolbar button.  ``currently_running`` is the manager
-        state *before* the click, so we invert it to decide the action."""
-        if currently_running:
-            self._robotocore_stop()
-        else:
-            self._robotocore_start()
+        """Toggle the Robotocore server state.
 
-    def _robotocore_start(self) -> None:
+        Called by the toolbar button. ``currently_running`` is the manager
+        state *before* the click, so we invert it to decide the action.
+        """
+        if currently_running:
+            self.robotocore_stop()
+        else:
+            self.robotocore_start()
+
+    def robotocore_start(self) -> None:
+        """Start the Robotocore server in a background thread."""
         if self.robotocore_panel.use_moto:
-            self._robotocore_start_moto_mode()
+            self.robotocore_start_moto_mode()
             return
         custom_url = self.toolbar.endpoint_url_var.get().strip() or None
         self.status_bar.set_status("Starting robotocore…")
@@ -434,7 +455,8 @@ class MainWindow:
 
         threading.Thread(target=worker, daemon=True).start()
 
-    def _robotocore_stop(self) -> None:
+    def robotocore_stop(self) -> None:
+        """Stop the Robotocore server in a background thread."""
         self.status_bar.set_status("Stopping robotocore…")
 
         def worker() -> None:
@@ -446,7 +468,8 @@ class MainWindow:
 
         threading.Thread(target=worker, daemon=True).start()
 
-    def _robotocore_restart(self) -> None:
+    def robotocore_restart(self) -> None:
+        """Restart the Robotocore server in a background thread."""
         self.status_bar.set_status("Restarting robotocore…")
         self.robotocore_panel.set_status("Restarting…")
 
@@ -459,7 +482,8 @@ class MainWindow:
 
         threading.Thread(target=worker, daemon=True).start()
 
-    def _robotocore_pull(self) -> None:
+    def robotocore_pull(self) -> None:
+        """Pull the latest Robotocore Docker image in a background thread."""
         self.status_bar.set_status("Pulling robotocore Docker image…")
         self.robotocore_panel.set_status("Pulling image…")
 
@@ -472,7 +496,7 @@ class MainWindow:
 
         threading.Thread(target=worker, daemon=True).start()
 
-    def _robotocore_reset_state(self) -> None:
+    def robotocore_reset_state(self) -> None:
         """POST /_localstack/state/reset to wipe robotocore state without restarting."""
         if not self.robotocore_manager.running:
             self.status_bar.set_status("Robotocore is not running")
@@ -488,12 +512,16 @@ class MainWindow:
 
         threading.Thread(target=worker, daemon=True).start()
 
-    def _robotocore_use_moto_changed(self, use_moto: bool) -> None:
-        """When the checkbox flips, switch endpoint mode if robotocore is running."""
+    def robotocore_use_moto_changed(self, use_moto: bool) -> None:
+        """Update endpoint mode when the 'Use Moto instead' checkbox flips.
+
+        If robotocore is running, this switches between routing through
+        LocalStack/Robotocore and routing through the Moto dev server.
+        """
         if not self.robotocore_manager.running:
             return
         if use_moto:
-            self._robotocore_start_moto_mode()
+            self.robotocore_start_moto_mode()
         else:
             # Switch back to robotocore endpoint.
             url = self.robotocore_manager.endpoint_url
@@ -502,7 +530,7 @@ class MainWindow:
             self.toolbar.endpoint_url_var.set(url)
             self.on_toolbar_changed()
 
-    def _robotocore_start_moto_mode(self) -> None:
+    def robotocore_start_moto_mode(self) -> None:
         """Point endpoint at a running moto server instead of robotocore."""
         if not self.moto_manager.running:
             self.status_bar.set_status("Start Moto first, then enable 'Use Moto instead'")
@@ -517,18 +545,19 @@ class MainWindow:
     # ── Toolbar ───────────────────────────────────────────────────────────────
 
     def on_toolbar_changed(self) -> None:
+        """Refresh the status bar when toolbar settings (profile, region) change."""
         self.status_bar.refresh_context()
 
-    def _refresh_diagnostics_now(self) -> None:
+    def refresh_diagnostics_now(self) -> None:
         """Refresh diagnostic widgets immediately without scheduling timers."""
-        self.moto_output_panel.set_text(self._render_moto_output())
-        self.robotocore_panel.set_text(self._render_robotocore_output())
-        self.queue_panel.set_snapshot(self._queue_diagnostics_snapshot())
-        self.cache_panel.set_snapshot(self._cache_diagnostics_snapshot())
+        self.moto_output_panel.set_text(self.render_moto_output())
+        self.robotocore_panel.set_text(self.render_robotocore_output())
+        self.queue_panel.set_snapshot(self.queue_diagnostics_snapshot())
+        self.cache_panel.set_snapshot(self.cache_diagnostics_snapshot())
 
     def clear_request_queue(self) -> None:
         """Drop pending work from the request and result queues."""
-        removed_jobs = self._action_queue.clear_pending()
+        removed_jobs = self.action_queue.clear_pending()
         removed_results = 0
         while True:
             try:
@@ -537,7 +566,7 @@ class MainWindow:
                 break
             removed_results += 1
         self.status_bar.set_status(f"Cleared queue ({removed_jobs} pending, {removed_results} ready)")
-        self._refresh_diagnostics_now()
+        self.refresh_diagnostics_now()
 
     def clear_selected_cache_entry(self) -> None:
         """Remove the selected cache entry from diagnostics."""
@@ -552,13 +581,13 @@ class MainWindow:
             inputs={str(name): str(value) for name, value in entry["inputs"].items()},
         )
         self.status_bar.set_status("Cleared cache entry" if removed else "Cache entry was already gone")
-        self._refresh_diagnostics_now()
+        self.refresh_diagnostics_now()
 
     def clear_all_cache_entries(self) -> None:
         """Remove all cached read results."""
         self.context.invalidate_read_cache()
         self.status_bar.set_status("Cleared cache")
-        self._refresh_diagnostics_now()
+        self.refresh_diagnostics_now()
 
     # ── Sidebar navigation ────────────────────────────────────────────────────
 
@@ -572,7 +601,7 @@ class MainWindow:
         # Bump generation unconditionally on every sidebar selection,
         # including transitions to a service-row (item_id=None). Any in-flight
         # worker from the previous nav is now stale.
-        self._nav_generation += 1
+        self.nav_generation += 1
 
         try:
             service = self.context.registry.get(selection.service_id)
@@ -592,36 +621,36 @@ class MainWindow:
 
         self.main_panel.clear_for_navigation()
 
-        self._current_sub_action = nav.sub_action
-        self._current_service_id = service.service_id
-        self._current_nav = nav
+        self.current_sub_action = nav.sub_action
+        self.current_service_id = service.service_id
+        self.current_nav = nav
 
         # Configure the filter bar for this nav (always — empty fields if none).
         self.main_panel.configure_filter_bar(
             nav.filter_fields,
-            on_refresh=self._refresh_current_nav,
+            on_refresh=self.refresh_current_nav,
         )
         # Wire dependent-field watchers so that picking e.g. a cluster refires
         # the eager fetch for service_name.
-        self.main_panel.set_filter_field_change_handler(self._on_filter_field_changed)
+        self.main_panel.set_filter_field_change_handler(self.on_filter_field_changed)
 
         if nav.row_actions or nav.sub_action:
             self.main_panel.set_row_actions(
                 nav.row_actions,
-                on_row_action=partial(self._on_row_action, service.service_id),
-                on_row_select=self._on_sub_action_row_select if nav.sub_action else None,
+                on_row_action=partial(self.on_row_action, service.service_id),
+                on_row_select=self.on_sub_action_row_select if nav.sub_action else None,
             )
         else:
             self.main_panel.set_row_actions((), None)
         self.main_panel.set_sub_row_actions(
             nav.sub_action.row_actions if nav.sub_action else (),
-            partial(self._on_sub_row_action, service.service_id) if nav.sub_action else None,
+            partial(self.on_sub_row_action, service.service_id) if nav.sub_action else None,
         )
 
         # Kick off any eager-choice fetches so dropdowns get populated.
         # Only fields without a depends_on are loaded here; dependent ones
         # are fired when their dependency picks up a value.
-        self._dispatch_eager_choices(service, nav, only_independent=True)
+        self.dispatch_eager_choices(service, nav, only_independent=True)
 
         if nav.default_action_id is None:
             return
@@ -635,19 +664,19 @@ class MainWindow:
         # If any required filter field is empty, skip the initial run — the
         # eager-choice load (or the user) will trigger the first refresh.
         inputs = self.main_panel.filter_values()
-        if self._missing_required(nav, inputs):
+        if self.missing_required(nav, inputs):
             self.status_bar.set_status("Pick a value above and click Refresh")
             return
 
         self.run_action(action, inputs=inputs)
 
-    def _refresh_current_nav(self, values: dict[str, str]) -> None:
+    def refresh_current_nav(self, values: dict[str, str]) -> None:
         """Re-run the current nav's default action with the filter-bar values."""
-        nav = getattr(self, "_current_nav", None)
-        service_id = self._current_service_id
+        nav = getattr(self, "current_nav", None)
+        service_id = self.current_service_id
         if nav is None or service_id is None or nav.default_action_id is None:
             return
-        if self._missing_required(nav, values):
+        if self.missing_required(nav, values):
             self.status_bar.set_status("Fill in the required filter fields above")
             return
         try:
@@ -657,16 +686,17 @@ class MainWindow:
             return
         # Treat a refresh as a new generation too — any previously in-flight
         # default-action worker is now stale.
-        self._nav_generation += 1
+        self.nav_generation += 1
         self.run_action(action, inputs=values)
 
-    def _on_filter_field_changed(self, field_name: str, value: str) -> None:
-        """Called by FilterBar when any (non-client-filter) field's value changes.
+    def on_filter_field_changed(self, field_name: str, value: str) -> None:
+        """Handle value changes in the filter bar.
 
+        Called by FilterBar when any (non-client-filter) field's value changes.
         Refires eager-choice fetches whose ``depends_on`` references this field.
         """
-        nav = getattr(self, "_current_nav", None)
-        service_id = self._current_service_id
+        nav = getattr(self, "current_nav", None)
+        service_id = self.current_service_id
         if nav is None or service_id is None or not nav.eager_choices:
             return
         try:
@@ -682,17 +712,20 @@ class MainWindow:
                 # Dependency cleared — wipe the dependent dropdown.
                 self.main_panel.set_filter_choices(fname, [])
                 continue
-            self._launch_eager_fetch(service, fname, source)
+            self.launch_eager_fetch(service, fname, source)
 
-    def _missing_required(self, nav: Any, values: dict[str, str]) -> bool:
+    def missing_required(self, nav: Any, values: dict[str, str]) -> bool:
+        """Check if any required filter fields are missing values."""
         return any(fld.required and not values.get(fld.name, "").strip() for fld in nav.filter_fields)
 
-    def _dispatch_eager_choices(self, service: Any, nav: Any, *, only_independent: bool) -> None:
-        """For each (field_name → EagerChoiceSource), fetch the source action
+    def dispatch_eager_choices(self, service: Any, nav: Any, *, only_independent: bool) -> None:
+        """Fetch data for dropdowns in the filter bar.
+
+        For each (field_name → EagerChoiceSource), fetch the source action
         in a worker thread and populate the dropdown when it returns.
 
         If ``only_independent`` is True, skip sources with non-empty
-        ``depends_on`` — those are fired by _on_filter_field_changed once
+        ``depends_on`` — those are fired by on_filter_field_changed once
         their dependency picks up a value.
         """
         if not nav.eager_choices:
@@ -700,9 +733,9 @@ class MainWindow:
         for field_name, source in nav.eager_choices.items():
             if only_independent and getattr(source, "depends_on", None):
                 continue
-            self._launch_eager_fetch(service, field_name, source)
+            self.launch_eager_fetch(service, field_name, source)
 
-    def _launch_eager_fetch(self, service: Any, field_name: str, source: Any) -> None:
+    def launch_eager_fetch(self, service: Any, field_name: str, source: Any) -> None:
         """Start one eager-choice worker tagged with the current generation."""
         try:
             src_action = service.action(source.action_id)
@@ -726,7 +759,7 @@ class MainWindow:
                     return
                 inputs[source_param] = v
 
-        generation = self._nav_generation
+        generation = self.nav_generation
 
         def worker() -> None:
             try:
@@ -738,7 +771,7 @@ class MainWindow:
             if raw is None:
                 return
             try:
-                choices = self._extract_choices_from_raw(source.jmespath, raw)
+                choices = self.extract_choices_from_raw(source.jmespath, raw)
             except Exception as exc:
                 logger.warning("eager_choice JMESPath failed for %s: %s", field_name, exc)
                 return
@@ -747,13 +780,14 @@ class MainWindow:
         # Route through the same single-worker queue as default actions, so
         # rapid nav switching can't pile up parallel eager fetches. Stale
         # generations skipped at dispatch time.
-        self._action_queue.submit(
+        self.action_queue.submit(
             worker,
-            lambda gen=generation: gen == self._nav_generation,
+            lambda gen=generation: gen == self.nav_generation,
             f"choices {field_name}",
         )
 
-    def _extract_choices_from_raw(self, jmespath_expression: str, raw: Any) -> list[str]:
+    def extract_choices_from_raw(self, jmespath_expression: str, raw: Any) -> list[str]:
+        """Extract a list of strings from raw API response using JMESPath."""
         import jmespath
 
         choices_raw = jmespath.compile(jmespath_expression).search(raw) or []
@@ -766,18 +800,20 @@ class MainWindow:
                 choices.append(text)
         return choices
 
-    def _seed_filter_values(self, nav: Any, current_values: dict[str, str]) -> dict[str, str]:
+    def seed_filter_values(self, nav: Any, current_values: dict[str, str]) -> dict[str, str]:
+        """Combine default values with current values for filter fields."""
         values = {field.name: field.default for field in nav.filter_fields if field.default is not None}
         for name, value in current_values.items():
             if value:
                 values[name] = value
         return values
 
-    def _source_inputs_from_values(
+    def source_inputs_from_values(
         self,
         source: EagerChoiceSource,
         values: dict[str, str],
     ) -> dict[str, str] | None:
+        """Map filter field values to source action input parameters."""
         inputs: dict[str, str] = {}
         depends_on = source.depends_on or {}
         for filter_field, source_param in depends_on.items():
@@ -787,7 +823,7 @@ class MainWindow:
             inputs[source_param] = value
         return inputs
 
-    def _resolve_required_filter_value(
+    def resolve_required_filter_value(
         self,
         service: Any,
         nav: Any,
@@ -795,6 +831,7 @@ class MainWindow:
         values: dict[str, str],
         resolving: set[str],
     ) -> str | None:
+        """Recursively resolve a required filter field by fetching its first choice."""
         source = nav.eager_choices.get(field_name)
         if source is None or field_name in resolving:
             return None
@@ -803,7 +840,7 @@ class MainWindow:
             for dependency_field in source.depends_on:
                 if values.get(dependency_field, "").strip():
                     continue
-                dependency_value = self._resolve_required_filter_value(
+                dependency_value = self.resolve_required_filter_value(
                     service,
                     nav,
                     dependency_field,
@@ -813,7 +850,7 @@ class MainWindow:
                 if dependency_value is None:
                     return None
                 values[dependency_field] = dependency_value
-            source_inputs = self._source_inputs_from_values(source, values)
+            source_inputs = self.source_inputs_from_values(source, values)
             if source_inputs is None:
                 return None
             src_action = service.action(source.action_id)
@@ -821,41 +858,44 @@ class MainWindow:
             raw = getattr(result, "response", None) or getattr(result, "parsed_json", None)
             if raw is None:
                 return None
-            choices = self._extract_choices_from_raw(source.jmespath, raw)
+            choices = self.extract_choices_from_raw(source.jmespath, raw)
             if not choices:
                 return None
             return choices[0]
         finally:
             resolving.discard(field_name)
 
-    def _resolved_filter_values(
+    def resolved_filter_values(
         self,
         service: Any,
         nav: Any,
         current_values: dict[str, str],
     ) -> dict[str, str] | None:
-        values = self._seed_filter_values(nav, current_values)
+        """Try to fill all required filter fields by fetching choices."""
+        values = self.seed_filter_values(nav, current_values)
         resolving: set[str] = set()
         for field in nav.filter_fields:
             if values.get(field.name, "").strip():
                 continue
             if not field.required:
                 continue
-            resolved = self._resolve_required_filter_value(service, nav, field.name, values, resolving)
+            resolved = self.resolve_required_filter_value(service, nav, field.name, values, resolving)
             if resolved is None:
                 return None
             values[field.name] = resolved
         return values
 
-    def _nav_action_inputs(self, nav: Any, values: dict[str, str]) -> dict[str, str]:
+    def nav_action_inputs(self, nav: Any, values: dict[str, str]) -> dict[str, str]:
+        """Extract inputs for the default nav action from resolved filter values."""
         return {field.name: values[field.name] for field in nav.filter_fields if values.get(field.name, "").strip()}
 
-    def _submit_nav_cache_warm(
+    def submit_nav_cache_warm(
         self,
         service: Any,
         nav: Any,
         current_values: dict[str, str],
     ) -> None:
+        """Pre-fetch data for a navigation item to warm the cache."""
         if nav.default_action_id is None:
             return
         try:
@@ -866,7 +906,7 @@ class MainWindow:
         captured_values = dict(current_values)
 
         def warm_nav() -> None:
-            values = self._resolved_filter_values(service, nav, captured_values)
+            values = self.resolved_filter_values(service, nav, captured_values)
             if values is None:
                 return
             for source in nav.eager_choices.values():
@@ -875,15 +915,16 @@ class MainWindow:
                 except KeyError:
                     logger.warning("cache warm skipped unknown eager action %r", source.action_id)
                     continue
-                source_inputs = self._source_inputs_from_values(source, values)
+                source_inputs = self.source_inputs_from_values(source, values)
                 if source_inputs is None:
                     continue
                 self.context.execute(source_action, source_inputs)
-            self.context.execute(default_action, self._nav_action_inputs(nav, values))
+            self.context.execute(default_action, self.nav_action_inputs(nav, values))
 
-        self._action_queue.submit(warm_nav, lambda: True, f"cache warm {service.service_id}.{nav.item_id}")
+        self.action_queue.submit(warm_nav, lambda: True, f"cache warm {service.service_id}.{nav.item_id}")
 
-    def _schedule_cache_refreshes_for_action(self, action: ActionDefinition) -> None:
+    def schedule_cache_refreshes_for_action(self, action: ActionDefinition) -> None:
+        """Invalidate cache and schedule warming for nav items affected by an action."""
         self.context.invalidate_read_cache(action.service_id)
         if not action.cache_refresh_nav_ids:
             return
@@ -892,39 +933,40 @@ class MainWindow:
         except KeyError:
             logger.warning("cache refresh skipped unknown service %r", action.service_id)
             return
-        current_values = self.main_panel.filter_values() if self._current_service_id == action.service_id else {}
+        current_values = self.main_panel.filter_values() if self.current_service_id == action.service_id else {}
         target_nav_ids = set(action.cache_refresh_nav_ids)
         for nav in service.navigation_items:
             if nav.item_id in target_nav_ids:
-                self._submit_nav_cache_warm(service, nav, current_values)
+                self.submit_nav_cache_warm(service, nav, current_values)
 
-    def _refresh_visible_data_after_write(self, action: ActionDefinition) -> None:
+    def refresh_visible_data_after_write(self, action: ActionDefinition) -> None:
         """Reload the visible grid after a successful write affecting the current nav."""
-        nav = getattr(self, "_current_nav", None)
-        if nav is None or self._current_service_id != action.service_id:
+        nav = getattr(self, "current_nav", None)
+        if nav is None or self.current_service_id != action.service_id:
             return
         if nav.item_id not in set(action.cache_refresh_nav_ids):
             return
-        self._refresh_current_nav(self.main_panel.filter_values())
+        self.refresh_current_nav(self.main_panel.filter_values())
 
-    def _schedule_demo_cache_seed(self) -> None:
+    def schedule_demo_cache_seed(self) -> None:
+        """Warm the cache for all navigation items in all services."""
         self.context.invalidate_read_cache()
         for service in self.context.registry:
             for nav in service.navigation_items:
-                self._submit_nav_cache_warm(service, nav, {})
+                self.submit_nav_cache_warm(service, nav, {})
 
-    def _on_sub_action_row_select(self, row: Any) -> None:
+    def on_sub_action_row_select(self, row: Any) -> None:
         """Fire the sub_action when a row is selected and show results in the sub-panel."""
         import dataclasses as _dc
 
-        sub = self._current_sub_action
-        if sub is None or self._current_service_id is None:
+        sub = self.current_sub_action
+        if sub is None or self.current_service_id is None:
             return
         try:
-            service = self.context.registry.get(self._current_service_id)
+            service = self.context.registry.get(self.current_service_id)
             action = service.action(sub.action_id)
         except KeyError:
-            logger.warning("sub-action %r not found in service %r", sub.action_id, self._current_service_id)
+            logger.warning("sub-action %r not found in service %r", sub.action_id, self.current_service_id)
             return
         inputs: dict[str, str] = {}
         for field_name, attr_name in sub.prefill.items():
@@ -947,14 +989,14 @@ class MainWindow:
         # Same serialised queue as default actions and eager fetches; capture
         # the generation so a sub-action enqueued before a nav-switch doesn't
         # run after the user has moved on.
-        generation = self._nav_generation
-        self._action_queue.submit(
+        generation = self.nav_generation
+        self.action_queue.submit(
             sub_worker,
-            lambda gen=generation: gen == self._nav_generation,
+            lambda gen=generation: gen == self.nav_generation,
             f"sub-action {action.action_id}",
         )
 
-    def _on_row_action(self, service_id: str, row_action: RowAction, row: Any) -> None:
+    def on_row_action(self, service_id: str, row_action: RowAction, row: Any) -> None:
         """Open an ActionDialog pre-filled from the selected row.
 
         First applies the row's own attributes (via row_action.prefill), then
@@ -1006,12 +1048,12 @@ class MainWindow:
                 prefill[field.name] = filter_values[field.name]
         self.open_action_dialog(action, prefill=prefill)
 
-    def _on_sub_row_action(self, service_id: str, row_action: RowAction, row: Any) -> None:
+    def on_sub_row_action(self, service_id: str, row_action: RowAction, row: Any) -> None:
         """Open an ActionDialog for the currently selected sub-row."""
-        self._on_row_action(service_id, row_action, row)
+        self.on_row_action(service_id, row_action, row)
 
     @staticmethod
-    def _filter_rows_by_inputs(rows: list[Any], inputs: dict[str, str]) -> list[Any]:
+    def filter_rows_by_inputs(rows: list[Any], inputs: dict[str, str]) -> list[Any]:
         """Apply any exact-match filters whose input names also exist on the row objects."""
         filtered = list(rows)
         for field_name, expected in inputs.items():
@@ -1034,12 +1076,13 @@ class MainWindow:
             self.root,
             action,
             prefill=prefill,
-            on_run=self._dialog_run,
-            on_generate_scripts=self._generate_scripts,
+            on_run=self.dialog_run,
+            on_generate_scripts=self.generate_scripts,
         )
         self.active_dialog = dialog
 
-    def _generate_scripts(self, action: ActionDefinition, inputs: dict[str, str]) -> tuple[str, str]:
+    def generate_scripts(self, action: ActionDefinition, inputs: dict[str, str]) -> tuple[str, str]:
+        """Generate AWS CLI and Boto3 scripts for the given action and inputs."""
         cli = generate_cli_script(
             action,
             inputs,
@@ -1056,9 +1099,12 @@ class MainWindow:
         )
         return cli, python
 
-    def _dialog_run(self, action: ActionDefinition, inputs: dict[str, str]) -> None:
-        """Called when the user clicks Run in the combined ActionDialog."""
-        cli, python = self._generate_scripts(action, inputs)
+    def dialog_run(self, action: ActionDefinition, inputs: dict[str, str]) -> None:
+        """Execute an action from the ActionDialog.
+
+        Called when the user clicks Run in the combined ActionDialog.
+        """
+        cli, python = self.generate_scripts(action, inputs)
         self.main_panel.show_scripts(cli, python)
         self.run_action(action, inputs)
 
@@ -1106,7 +1152,7 @@ class MainWindow:
         self.main_panel.show_scripts(cli, python)
         self.status_bar.set_status("Loading")
         self.status_bar.set_last_action(action.action_id)
-        generation = self._nav_generation
+        generation = self.nav_generation
         # Capture inputs/action in the closure so the worker has its own copy.
         captured_inputs = dict(inputs)
 
@@ -1119,15 +1165,16 @@ class MainWindow:
                 return
             self.results_queue.put(("ok", action, result, generation))
 
-        self._action_queue.submit(
+        self.action_queue.submit(
             job,
-            lambda gen=generation: gen == self._nav_generation,
+            lambda gen=generation: gen == self.nav_generation,
             f"action {action.action_id}",
         )
 
     # ── Queue polling ─────────────────────────────────────────────────────────
 
     def poll_queue(self) -> None:
+        """Periodically check the results queue for background job completion."""
         try:
             while True:
                 try:
@@ -1158,14 +1205,15 @@ class MainWindow:
     def refresh_diagnostics(self) -> None:
         """Refresh the diagnostic tabs from live runtime state."""
         try:
-            self.moto_output_panel.set_text(self._render_moto_output())
-            self.robotocore_panel.set_text(self._render_robotocore_output())
-            self.queue_panel.set_snapshot(self._queue_diagnostics_snapshot())
-            self.cache_panel.set_snapshot(self._cache_diagnostics_snapshot())
+            self.moto_output_panel.set_text(self.render_moto_output())
+            self.robotocore_panel.set_text(self.render_robotocore_output())
+            self.queue_panel.set_snapshot(self.queue_diagnostics_snapshot())
+            self.cache_panel.set_snapshot(self.cache_diagnostics_snapshot())
         finally:
             self.root.after(1000, self.refresh_diagnostics)
 
-    def _render_moto_output(self) -> str:
+    def render_moto_output(self) -> str:
+        """Format Moto server status and logs for display."""
         snapshot = self.moto_manager.snapshot()
         lines = [
             f"Running: {snapshot['running']}",
@@ -1182,7 +1230,8 @@ class MainWindow:
             lines.append("(no output yet)")
         return "\n".join(lines)
 
-    def _render_robotocore_output(self) -> str:
+    def render_robotocore_output(self) -> str:
+        """Format Robotocore status and logs for display."""
         snapshot = self.robotocore_manager.snapshot()
         lines = [
             f"Running: {snapshot['running']}",
@@ -1204,15 +1253,17 @@ class MainWindow:
             lines.append("(no output yet — click Start Robotocore or Pull Docker Image first)")
         return "\n".join(lines)
 
-    def _queue_diagnostics_snapshot(self) -> dict[str, Any]:
-        snapshot = self._action_queue.snapshot()
+    def queue_diagnostics_snapshot(self) -> dict[str, Any]:
+        """Gather internal queue and navigation state for diagnostics."""
+        snapshot = self.action_queue.snapshot()
         snapshot["result_queue_depth"] = self.results_queue.qsize()
-        snapshot["current_nav_generation"] = self._nav_generation
-        snapshot["current_service"] = self._current_service_id
-        snapshot["current_nav"] = getattr(self._current_nav, "item_id", None)
+        snapshot["current_nav_generation"] = self.nav_generation
+        snapshot["current_service"] = self.current_service_id
+        snapshot["current_nav"] = getattr(self.current_nav, "item_id", None)
         return snapshot
 
-    def _cache_diagnostics_snapshot(self) -> dict[str, Any]:
+    def cache_diagnostics_snapshot(self) -> dict[str, Any]:
+        """Gather cache and endpoint state for diagnostics."""
         snapshot = self.context.action_cache.snapshot()
         snapshot["mode"] = str(self.context.mode)
         snapshot["profile"] = self.context.profile_name or "(environment)"
@@ -1227,6 +1278,7 @@ class MainWindow:
         payload: Any,
         generation: int | None = None,
     ) -> None:
+        """Route a background job's result to the appropriate UI update function."""
         # Drop results from a stale nav generation — the user moved on and
         # touching the panel for them would corrupt the current view.
         # Default-action and sub-panel results update the current browser view,
@@ -1235,7 +1287,7 @@ class MainWindow:
         if (
             kind in ("ok", "error", "sub_ok", "sub_error")
             and generation is not None
-            and generation != self._nav_generation
+            and generation != self.nav_generation
         ):
             # Stale result for an older selection/refresh; ignore it.
             return
@@ -1299,7 +1351,7 @@ class MainWindow:
             report: dict[str, list[str]] = payload
             lines = [f"{rtype}: {', '.join(ids) if ids else '(none)'}" for rtype, ids in report.items()]
             self.status_bar.set_status("Demo resources seeded")
-            self._schedule_demo_cache_seed()
+            self.schedule_demo_cache_seed()
             messagebox.showinfo("Demo resources seeded", "\n".join(lines) or "Nothing was created.")
             return
         if kind == "demo_error":
@@ -1315,11 +1367,11 @@ class MainWindow:
 
                 if isinstance(sub, _SubAction):
                     try:
-                        service = self.context.registry.get(self._current_service_id or "")
+                        service = self.context.registry.get(self.current_service_id or "")
                         act = service.action(sub.action_id)
                         if act.view is not None:
                             rows = act.view(raw)
-                            rows = self._filter_rows_by_inputs(rows, sub_inputs)
+                            rows = self.filter_rows_by_inputs(rows, sub_inputs)
                             self.main_panel.show_sub_table(sub.panel_label, rows, list(sub.columns))
                     except Exception:
                         logger.exception("sub-panel view failed for %s", getattr(sub, "action_id", sub))
@@ -1336,7 +1388,7 @@ class MainWindow:
             # is a meaningful value (e.g. ECS Tasks' service_name = "all
             # services") and we shouldn't override it.
             auto_select = True
-            nav = getattr(self, "_current_nav", None)
+            nav = getattr(self, "current_nav", None)
             if nav is not None:
                 for fld in nav.filter_fields:
                     if fld.name == field_name and not fld.required:
@@ -1385,8 +1437,8 @@ class MainWindow:
         if isinstance(action, ActionDefinition):
             view = action.view
             if action.risk_level is not RiskLevel.READ_ONLY:
-                self._schedule_cache_refreshes_for_action(action)
-                self._refresh_visible_data_after_write(action)
+                self.schedule_cache_refreshes_for_action(action)
+                self.refresh_visible_data_after_write(action)
 
             if action.text_generator is not None:
                 try:
@@ -1414,6 +1466,7 @@ class MainWindow:
             self.main_panel.show_output(f"{action.action_id} ok", raw_response)
 
     def record_history(self, action: ActionDefinition, kind: str, payload: Any) -> None:
+        """Add an execution entry to the persistent action history."""
         from datetime import datetime, timezone
 
         from gui4aws.execution.action_history import ActionHistoryEntry
@@ -1457,6 +1510,7 @@ class MainWindow:
         )
 
     def run(self) -> None:
+        """Enter the Tkinter main event loop."""
         self.root.mainloop()
 
 

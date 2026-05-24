@@ -25,7 +25,9 @@ disable=
     missing-function-docstring,
     no-self-use,
     attribute-defined-outside-init,
-    invalid-name
+    invalid-name,
+    import-outside-toplevel,
+    too-many-ancestors
 
 [FORMAT]
 max-line-length=120

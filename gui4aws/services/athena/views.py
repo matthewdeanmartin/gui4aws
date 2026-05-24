@@ -13,28 +13,31 @@ __all__ = [
 ]
 
 
-def _optional_str(value: Any) -> str | None:
+def optional_str(value: Any) -> str | None:
+    """Return value as str, or None for blank/None."""
     if value is None:
         return None
     return str(value) or None
 
 
-def _fmt_date(value: Any) -> str | None:
+def fmt_date(value: Any) -> str | None:
+    """Format a datetime object or string into a standard YYYY-MM-DD HH:MM:SS string."""
     if value is None:
         return None
     return str(value)[:19]
 
 
 def to_workgroup_summaries(response: Mapping[str, Any]) -> list[AthenaWorkGroupSummary]:
+    """Map ``list_work_groups`` or ``get_work_group`` response -> list[AthenaWorkGroupSummary]."""
     groups = response.get("WorkGroups", []) or []
     summaries: list[AthenaWorkGroupSummary] = []
     for g in groups:
         summaries.append(
             AthenaWorkGroupSummary(
                 name=str(g.get("Name", "")),
-                state=_optional_str(g.get("State")),
-                description=_optional_str(g.get("Description")),
-                creation_time=_fmt_date(g.get("CreationTime")),
+                state=optional_str(g.get("State")),
+                description=optional_str(g.get("Description")),
+                creation_time=fmt_date(g.get("CreationTime")),
             )
         )
     # get_work_group returns {"WorkGroup": {...}}
@@ -43,15 +46,16 @@ def to_workgroup_summaries(response: Mapping[str, Any]) -> list[AthenaWorkGroupS
         summaries.append(
             AthenaWorkGroupSummary(
                 name=str(wg.get("Name", "")),
-                state=_optional_str(wg.get("State")),
-                description=_optional_str((wg.get("Configuration") or {}).get("Description", wg.get("Description"))),
-                creation_time=_fmt_date(wg.get("CreationTime")),
+                state=optional_str(wg.get("State")),
+                description=optional_str((wg.get("Configuration") or {}).get("Description", wg.get("Description"))),
+                creation_time=fmt_date(wg.get("CreationTime")),
             )
         )
     return summaries
 
 
 def to_query_execution_summaries(response: Mapping[str, Any]) -> list[AthenaQueryExecutionSummary]:
+    """Map query execution list/detail responses -> list[AthenaQueryExecutionSummary]."""
     # list_query_executions returns {"QueryExecutionIds": [...]}
     ids = response.get("QueryExecutionIds", []) or []
     summaries: list[AthenaQueryExecutionSummary] = []
@@ -79,12 +83,12 @@ def to_query_execution_summaries(response: Mapping[str, Any]) -> list[AthenaQuer
         summaries.append(
             AthenaQueryExecutionSummary(
                 query_execution_id=str(qe.get("QueryExecutionId", "")),
-                query=_optional_str(qe.get("Query")),
-                state=_optional_str(status.get("State")),
-                state_change_reason=_optional_str(status.get("StateChangeReason")),
-                workgroup=_optional_str(qe.get("WorkGroup")),
-                submission_date=_fmt_date(status.get("SubmissionDateTime")),
-                completion_date=_fmt_date(status.get("CompletionDateTime")),
+                query=optional_str(qe.get("Query")),
+                state=optional_str(status.get("State")),
+                state_change_reason=optional_str(status.get("StateChangeReason")),
+                workgroup=optional_str(qe.get("WorkGroup")),
+                submission_date=fmt_date(status.get("SubmissionDateTime")),
+                completion_date=fmt_date(status.get("CompletionDateTime")),
                 data_scanned_in_bytes=stats.get("DataScannedInBytes"),
             )
         )

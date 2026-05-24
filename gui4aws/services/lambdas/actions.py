@@ -26,7 +26,7 @@ __all__ = [
 ]
 
 
-def _create_function_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+def create_function_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
 
     params: dict[str, Any] = {
         "FunctionName": inputs["function_name"],
@@ -49,7 +49,7 @@ def _create_function_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
     return params
 
 
-def _create_function_cli_args(inputs: Mapping[str, str]) -> list[str]:
+def create_function_cli_args(inputs: Mapping[str, str]) -> list[str]:
     args = [
         "--function-name",
         inputs["function_name"],
@@ -68,7 +68,7 @@ def _create_function_cli_args(inputs: Mapping[str, str]) -> list[str]:
     return args
 
 
-def _invoke_function_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+def invoke_function_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
 
     params: dict[str, Any] = {"FunctionName": inputs["function_name"]}
     payload = inputs.get("payload", "")
@@ -80,7 +80,7 @@ def _invoke_function_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
     return params
 
 
-def _invoke_function_cli_args(inputs: Mapping[str, str]) -> list[str]:
+def invoke_function_cli_args(inputs: Mapping[str, str]) -> list[str]:
     args = ["--function-name", inputs["function_name"]]
     if inputs.get("payload"):
         args += ["--payload", inputs["payload"]]
@@ -161,8 +161,8 @@ CREATE_FUNCTION = ActionDefinition(
     iam_permissions=("lambda:CreateFunction", "iam:PassRole"),
     description="Create a new Lambda function from a local deployment zip.",
     cache_refresh_nav_ids=("functions",),
-    cli_args_builder=_create_function_cli_args,
-    boto3_params_builder=_create_function_boto3_params,
+    cli_args_builder=create_function_cli_args,
+    boto3_params_builder=create_function_boto3_params,
 )
 
 
@@ -225,8 +225,8 @@ INVOKE_FUNCTION = ActionDefinition(
     result_view=ResultViewDefinition(kind=ResultViewKind.RAW_JSON, title="Invoke result"),
     iam_permissions=("lambda:InvokeFunction",),
     description="Invoke a Lambda function synchronously or asynchronously.",
-    cli_args_builder=_invoke_function_cli_args,
-    boto3_params_builder=_invoke_function_boto3_params,
+    cli_args_builder=invoke_function_cli_args,
+    boto3_params_builder=invoke_function_boto3_params,
 )
 
 

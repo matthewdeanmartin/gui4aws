@@ -172,7 +172,11 @@ class Boto3Executor:
 
 
 def coerce_value(raw: str, kind: str) -> Any:
-    """Convert a string form value to the type implied by InputField.kind."""
+    """Convert a string form value to the type implied by InputField.kind.
+
+    This is the bridge between the GUI's string-based widget values and the
+    typed parameters expected by the boto3 SDK.
+    """
     if kind == "int":
         return int(raw)
     if kind == "float":

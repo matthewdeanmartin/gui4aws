@@ -10,14 +10,14 @@ from gui4aws.services.ssm.models import ParameterSummary
 __all__ = ["to_parameter_summaries"]
 
 
-def _optional_str(value: Any) -> str | None:
+def optional_str(value: Any) -> str | None:
     if value is None:
         return None
     text = str(value)
     return text or None
 
 
-def _optional_int(value: Any) -> int | None:
+def optional_int(value: Any) -> int | None:
     if value is None:
         return None
     try:
@@ -35,12 +35,12 @@ def to_parameter_summaries(response: Mapping[str, Any]) -> list[ParameterSummary
         summaries.append(
             ParameterSummary(
                 name=str(p.get("Name", "")),
-                type=_optional_str(p.get("Type")),
-                description=_optional_str(p.get("Description")),
+                type=optional_str(p.get("Type")),
+                description=optional_str(p.get("Description")),
                 last_modified_date=str(last_modified) if last_modified else None,
-                version=_optional_int(p.get("Version")),
-                tier=_optional_str(p.get("Tier")),
-                arn=_optional_str(p.get("ARN")),
+                version=optional_int(p.get("Version")),
+                tier=optional_str(p.get("Tier")),
+                arn=optional_str(p.get("ARN")),
             )
         )
     return summaries
