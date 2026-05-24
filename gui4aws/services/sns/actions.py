@@ -1,7 +1,5 @@
 """SNS action definitions."""
 from __future__ import annotations
-from collections.abc import Mapping
-from typing import Any
 from gui4aws.models import (
     ActionDefinition, Boto3Template, CliTemplate, InputField,
     ResultViewDefinition, ResultViewKind, RiskLevel,
@@ -9,8 +7,14 @@ from gui4aws.models import (
 from gui4aws.services.sns.views import to_topic_summaries, to_subscription_summaries
 
 __all__ = [
-    "ALL_ACTIONS", "LIST_TOPICS", "CREATE_TOPIC", "DELETE_TOPIC",
-    "LIST_SUBSCRIPTIONS", "SUBSCRIBE", "UNSUBSCRIBE", "PUBLISH",
+    "ALL_ACTIONS",
+    "CREATE_TOPIC",
+    "DELETE_TOPIC",
+    "LIST_SUBSCRIPTIONS",
+    "LIST_TOPICS",
+    "PUBLISH",
+    "SUBSCRIBE",
+    "UNSUBSCRIBE",
 ]
 
 LIST_TOPICS = ActionDefinition(

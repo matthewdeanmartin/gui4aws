@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, cast
 
 from gui4aws.models import (
     ActionDefinition,
@@ -27,15 +27,15 @@ __all__ = [
     "CREATE_SERVICE",
     "DELETE_CLUSTER",
     "DELETE_SERVICE",
+    "DEREGISTER_TASK_DEFINITION",
     "DESCRIBE_CLUSTERS",
     "DESCRIBE_SERVICES",
-    "DESCRIBE_TASK_DEFINITION",
     "DESCRIBE_TASKS",
-    "DEREGISTER_TASK_DEFINITION",
+    "DESCRIBE_TASK_DEFINITION",
     "LIST_CLUSTERS",
     "LIST_SERVICES",
-    "LIST_TASK_DEFINITIONS",
     "LIST_TASKS",
+    "LIST_TASK_DEFINITIONS",
     "REGISTER_TASK_DEFINITION",
     "RUN_TASK",
     "STOP_TASK",
@@ -73,9 +73,11 @@ def _register_task_def_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]
     raw = inputs.get("task_definition_json", "{}")
     try:
         doc = json.loads(raw)
+        if not isinstance(doc, dict):
+            return {}
+        return cast(dict[str, Any], doc)
     except Exception:
-        doc = {}
-    return doc
+        return {}
 
 
 def _register_task_def_cli_args(inputs: Mapping[str, str]) -> list[str]:

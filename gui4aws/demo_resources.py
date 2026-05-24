@@ -101,8 +101,8 @@ def _seed_aurora(rds: Any) -> dict[str, list[str]]:
     ]
 
     for spec in clusters:
-        cluster_id = spec["DBClusterIdentifier"]
-        engine = spec["Engine"]
+        cluster_id = str(spec["DBClusterIdentifier"])
+        engine = str(spec["Engine"])
         try:
             rds.create_db_cluster(**spec)
             logger.info("created Aurora cluster %s", cluster_id)
@@ -315,7 +315,7 @@ def _seed_ecs(ecs: Any, *, extended: bool = False) -> dict[str, list[str]]:
         try:
             resp = ecs.register_task_definition(**td)
             td_arn = resp["taskDefinition"]["taskDefinitionArn"]
-            family = td["family"]
+            family = str(td["family"])
             logger.info("registered task definition %s", td_arn)
             created["ecs_task_definitions"].append(td_arn)
             registered_families.append(family)
@@ -341,12 +341,13 @@ def _seed_ecs(ecs: Any, *, extended: bool = False) -> dict[str, list[str]]:
             },
         ]
         for svc in services:
+            service_name = str(svc["serviceName"])
             try:
                 ecs.create_service(**svc)
-                logger.info("created ECS service %s", svc["serviceName"])
-                created["ecs_services"].append(svc["serviceName"])
+                logger.info("created ECS service %s", service_name)
+                created["ecs_services"].append(service_name)
             except Exception as exc:
-                logger.warning("skipped ECS service %s: %s", svc["serviceName"], exc)
+                logger.warning("skipped ECS service %s: %s", service_name, exc)
 
     return created
 
@@ -569,7 +570,7 @@ def _seed_kms(kms: Any) -> dict[str, list[str]]:
 
     aliases = ["alias/demo-app-key", "alias/demo-jwt-signing-key"]
 
-    for (description, key_usage, key_spec), alias_name in zip(key_specs, aliases):
+    for (description, key_usage, key_spec), alias_name in zip(key_specs, aliases, strict=True):
         try:
             resp = kms.create_key(
                 Description=description,
@@ -768,7 +769,7 @@ def _seed_cloudwatch(cloudwatch: Any, logs: Any) -> dict[str, list[str]]:
     ]
 
     for alarm_spec in alarms:
-        alarm_name = alarm_spec["AlarmName"]
+        alarm_name = str(alarm_spec["AlarmName"])
         try:
             cloudwatch.put_metric_alarm(**alarm_spec)
             logger.info("created CloudWatch alarm %s", alarm_name)

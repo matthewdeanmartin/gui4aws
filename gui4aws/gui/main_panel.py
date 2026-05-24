@@ -6,8 +6,10 @@ import dataclasses
 import logging
 import tkinter as tk
 from collections.abc import Callable, Iterable
+from functools import partial
 from tkinter import ttk
 from typing import Any
+
 
 from gui4aws.gui.detail_tree import DetailTree
 from gui4aws.gui.filter_bar import FilterBar
@@ -298,7 +300,7 @@ class MainPanel(ttk.Frame):
             ttk.Button(
                 self.row_action_bar,
                 text=ra.button_label,
-                command=lambda _ra=ra: self._fire_row_action(_ra),
+                command=partial(self._fire_row_action, ra),
             ).pack(side="left", padx=2)
 
     def set_sub_row_actions(
@@ -321,7 +323,7 @@ class MainPanel(ttk.Frame):
             ttk.Button(
                 self.sub_row_action_bar,
                 text=ra.button_label,
-                command=lambda _ra=ra: self._fire_sub_row_action(_ra),
+                command=partial(self._fire_sub_row_action, ra),
             ).pack(side="left", padx=2)
 
     # ── Internal helpers ─────────────────────────────────────────────────────

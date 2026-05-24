@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 import queue
 import shlex
 import subprocess
 import threading
 import tkinter as tk
+from functools import partial
 from tkinter import filedialog, messagebox, ttk
-from typing import Any
+from typing import Any, cast
 
 __all__ = ["CdkDialog"]
 
@@ -265,7 +267,7 @@ class CdkDialog(tk.Toplevel):
                 self._left,
                 text=sub["label"],
                 width=14,
-                command=lambda s=sub: self._select_subcommand(s),
+                command=partial(self._select_subcommand, sub),
             )
             btn.pack(fill="x", padx=4, pady=1)
             self._sidebar_buttons[sub["name"]] = btn
@@ -419,12 +421,12 @@ class CdkDialog(tk.Toplevel):
         for flag_name, var in self._field_vars.items():
             # Positional-style args (ALL_CAPS)
             if flag_name.isupper():
-                val = str(var.get()).strip()
+                val = str(cast(Any, var).get()).strip()
                 if val:
                     positional_args.extend(shlex.split(val))
                 continue
 
-            val = var.get()
+            val = cast(Any, var).get()
             if isinstance(val, bool):
                 if val:
                     cmd.append(flag_name)
@@ -435,18 +437,16 @@ class CdkDialog(tk.Toplevel):
 
         if dry_run and sub["name"] == "deploy":
             # CDK doesn't have --dry-run; redirect to synth for a dry preview
-            cmd = ["npx", "cdk", "synth"] + positional_args
+            cmd = ["npx", "cdk", "synth", *positional_args]
         else:
             cmd.extend(positional_args)
 
         return cmd
 
     def _update_preview(self, _event: Any = None) -> None:
-        try:
+        with contextlib.suppress(Exception):
             cmd = self._build_command(dry_run=self._dry_run_var.get())
             self._cmd_preview.configure(text="$ " + " ".join(shlex.quote(a) for a in cmd))
-        except Exception:
-            pass
 
     def _copy_command(self) -> None:
         try:
@@ -503,10 +503,8 @@ class CdkDialog(tk.Toplevel):
 
     def _on_stop(self) -> None:
         if self._proc is not None:
-            try:
+            with contextlib.suppress(Exception):
                 self._proc.terminate()
-            except Exception:
-                pass
             self._status_var.set("Process terminated")
 
     def _poll_output(self) -> None:

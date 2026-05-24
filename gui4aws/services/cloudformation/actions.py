@@ -213,7 +213,7 @@ app.synth()"""
 #   cdk bootstrap aws://{account}/{region}
 """
 
-    workflow = f"""# Typical workflow
+    workflow = """# Typical workflow
 cdk synth          # generate CloudFormation template (no AWS calls)
 cdk diff           # compare deployed stack with local template
 cdk deploy         # deploy (requires bootstrap if using assets)

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
-from enum import StrEnum
+from enum import Enum
 from typing import Any
 
 __all__ = [
@@ -31,7 +31,7 @@ __all__ = [
 ]
 
 
-class RiskLevel(StrEnum):
+class RiskLevel(str, Enum):
     """How dangerous an action is. Used to gate confirmation flows."""
 
     READ_ONLY = "read_only"
@@ -95,7 +95,7 @@ class Boto3Template:
     param_map: Mapping[str, str] = field(default_factory=dict)
 
 
-class ResultViewKind(StrEnum):
+class ResultViewKind(str, Enum):
     """How the main panel should render the action result."""
 
     TABLE = "table"

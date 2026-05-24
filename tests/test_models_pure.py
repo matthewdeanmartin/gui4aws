@@ -59,10 +59,10 @@ def test_action_definition_roundtrip_fields() -> None:
 
 def test_risk_level_values() -> None:
     """RiskLevel uses descriptive string values from the StrEnum."""
-    assert RiskLevel.READ_ONLY == "read_only"
-    assert RiskLevel.SAFE_WRITE == "safe_write"
-    assert RiskLevel.COST_AFFECTING == "cost_affecting"
-    assert RiskLevel.DESTRUCTIVE == "destructive"
+    assert RiskLevel.READ_ONLY.value == "read_only"
+    assert RiskLevel.SAFE_WRITE.value == "safe_write"
+    assert RiskLevel.COST_AFFECTING.value == "cost_affecting"
+    assert RiskLevel.DESTRUCTIVE.value == "destructive"
     # All four levels are distinct.
     all_levels = [RiskLevel.READ_ONLY, RiskLevel.SAFE_WRITE, RiskLevel.COST_AFFECTING, RiskLevel.DESTRUCTIVE]
     assert len(set(all_levels)) == 4

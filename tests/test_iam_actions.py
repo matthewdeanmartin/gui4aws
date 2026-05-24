@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import boto3
-import pytest
 import json
 
 from gui4aws.app import AppContext
@@ -42,7 +41,7 @@ def test_list_policies_builders():
 
 def test_user_actions(mock_aws_env: None) -> None:
     context = AppContext(region_name="us-east-1")
-    
+
     # Create
     result = context.execute(CREATE_USER, inputs={"user_name": "test-user"})
     assert isinstance(result, Boto3Result)
@@ -65,7 +64,7 @@ def test_user_actions(mock_aws_env: None) -> None:
 
 def test_group_actions(mock_aws_env: None) -> None:
     context = AppContext(region_name="us-east-1")
-    
+
     # Create
     result = context.execute(CREATE_GROUP, inputs={"group_name": "test-group"})
     assert isinstance(result, Boto3Result)
@@ -82,12 +81,12 @@ def test_group_actions(mock_aws_env: None) -> None:
 
 def test_role_actions(mock_aws_env: None) -> None:
     context = AppContext(region_name="us-east-1")
-    
+
     trust_policy = {
         "Version": "2012-10-17",
         "Statement": [{"Effect": "Allow", "Principal": {"Service": "ec2.amazonaws.com"}, "Action": "sts:AssumeRole"}]
     }
-    
+
     # Create
     result = context.execute(
         CREATE_ROLE,
@@ -121,7 +120,7 @@ def test_policy_actions(mock_aws_env: None) -> None:
     )["Policy"]["Arn"]
 
     context = AppContext(region_name="us-east-1")
-    
+
     # List
     list_result = context.execute(LIST_POLICIES, inputs={"scope": "Local"})
     summaries = to_policy_summaries(list_result.response)

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import boto3
-import pytest
 
 from gui4aws.app import AppContext
 from gui4aws.execution.boto3_executor import Boto3Result
@@ -29,7 +28,7 @@ def test_list_topics_empty(mock_aws_env: None) -> None:
 
 def test_create_and_delete_topic(mock_aws_env: None) -> None:
     context = AppContext(region_name="us-east-1")
-    
+
     # Create
     result = context.execute(CREATE_TOPIC, inputs={"topic_name": "test-topic"})
     assert isinstance(result, Boto3Result)
@@ -52,7 +51,7 @@ def test_subscription_actions(mock_aws_env: None) -> None:
     topic_arn = sns.create_topic(Name="sub-topic")["TopicArn"]
 
     context = AppContext(region_name="us-east-1")
-    
+
     # Subscribe
     result = context.execute(
         SUBSCRIBE,

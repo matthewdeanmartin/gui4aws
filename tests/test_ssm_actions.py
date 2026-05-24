@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import boto3
 import pytest
+from botocore.exceptions import ClientError
 
 from gui4aws.app import AppContext
 from gui4aws.execution.boto3_executor import Boto3Result
@@ -27,7 +28,7 @@ def test_describe_parameters_empty(mock_aws_env: None) -> None:
 
 def test_put_and_get_parameter(mock_aws_env: None) -> None:
     context = AppContext(region_name="us-east-1")
-    
+
     # Put
     result = context.execute(
         PUT_PARAMETER,
@@ -78,9 +79,9 @@ def test_delete_parameter(mock_aws_env: None) -> None:
     assert isinstance(result, Boto3Result)
 
     # Verify deleted
-    with pytest.raises(Exception): # boto3 client error
+    with pytest.raises(ClientError):
         ssm.get_parameter(Name="delete-me")
-    
+
     desc_result = context.execute(DESCRIBE_PARAMETERS, inputs={})
     summaries = to_parameter_summaries(desc_result.response)
     assert not any(s.name == "delete-me" for s in summaries)

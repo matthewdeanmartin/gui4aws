@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from typing import Any
 from gui4aws.services.sns.models import TopicSummary, SubscriptionSummary
 
-__all__ = ["to_topic_summaries", "to_subscription_summaries"]
+__all__ = ["to_subscription_summaries", "to_topic_summaries"]
 
 def to_topic_summaries(response: Mapping[str, Any]) -> list[TopicSummary]:
     topics = response.get("Topics", []) or []

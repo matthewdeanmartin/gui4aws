@@ -2,7 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 
-__all__ = ["UserSummary", "GroupSummary", "RoleSummary", "PolicySummary"]
+__all__ = ["GroupSummary", "PolicySummary", "RoleSummary", "UserSummary"]
 
 @dataclass(frozen=True)
 class UserSummary:

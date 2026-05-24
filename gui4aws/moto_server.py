@@ -49,7 +49,7 @@ def _find_free_port() -> int:
     """Ask the OS for an available TCP port."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("", 0))
-        return s.getsockname()[1]
+        return int(s.getsockname()[1])
 
 
 class MotoServerManager:
@@ -161,7 +161,8 @@ class MotoServerManager:
         url = f"{self.endpoint_url}/moto-api/reset"
         req = urllib.request.Request(url, method="POST", data=b"")
         try:
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            with urllib.request.urlopen(req, timeout=10) as resp:  # nosec B310
+
                 body = resp.read()
                 self._append_output(f"=== moto state reset: {resp.status} {body!r} ===")
         except urllib.error.HTTPError as exc:
@@ -209,8 +210,9 @@ class MotoServerManager:
             if self.process is not None and self.process.poll() is not None:
                 raise RuntimeError(f"moto server process exited with code {self.process.returncode}")
             try:
-                urllib.request.urlopen(self.endpoint_url, timeout=1)
+                urllib.request.urlopen(self.endpoint_url, timeout=1)  # nosec B310
                 return
+
             except (urllib.error.URLError, OSError):
                 time.sleep(0.25)
         raise RuntimeError(f"moto server did not respond within {timeout}s")

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import boto3
-import pytest
 
 from gui4aws.app import AppContext
 from gui4aws.execution.boto3_executor import Boto3Result

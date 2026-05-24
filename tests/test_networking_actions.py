@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import boto3
-import pytest
 
 from gui4aws.app import AppContext
 from gui4aws.execution.boto3_executor import Boto3Result
@@ -38,7 +37,7 @@ def test_describe_vpcs_default(mock_aws_env: None) -> None:
 
 def test_create_and_delete_vpc(mock_aws_env: None) -> None:
     context = AppContext(region_name="us-east-1")
-    
+
     # Create (name is not currently mapped in Boto3Template)
     result = context.execute(CREATE_VPC, inputs={"cidr_block": "10.1.0.0/16"})
     assert isinstance(result, Boto3Result)
@@ -59,7 +58,7 @@ def test_subnet_actions(mock_aws_env: None) -> None:
     vpc_id = ec2.create_vpc(CidrBlock="10.2.0.0/16")["Vpc"]["VpcId"]
 
     context = AppContext(region_name="us-east-1")
-    
+
     # Create Subnet (name is not currently mapped)
     result = context.execute(
         CREATE_SUBNET,
@@ -83,7 +82,7 @@ def test_security_group_actions(mock_aws_env: None) -> None:
     vpc_id = ec2.create_vpc(CidrBlock="10.3.0.0/16")["Vpc"]["VpcId"]
 
     context = AppContext(region_name="us-east-1")
-    
+
     # Create SG
     result = context.execute(
         CREATE_SECURITY_GROUP,
@@ -108,9 +107,9 @@ def test_security_group_actions(mock_aws_env: None) -> None:
     )
 
     rules_result = context.execute(DESCRIBE_SECURITY_GROUP_RULES, inputs={"group_id": group_id})
-    summaries = to_security_group_rule_summaries(rules_result.response)
+    rule_summaries = to_security_group_rule_summaries(rules_result.response)
     # Path 2 in to_security_group_rule_summaries is used here because describe_security_groups is called
-    assert any(s.from_port == "80" and s.cidr == "0.0.0.0/0" for s in summaries)
+    assert any(s.from_port == "80" and s.cidr == "0.0.0.0/0" for s in rule_summaries)
 
     # Delete SG
     del_result = context.execute(DELETE_SECURITY_GROUP, inputs={"group_id": group_id})

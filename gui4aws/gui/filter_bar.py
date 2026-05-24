@@ -11,6 +11,7 @@ Layout is horizontal — fields flow left-to-right and wrap to a second row if n
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import tkinter as tk
 from collections.abc import Callable, Iterable
@@ -208,10 +209,8 @@ class FilterBar(ttk.LabelFrame):
             return
         # Debounce keystrokes so we don't filter the table on every character.
         if self._client_after_id is not None:
-            try:
+            with contextlib.suppress(Exception):
                 self.after_cancel(self._client_after_id)
-            except Exception:
-                pass
         self._client_after_id = self.after(250, self._fire_client_filter)
 
     def _fire_client_filter(self) -> None:

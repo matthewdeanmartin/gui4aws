@@ -10,10 +10,19 @@ from gui4aws.services.iam.views import to_user_summaries, to_group_summaries, to
 
 __all__ = [
     "ALL_ACTIONS",
-    "LIST_USERS", "GET_USER", "CREATE_USER", "DELETE_USER",
-    "LIST_GROUPS", "CREATE_GROUP", "DELETE_GROUP",
-    "LIST_ROLES", "GET_ROLE", "CREATE_ROLE", "DELETE_ROLE",
-    "LIST_POLICIES", "GET_POLICY",
+    "CREATE_GROUP",
+    "CREATE_ROLE",
+    "CREATE_USER",
+    "DELETE_GROUP",
+    "DELETE_ROLE",
+    "DELETE_USER",
+    "GET_POLICY",
+    "GET_ROLE",
+    "GET_USER",
+    "LIST_GROUPS",
+    "LIST_POLICIES",
+    "LIST_ROLES",
+    "LIST_USERS",
 ]
 
 def _list_policies_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:

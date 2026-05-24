@@ -157,8 +157,9 @@ class RobotocoreManager:
         url = f"{self._endpoint_url}/_localstack/state/reset"
         req = urllib.request.Request(url, method="POST", data=b"")
         try:
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            with urllib.request.urlopen(req, timeout=10) as resp:  # nosec B310
                 body = resp.read()
+
                 self._append_output(f"=== robotocore state reset: {resp.status} {body!r} ===")
         except urllib.error.HTTPError as exc:
             raise RuntimeError(f"Robotocore reset failed: HTTP {exc.code}") from exc
@@ -235,7 +236,7 @@ class RobotocoreManager:
         ]
         self._append_output("$ " + " ".join(cmd))
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
+            result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", check=False)
         except FileNotFoundError as exc:
             raise RuntimeError("docker not found — is Docker Desktop installed and running?") from exc
 
@@ -255,7 +256,7 @@ class RobotocoreManager:
     def _docker_stop(self) -> None:
         for subcmd in (["docker", "stop", self._container_name],
                        ["docker", "rm", self._container_name]):
-            result = subprocess.run(subcmd, capture_output=True, text=True, encoding="utf-8")
+            result = subprocess.run(subcmd, capture_output=True, text=True, encoding="utf-8", check=False)
             if result.stdout.strip():
                 self._append_output(result.stdout.strip())
             if result.stderr.strip():
@@ -298,7 +299,7 @@ class RobotocoreManager:
         still counts as reachable.
         """
         try:
-            urllib.request.urlopen(self._endpoint_url, timeout=probe_timeout)
+            urllib.request.urlopen(self._endpoint_url, timeout=probe_timeout)  # nosec B310
             return True
         except urllib.error.HTTPError:
             # Server answered with an error code — it is listening.

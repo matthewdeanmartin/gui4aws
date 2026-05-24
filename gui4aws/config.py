@@ -55,10 +55,14 @@ def load_config(path: Path | None = None) -> AppConfig:
         data = json.loads(raw)
     else:
         try:
-            import tomllib  # Python 3.11+
+            if sys.version_info >= (3, 11):
+                import tomllib
+            else:
+                import tomli as tomllib
 
             data = tomllib.loads(raw)
-        except ImportError:  # pragma: no cover - 3.10 fallback
+        except ImportError:  # pragma: no cover
+            # Fallback if neither is available (should not happen with our deps)
             data = json.loads(raw)
     return _apply(data)
 

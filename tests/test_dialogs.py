@@ -35,8 +35,9 @@ def test_warning_banner_only_for_cost_or_destructive() -> None:
     """Banner appears for cost-affecting and destructive actions, otherwise None."""
     assert warning_banner(DESCRIBE_DB_CLUSTERS) is None
     assert warning_banner(CREATE_DB_CLUSTER_SNAPSHOT) is None  # safe_write -> no banner
-    assert warning_banner(RESTORE_DB_CLUSTER_FROM_SNAPSHOT) is not None
-    assert RiskLevel.COST_AFFECTING.value not in warning_banner(RESTORE_DB_CLUSTER_FROM_SNAPSHOT)  # human text
+    banner = warning_banner(RESTORE_DB_CLUSTER_FROM_SNAPSHOT)
+    assert banner is not None
+    assert RiskLevel.COST_AFFECTING.value not in banner  # human text
 
 
 def test_review_decision_confirm_path() -> None:

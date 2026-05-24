@@ -42,7 +42,7 @@ def test_delete_db_cluster_and_instance(mock_aws_env: None) -> None:
         DBInstanceClass="db.t3.medium",
     )
     context = AppContext(region_name="us-east-1")
-    
+
     # Delete Instance
     inst_res = context.execute(DELETE_DB_INSTANCE, inputs={"instance_identifier": "del-inst", "skip_final_snapshot": "true"})
     assert isinstance(inst_res, Boto3Result)
@@ -73,7 +73,7 @@ def test_db_lifecycle_actions(mock_aws_env: None) -> None:
         DBInstanceClass="db.t3.medium",
     )
     context = AppContext(region_name="us-east-1")
-    
+
     # Reboot
     reboot_res = context.execute(REBOOT_DB_INSTANCE, inputs={"instance_identifier": "life-inst"})
     assert isinstance(reboot_res, Boto3Result)
@@ -104,7 +104,7 @@ def test_db_snapshot_actions(mock_aws_env: None) -> None:
         MasterUserPassword="password",
     )
     context = AppContext(region_name="us-east-1")
-    
+
     # Create Snapshot
     create_res = context.execute(
         CREATE_DB_CLUSTER_SNAPSHOT,

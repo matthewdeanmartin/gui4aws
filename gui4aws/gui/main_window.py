@@ -9,6 +9,7 @@ import threading
 import time
 import tkinter as tk
 from collections import deque
+from functools import partial
 from tkinter import messagebox, ttk
 from typing import Any
 
@@ -21,7 +22,7 @@ from gui4aws.gui.main_panel import MainPanel
 from gui4aws.gui.sidebar import Sidebar, SidebarSelection
 from gui4aws.gui.status_bar import StatusBar
 from gui4aws.gui.toolbar import Toolbar
-from gui4aws.models import ActionDefinition, EagerChoiceSource, RiskLevel, RowAction
+from gui4aws.models import ActionDefinition, EagerChoiceSource, RiskLevel, RowAction, SubAction
 from gui4aws.moto_server import MotoServerManager
 from gui4aws.robotocore_server import RobotocoreManager
 
@@ -298,7 +299,7 @@ class MainWindow:
             moto_ver = "not installed"
         rc_status = (
             f"connected ({self.robotocore_manager.endpoint_url})"
-            if self.robotocore_manager.connected
+            if self.robotocore_manager.running
             else "not connected"
         )
         lines = [
@@ -598,7 +599,7 @@ class MainWindow:
         # Configure the filter bar for this nav (always — empty fields if none).
         self.main_panel.configure_filter_bar(
             nav.filter_fields,
-            on_refresh=lambda values, _nav=nav: self._refresh_current_nav(values),
+            on_refresh=self._refresh_current_nav,
         )
         # Wire dependent-field watchers so that picking e.g. a cluster refires
         # the eager fetch for service_name.
@@ -607,14 +608,14 @@ class MainWindow:
         if nav.row_actions or nav.sub_action:
             self.main_panel.set_row_actions(
                 nav.row_actions,
-                on_row_action=lambda ra, row: self._on_row_action(service.service_id, ra, row),
+                on_row_action=partial(self._on_row_action, service.service_id),
                 on_row_select=self._on_sub_action_row_select if nav.sub_action else None,
             )
         else:
             self.main_panel.set_row_actions((), None)
         self.main_panel.set_sub_row_actions(
             nav.sub_action.row_actions if nav.sub_action else (),
-            (lambda ra, row: self._on_sub_row_action(service.service_id, ra, row)) if nav.sub_action else None,
+            partial(self._on_sub_row_action, service.service_id) if nav.sub_action else None,
         )
 
         # Kick off any eager-choice fetches so dropdowns get populated.
@@ -753,7 +754,7 @@ class MainWindow:
         )
 
     def _extract_choices_from_raw(self, jmespath_expression: str, raw: Any) -> list[str]:
-        import jmespath  # type: ignore[import-untyped]
+        import jmespath
 
         choices_raw = jmespath.compile(jmespath_expression).search(raw) or []
         choices: list[str] = []
@@ -1222,7 +1223,7 @@ class MainWindow:
     def dispatch_result(
         self,
         kind: str,
-        action: ActionDefinition | None,
+        action: ActionDefinition | SubAction | str | None,
         payload: Any,
         generation: int | None = None,
     ) -> None:
@@ -1347,7 +1348,8 @@ class MainWindow:
         if action is None:
             return
 
-        self.record_history(action, kind, payload)
+        if isinstance(action, ActionDefinition):
+            self.record_history(action, kind, payload)
 
         if kind == "error":
             self.status_bar.set_status("Error")
@@ -1359,10 +1361,11 @@ class MainWindow:
 
         if hasattr(payload, "exception_class"):
             self.status_bar.set_status("Error")
-            message = getattr(payload, "message", None) or getattr(payload, "reason", "failed")
+            message = str(getattr(payload, "message", None) or getattr(payload, "reason", "failed"))
             error_code = getattr(payload, "aws_error_code", None)
             full_message = f"{error_code}: {message}" if error_code else message
-            logger.error("action %s failed: %s", action.action_id, full_message)
+            act_id = getattr(action, "action_id", str(action))
+            logger.error("action %s failed: %s", act_id, full_message)
             self.main_panel.output_panel.set_error(full_message)
             if self.active_dialog and self.active_dialog.winfo_exists():
                 self.active_dialog.set_status(f"Failed: {full_message}")
@@ -1371,7 +1374,6 @@ class MainWindow:
 
         self.status_bar.set_status("Ready")
 
-        view = action.view
         raw_response: Any = getattr(payload, "response", None) or getattr(payload, "parsed_json", None)
 
         # Update dialog status and show result if it's still open.
@@ -1380,34 +1382,36 @@ class MainWindow:
             if raw_response is not None:
                 self.active_dialog.set_result(raw_response)
 
-        if action.risk_level is not RiskLevel.READ_ONLY:
-            self._schedule_cache_refreshes_for_action(action)
-            self._refresh_visible_data_after_write(action)
+        if isinstance(action, ActionDefinition):
+            view = action.view
+            if action.risk_level is not RiskLevel.READ_ONLY:
+                self._schedule_cache_refreshes_for_action(action)
+                self._refresh_visible_data_after_write(action)
 
-        if action.text_generator is not None:
-            try:
-                generated = action.text_generator(self.current_inputs)
-            except Exception as exc:
-                logger.exception("text_generator failed for %s", action.action_id)
-                self.main_panel.output_panel.set_error(f"Text generation failed: {exc}")
+            if action.text_generator is not None:
+                try:
+                    generated = action.text_generator(self.current_inputs)
+                except Exception as exc:
+                    logger.exception("text_generator failed for %s", action.action_id)
+                    self.main_panel.output_panel.set_error(f"Text generation failed: {exc}")
+                    return
+                self.main_panel.show_output(generated, raw_response)
                 return
-            self.main_panel.show_output(generated, raw_response)
-            return
 
-        if view is not None and raw_response is not None:
-            try:
-                rows = view(raw_response)
-            except Exception as exc:
-                logger.exception("view function failed for %s", action.action_id)
-                self.main_panel.output_panel.set_error(f"View failed: {exc}")
+            if view is not None and raw_response is not None:
+                try:
+                    rows = view(raw_response)
+                except Exception as exc:
+                    logger.exception("view function failed for %s", action.action_id)
+                    self.main_panel.output_panel.set_error(f"View failed: {exc}")
+                    return
+                columns = list(action.result_view.columns) or (list(vars(rows[0]).keys()) if rows else [])
+                self.main_panel.show_table(rows, columns)
+                count = len(rows)
+                self.main_panel.show_output(f"{count} {'item' if count == 1 else 'items'}", raw_response)
                 return
-            columns = list(action.result_view.columns) or (list(vars(rows[0]).keys()) if rows else [])
-            self.main_panel.show_table(rows, columns)
-            count = len(rows)
-            self.main_panel.show_output(f"{count} {'item' if count == 1 else 'items'}", raw_response)
-            return
 
-        self.main_panel.show_output(f"{action.action_id} ok", raw_response)
+            self.main_panel.show_output(f"{action.action_id} ok", raw_response)
 
     def record_history(self, action: ActionDefinition, kind: str, payload: Any) -> None:
         from datetime import datetime, timezone

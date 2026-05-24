@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import StrEnum
+from enum import Enum
 
 __all__ = ["EndpointConfig", "EndpointMode"]
 
 
-class EndpointMode(StrEnum):
+class EndpointMode(str, Enum):
     """Where AWS calls are routed."""
 
     AWS = "aws"

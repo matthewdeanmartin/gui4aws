@@ -7,8 +7,12 @@ from gui4aws.models import (
 from gui4aws.services.ses.views import to_identity_summaries, to_template_summaries
 
 __all__ = [
-    "ALL_ACTIONS", "LIST_IDENTITIES", "VERIFY_EMAIL_IDENTITY",
-    "DELETE_IDENTITY", "LIST_TEMPLATES", "SEND_EMAIL",
+    "ALL_ACTIONS",
+    "DELETE_IDENTITY",
+    "LIST_IDENTITIES",
+    "LIST_TEMPLATES",
+    "SEND_EMAIL",
+    "VERIFY_EMAIL_IDENTITY",
 ]
 
 LIST_IDENTITIES = ActionDefinition(

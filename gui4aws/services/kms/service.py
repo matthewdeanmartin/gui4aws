@@ -6,7 +6,6 @@ from gui4aws.models import InputField, NavigationItem, RowAction, ServiceDefinit
 from gui4aws.services.kms.actions import (
     ALL_ACTIONS,
     CREATE_ALIAS,
-    CREATE_KEY,
     DELETE_ALIAS,
     DESCRIBE_KEY,
     DISABLE_KEY,

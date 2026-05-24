@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from botocore.exceptions import ClientError, BotoCoreError
 from unittest.mock import MagicMock, patch
 
@@ -23,12 +22,12 @@ def test_coerce_value():
 def test_execute_client_error():
     config = EndpointConfig(mode=EndpointMode.MOTO)
     executor = Boto3Executor(profile_name=None, region_name="us-east-1", endpoint_config=config)
-    
+
     action = MagicMock(spec=ActionDefinition)
     action.boto3_template = Boto3Template(service="s3", operation="list_buckets")
     action.boto3_params_builder = None
     action.input_fields = []
-    
+
     # Mock client to raise ClientError
     with patch.object(executor, "build_client") as mock_build:
         mock_client = MagicMock()
@@ -37,9 +36,9 @@ def test_execute_client_error():
             "ListBuckets"
         )
         mock_build.return_value = mock_client
-        
+
         result = executor.execute(action, {})
-        
+
         assert isinstance(result, Boto3Failure)
         assert result.aws_error_code == "NoSuchBucket"
         assert "The bucket does not exist" in result.message
@@ -49,20 +48,20 @@ def test_execute_client_error():
 def test_execute_botocore_error():
     config = EndpointConfig(mode=EndpointMode.MOTO)
     executor = Boto3Executor(profile_name=None, region_name="us-east-1", endpoint_config=config)
-    
+
     action = MagicMock(spec=ActionDefinition)
     action.boto3_template = Boto3Template(service="s3", operation="list_buckets")
     action.boto3_params_builder = None
     action.input_fields = []
-    
+
     # Mock client to raise BotoCoreError
     with patch.object(executor, "build_client") as mock_build:
         mock_client = MagicMock()
         mock_client.list_buckets.side_effect = BotoCoreError()
         mock_build.return_value = mock_client
-        
+
         result = executor.execute(action, {})
-        
+
         assert isinstance(result, Boto3Failure)
         assert result.aws_error_code is None
         assert result.exception_class == "BotoCoreError"
@@ -71,12 +70,12 @@ def test_execute_botocore_error():
 def test_build_client_real_aws():
     config = EndpointConfig(mode=EndpointMode.AWS)
     executor = Boto3Executor(profile_name="test-profile", region_name="us-east-1", endpoint_config=config)
-    
+
     with patch("boto3.Session") as mock_session_class:
         mock_session = MagicMock()
         mock_session_class.return_value = mock_session
-        
+
         executor.build_client("s3")
-        
+
         mock_session_class.assert_called_with(profile_name="test-profile", region_name="us-east-1")
         mock_session.client.assert_called()

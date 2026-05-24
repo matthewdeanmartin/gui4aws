@@ -10,8 +10,6 @@ gracefully on headless environments that lack a display.
 
 from __future__ import annotations
 
-import queue
-import threading
 import time
 import tkinter as tk
 from typing import Any
@@ -87,7 +85,7 @@ def test_moto_context_list_sqs_queues_via_http(moto_server: MotoServerManager) -
     """AppContext can call SQS list_queues through the moto HTTP server."""
     import boto3
 
-    from gui4aws.services.sqs.actions import CREATE_QUEUE, LIST_QUEUES
+    from gui4aws.services.sqs.actions import LIST_QUEUES
     from gui4aws.services.sqs.views import to_queue_summaries
 
     sqs = boto3.client("sqs", region_name="us-east-1", endpoint_url=moto_server.endpoint_url)
@@ -125,7 +123,7 @@ def test_moto_context_list_s3_buckets_via_http(moto_server: MotoServerManager) -
     import boto3
 
     from gui4aws.execution.boto3_executor import Boto3Result
-    from gui4aws.services.s3.actions import CREATE_BUCKET, LIST_BUCKETS
+    from gui4aws.services.s3.actions import LIST_BUCKETS
     from gui4aws.services.s3.views import to_bucket_summaries
 
     s3 = boto3.client("s3", region_name="us-east-1", endpoint_url=moto_server.endpoint_url)

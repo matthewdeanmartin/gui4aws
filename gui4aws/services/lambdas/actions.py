@@ -27,7 +27,6 @@ __all__ = [
 
 
 def _create_function_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
-    import json
 
     params: dict[str, Any] = {
         "FunctionName": inputs["function_name"],
@@ -66,7 +65,6 @@ def _create_function_cli_args(inputs: Mapping[str, str]) -> list[str]:
 
 
 def _invoke_function_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
-    import json
 
     params: dict[str, Any] = {"FunctionName": inputs["function_name"]}
     payload = inputs.get("payload", "")

@@ -6,7 +6,7 @@ import logging
 import time
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import boto3
 from botocore.config import Config as BotocoreConfig
@@ -91,10 +91,10 @@ class Boto3Executor:
                 endpoint_url,
                 "moto" if self.endpoint_config.mode.value == "moto" else "custom endpoint",
             )
-            return session.client(service_name, endpoint_url=endpoint_url, config=_BOTOCORE_CONFIG)
+            return cast(Any, session).client(service_name, endpoint_url=endpoint_url, config=_BOTOCORE_CONFIG)
         profile_hint = f"profile={self.profile_name}" if self.profile_name else "default credentials"
         logger.info("connecting to %s on real AWS (%s, region=%s)", service_name, profile_hint, self.region_name)
-        return session.client(service_name, config=_BOTOCORE_CONFIG)
+        return cast(Any, session).client(service_name, config=_BOTOCORE_CONFIG)
 
     def render_params(
         self,

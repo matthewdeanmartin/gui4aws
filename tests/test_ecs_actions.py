@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import boto3
-import pytest
 import json
 
 from gui4aws.app import AppContext
@@ -38,7 +37,7 @@ def test_list_clusters_empty(mock_aws_env: None) -> None:
 
 def test_create_and_delete_cluster(mock_aws_env: None) -> None:
     context = AppContext(region_name="us-east-1")
-    
+
     # Create
     result = context.execute(CREATE_CLUSTER, inputs={"cluster_name": "test-cluster"})
     assert isinstance(result, Boto3Result)
@@ -64,7 +63,7 @@ def test_create_and_delete_cluster(mock_aws_env: None) -> None:
 
 def test_task_definition_actions(mock_aws_env: None) -> None:
     context = AppContext(region_name="us-east-1")
-    
+
     task_def = {
         "family": "test-family",
         "containerDefinitions": [
@@ -75,12 +74,11 @@ def test_task_definition_actions(mock_aws_env: None) -> None:
             }
         ]
     }
-    
+
     # Register
     result = context.execute(REGISTER_TASK_DEFINITION, inputs={"task_definition_json": json.dumps(task_def)})
     assert isinstance(result, Boto3Result)
     assert result.response["taskDefinition"]["family"] == "test-family"
-    arn = result.response["taskDefinition"]["taskDefinitionArn"]
 
     # List
     list_result = context.execute(LIST_TASK_DEFINITIONS, inputs={})
@@ -103,7 +101,7 @@ def test_service_actions(mock_aws_env: None) -> None:
     )
 
     context = AppContext(region_name="us-east-1")
-    
+
     # Create Service
     result = context.execute(
         CREATE_SERVICE,

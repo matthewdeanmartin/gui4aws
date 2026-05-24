@@ -9,7 +9,7 @@ from gui4aws.execution.script_generator import (
     generate_cli_script,
     generate_python_script,
 )
-from gui4aws.models import ActionDefinition, Boto3Template, CliTemplate, InputField
+from gui4aws.models import ActionDefinition, Boto3Template, CliTemplate, InputField, RiskLevel
 
 
 def test_generate_cli_script_with_profile_and_endpoint():
@@ -18,14 +18,14 @@ def test_generate_cli_script_with_profile_and_endpoint():
         action_id="s3.ls",
         display_name="List S3",
         service_id="s3",
-        risk_level=1,
+        risk_level=RiskLevel.READ_ONLY,
         input_fields=(),
         cli_template=CliTemplate(service="s3", command="ls"),
         boto3_template=MagicMock(),
         result_view=MagicMock(),
         iam_permissions=(),
     )
-    
+
     script = generate_cli_script(
         action,
         {},
@@ -33,7 +33,7 @@ def test_generate_cli_script_with_profile_and_endpoint():
         region_name="us-east-1",
         endpoint_config=config
     )
-    
+
     assert "aws s3 ls" in script
     assert "--profile dev" in script
     assert "--endpoint-url http://127.0.0.1:5000" in script
@@ -46,7 +46,7 @@ def test_generate_python_script_with_params():
         action_id="s3.put",
         display_name="Put S3",
         service_id="s3",
-        risk_level=2,
+        risk_level=RiskLevel.SAFE_WRITE,
         input_fields=(
             InputField(name="bucket", label="B", kind="text"),
             InputField(name="key", label="K", kind="text"),
@@ -60,7 +60,7 @@ def test_generate_python_script_with_params():
         result_view=MagicMock(),
         iam_permissions=(),
     )
-    
+
     script = generate_python_script(
         action,
         {"bucket": "my-bucket", "key": "my-key"},
@@ -68,7 +68,7 @@ def test_generate_python_script_with_params():
         region_name="us-east-1",
         endpoint_config=config
     )
-    
+
     assert "import boto3" in script
     assert "client.put_object(" in script
     assert "Bucket='my-bucket'" in script
@@ -82,7 +82,7 @@ def test_generate_cli_script_with_builder():
         action_id="custom.act",
         display_name="Custom",
         service_id="s3",
-        risk_level=1,
+        risk_level=RiskLevel.READ_ONLY,
         input_fields=(),
         cli_template=CliTemplate(service="s3", command="ls"),
         boto3_template=MagicMock(),
@@ -90,7 +90,7 @@ def test_generate_cli_script_with_builder():
         iam_permissions=(),
         cli_args_builder=lambda inputs: ["--custom-flag", "custom-val"]
     )
-    
+
     script = generate_cli_script(
         action,
         {},
@@ -98,7 +98,7 @@ def test_generate_cli_script_with_builder():
         region_name="us-east-1",
         endpoint_config=config
     )
-    
+
     assert "--custom-flag custom-val" in script
 
 
@@ -108,7 +108,7 @@ def test_generate_python_script_with_builder():
         action_id="custom.act",
         display_name="Custom",
         service_id="s3",
-        risk_level=1,
+        risk_level=RiskLevel.READ_ONLY,
         input_fields=(),
         cli_template=MagicMock(),
         boto3_template=Boto3Template(service="s3", operation="put_object"),
@@ -116,7 +116,7 @@ def test_generate_python_script_with_builder():
         iam_permissions=(),
         boto3_params_builder=lambda inputs: {"CustomParam": "CustomValue"}
     )
-    
+
     script = generate_python_script(
         action,
         {},
@@ -124,5 +124,5 @@ def test_generate_python_script_with_builder():
         region_name="us-east-1",
         endpoint_config=config
     )
-    
+
     assert "CustomParam='CustomValue'" in script

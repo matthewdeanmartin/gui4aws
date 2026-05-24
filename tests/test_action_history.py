@@ -39,8 +39,9 @@ def test_history_add_and_latest() -> None:
     history = ActionHistory()
     history.add(make_entry("a"))
     history.add(make_entry("b"))
-    assert history.latest() is not None
-    assert history.latest().action_id == "b"
+    latest = history.latest()
+    assert latest is not None
+    assert latest.action_id == "b"
 
 
 def test_history_trims_to_max_entries() -> None:

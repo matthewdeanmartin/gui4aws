@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import boto3
-import pytest
 
 from gui4aws.app import AppContext
 from gui4aws.execution.boto3_executor import Boto3Result
@@ -46,7 +45,7 @@ def test_alarm_actions(mock_aws_env: None) -> None:
     )
 
     context = AppContext(region_name="us-east-1")
-    
+
     # List
     list_result = context.execute(DESCRIBE_ALARMS, inputs={})
     summaries = to_alarm_summaries(list_result.response)
@@ -64,9 +63,9 @@ def test_alarm_actions(mock_aws_env: None) -> None:
 
 def test_log_actions(mock_aws_env: None) -> None:
     logs = boto3.client("logs", region_name="us-east-1")
-    
+
     context = AppContext(region_name="us-east-1")
-    
+
     # Create Log Group
     result = context.execute(CREATE_LOG_GROUP, inputs={"log_group_name": "test-lg"})
     assert isinstance(result, Boto3Result)
@@ -88,16 +87,16 @@ def test_log_actions(mock_aws_env: None) -> None:
 
     # List Streams
     streams_result = context.execute(LIST_LOG_STREAMS, inputs={"log_group_name": "test-lg"})
-    summaries = to_log_stream_summaries(streams_result.response)
-    assert any(s.stream_name == "test-stream" for s in summaries)
+    stream_summaries = to_log_stream_summaries(streams_result.response)
+    assert any(s.stream_name == "test-stream" for s in stream_summaries)
 
     # Get Events
     events_result = context.execute(
         GET_LOG_EVENTS,
         inputs={"log_group_name": "test-lg", "log_stream_name": "test-stream"}
     )
-    summaries = to_log_event_summaries(events_result.response)
-    assert any(s.message == "hello" for s in summaries)
+    event_summaries = to_log_event_summaries(events_result.response)
+    assert any(s.message == "hello" for s in event_summaries)
 
     # Delete Log Group
     del_result = context.execute(DELETE_LOG_GROUP, inputs={"log_group_name": "test-lg"})

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import tkinter as tk
 from collections.abc import Callable, Sequence
+from functools import partial
 from tkinter import ttk
 from typing import Any
 
@@ -40,7 +41,7 @@ class ResourceTable(ttk.Frame):
             self.tree.heading(
                 column,
                 text=column,
-                command=lambda col=column: self.sort_by(col, False),
+                command=partial(self.sort_by, column, False),
             )
             self.tree.column(column, anchor="w", width=160, stretch=True)
 
@@ -101,7 +102,7 @@ class ResourceTable(ttk.Frame):
         data.sort(reverse=descending)
         for index, (_, item) in enumerate(data):
             self.tree.move(item, "", index)
-        self.tree.heading(column, command=lambda: self.sort_by(column, not descending))
+        self.tree.heading(column, command=partial(self.sort_by, column, not descending))
 
 
 def format_cell(value: Any) -> str:

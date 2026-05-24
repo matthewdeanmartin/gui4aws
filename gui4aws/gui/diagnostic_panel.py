@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import tkinter as tk
+from collections.abc import Sequence
 from tkinter import ttk
 from typing import Any
 
@@ -383,15 +384,16 @@ def _replace_listbox(widget: tk.Listbox, items: Any) -> None:
         widget.yview_moveto(yview[0])
 
 
-def _replace_tree(widget: ttk.Treeview, rows: list[tuple[str, ...]]) -> None:
+def _replace_tree(widget: ttk.Treeview, rows: Sequence[tuple[Any, ...]]) -> None:
     current = [tuple(widget.item(item, "values")) for item in widget.get_children("")]
+    new_rows: Sequence[tuple[Any, ...]]
     if rows:
         new_rows = rows
     elif len(widget["columns"]) == 2:
         new_rows = [("(none)", "")]
     else:
         new_rows = [("(none)", "", "", "")]
-    if current == new_rows:
+    if current == list(new_rows):
         return
     yview = widget.yview()
     for item in widget.get_children(""):

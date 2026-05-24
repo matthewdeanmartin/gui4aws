@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import boto3
-import pytest
 
 from gui4aws.app import AppContext
 from gui4aws.execution.boto3_executor import Boto3Result
@@ -26,7 +25,7 @@ def test_list_identities_empty(mock_aws_env: None) -> None:
 
 def test_identity_actions(mock_aws_env: None) -> None:
     context = AppContext(region_name="us-east-1")
-    
+
     # Verify
     result = context.execute(VERIFY_EMAIL_IDENTITY, inputs={"email_address": "test@example.com"})
     assert isinstance(result, Boto3Result)

@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from typing import Any
 from gui4aws.services.iam.models import UserSummary, GroupSummary, RoleSummary, PolicySummary
 
-__all__ = ["to_user_summaries", "to_group_summaries", "to_role_summaries", "to_policy_summaries"]
+__all__ = ["to_group_summaries", "to_policy_summaries", "to_role_summaries", "to_user_summaries"]
 
 def _fmt(value: Any) -> str | None:
     if value is None:

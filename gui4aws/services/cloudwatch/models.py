@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-__all__ = ["AlarmSummary", "LogGroupSummary", "LogStreamSummary", "LogEventSummary"]
+__all__ = ["AlarmSummary", "LogEventSummary", "LogGroupSummary", "LogStreamSummary"]
 
 
 @dataclass(frozen=True)

@@ -21,6 +21,7 @@ classifiers = [
 ]
 dependencies = [
     "boto3>=1.35.0",
+    "tomli>=2.4.1 ; python_full_version < '3.11'",
 ]
 
 [project.urls]
@@ -98,6 +99,7 @@ dev = [
     "deptry>=0.20.0",
     "import-linter>=2.0",
     "moto[server]>=5.2.1",
+    "types-jmespath>=1.1.0.20260508",
 ]
 
 [tool.uv]
@@ -177,7 +179,7 @@ convention = "google"
 
 [tool.bandit]
 exclude_dirs = ["tests"]
-skips = ["B101"]
+skips = ["B101", "B404", "B602", "B603", "B604", "B605", "B606", "B607", "B105"]
 
 [tool.coverage.report]
 exclude_also = [

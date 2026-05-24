@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from enum import StrEnum
+from enum import Enum
 
 __all__ = ["ExecutionMode"]
 
 
-class ExecutionMode(StrEnum):
+class ExecutionMode(str, Enum):
     """How the current action will be executed (and exported)."""
 
     AWS_CLI = "aws-cli"

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import tkinter as tk
+from collections.abc import Generator
 from typing import cast
 
 import pytest
@@ -14,7 +15,7 @@ from gui4aws.services.ssm.actions import PUT_PARAMETER
 
 
 @pytest.fixture(scope="module")
-def tk_root() -> tk.Tk:
+def tk_root() -> Generator[tk.Tk, None, None]:
     """Create one Tk root for the module or skip if Tk is unavailable."""
     try:
         root = tk.Tk()

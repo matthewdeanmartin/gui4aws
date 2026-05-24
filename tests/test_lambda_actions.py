@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import boto3
-import pytest
 import zipfile
-import io
 import os
 import tempfile
 
@@ -44,7 +42,7 @@ def test_create_and_delete_function(mock_aws_env: None) -> None:
 
     try:
         context = AppContext(region_name="us-east-1")
-        
+
         # Create
         result = context.execute(
             CREATE_FUNCTION,

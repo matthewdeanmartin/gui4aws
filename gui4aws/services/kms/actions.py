@@ -346,7 +346,7 @@ SCHEDULE_KEY_DELETION = ActionDefinition(
             label="Pending window (days)",
             kind="int",
             default="30",
-            help_text="7–30 days. Key is deleted after this period.",
+            help_text="7-30 days. Key is deleted after this period.",
         ),
     ),
     cli_template=CliTemplate(

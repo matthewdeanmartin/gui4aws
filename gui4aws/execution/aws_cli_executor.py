@@ -136,8 +136,8 @@ class AwsCliExecutor:
                 argv=argv,
                 region=self.region_name,
                 duration_seconds=duration,
-                stdout=exc.stdout or "",
-                stderr=exc.stderr or "",
+                stdout=str(exc.stdout or ""),
+                stderr=str(exc.stderr or ""),
                 exit_code=-1,
                 reason=f"timeout after {exc.timeout}s",
             )
@@ -147,10 +147,10 @@ class AwsCliExecutor:
                 argv=argv,
                 region=self.region_name,
                 duration_seconds=duration,
-                stdout=completed.stdout,
-                stderr=completed.stderr,
+                stdout=str(completed.stdout),
+                stderr=str(completed.stderr),
                 exit_code=completed.returncode,
-                reason=parse_aws_cli_error(completed.stderr),
+                reason=parse_aws_cli_error(str(completed.stderr)),
             )
         parsed: Any = None
         if completed.stdout.strip():

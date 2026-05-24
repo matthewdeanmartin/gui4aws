@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import boto3
-import pytest
 
 from gui4aws.app import AppContext
 from gui4aws.execution.boto3_executor import Boto3Result
@@ -20,10 +19,10 @@ from gui4aws.services.cloudformation.views import to_stack_summaries
 def test_list_stacks_builders():
     """Test the pure builder functions."""
     inputs = {"stack_status_filter": "CREATE_COMPLETE,UPDATE_COMPLETE"}
-    
+
     params = _list_stacks_boto3_params(inputs)
     assert params == {"StackStatusFilter": ["CREATE_COMPLETE", "UPDATE_COMPLETE"]}
-    
+
     args = _list_stacks_cli_args(inputs)
     assert args == ["--stack-status-filter", "CREATE_COMPLETE", "UPDATE_COMPLETE"]
 
@@ -54,7 +53,7 @@ def test_create_and_delete_stack(mock_aws_env: None) -> None:
     cfn.create_stack(StackName="test-stack", TemplateBody=json.dumps(template))
 
     context = AppContext(region_name="us-east-1")
-    
+
     # List
     list_result = context.execute(LIST_STACKS, inputs={})
     summaries = to_stack_summaries(list_result.response)
