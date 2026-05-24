@@ -1,5 +1,7 @@
 """Global toolbar: mode / profile / region / endpoint selectors + moto/robotocore toggles."""
 
+# pylint: disable=too-many-ancestors
+
 from __future__ import annotations
 
 import tkinter as tk

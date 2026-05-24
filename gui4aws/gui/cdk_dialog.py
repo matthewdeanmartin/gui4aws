@@ -352,6 +352,22 @@ class CdkDialog(tk.Toplevel):
         self.output_queue: queue.Queue[str | None] = queue.Queue()
         self.help_cache: dict[str, str] = {}
 
+        # Initialize attributes that are otherwise defined outside __init__
+        self.left = cast(ttk.Frame, None)
+        self.help_text = cast(tk.Text, None)
+        self.sidebar_buttons: dict[str, ttk.Button] = {}
+        self.cwd_var = cast(tk.StringVar, None)
+        self.cmd_title = cast(ttk.Label, None)
+        self.cmd_desc = cast(ttk.Label, None)
+        self.form_canvas = cast(tk.Canvas, None)
+        self.form_inner = cast(ttk.Frame, None)
+        self.dry_run_var = cast(tk.BooleanVar, None)
+        self.run_btn = cast(ttk.Button, None)
+        self.stop_btn = cast(ttk.Button, None)
+        self.cmd_preview = cast(ttk.Label, None)
+        self.output_text = cast(tk.Text, None)
+        self.status_var = cast(tk.StringVar, None)
+
         size_and_center(self)
         self.build_ui()
         self.select_subcommand(_CDK_SUBCOMMANDS[3])  # default: deploy
@@ -636,6 +652,7 @@ class CdkDialog(tk.Toplevel):
             self.output_queue.put(None)  # sentinel
 
         try:
+            # pylint: disable=consider-using-with
             self.proc = subprocess.Popen(
                 cmd,
                 cwd=cwd,
@@ -720,13 +737,14 @@ class CdkDialog(tk.Toplevel):
                     capture_output=True,
                     text=True,
                     timeout=15,
+                    check=False,
                 )
                 text = result.stdout or result.stderr or "(no help output)"
             except FileNotFoundError:
                 text = "npx not found — install Node.js to use the CDK launcher."
             except subprocess.TimeoutExpired:
                 text = "Timed out fetching help."
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-exception-caught
                 text = f"Error: {exc}"
             self.help_cache[subcommand] = text
             self.after(0, lambda: self.set_help(text) if self.current_subcommand["name"] == subcommand else None)

@@ -7,6 +7,8 @@ This module only writes resources; it never deletes. Call :func:`seed_demo_resou
 with a boto3 session (or endpoint_url for moto server mode) to create the assets.
 """
 
+# pylint: disable=broad-exception-caught
+
 from __future__ import annotations
 
 import logging
@@ -717,7 +719,8 @@ def make_lambda_zip() -> bytes:
     import zipfile
 
     handler_code = (
-        "def handler(event, context):\n" '    return {"statusCode": 200, "body": "Hello from gui4aws demo"}\n'
+        "def handler(event, context):\n"
+        '    return {"statusCode": 200, "body": "Hello from gui4aws demo"}\n'
     )
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:

@@ -1,5 +1,7 @@
 """Panels for runtime diagnostics."""
 
+# pylint: disable=too-many-ancestors
+
 from __future__ import annotations
 
 import json

@@ -1,5 +1,7 @@
 """Dynamic form built from list[InputField]."""
 
+# pylint: disable=too-many-ancestors
+
 from __future__ import annotations
 
 import tkinter as tk

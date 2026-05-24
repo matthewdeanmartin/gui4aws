@@ -96,7 +96,7 @@ class MotoServerManager:
             return
 
         try:
-            import moto  # noqa: F401
+            import moto  # pylint: disable=unused-import  # noqa: F401
         except ImportError as exc:
             raise RuntimeError("moto is not installed; add it to dev deps") from exc
 
@@ -106,6 +106,7 @@ class MotoServerManager:
         self.clear_output()
         self.append_output(f"=== starting moto on {self.endpoint_url} ===")
 
+        # pylint: disable=consider-using-with
         self.process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -213,9 +214,8 @@ class MotoServerManager:
             if self.process is not None and self.process.poll() is not None:
                 raise RuntimeError(f"moto server process exited with code {self.process.returncode}")
             try:
-                urllib.request.urlopen(self.endpoint_url, timeout=1)  # nosec B310
-                return
-
+                with urllib.request.urlopen(self.endpoint_url, timeout=1):  # nosec B310
+                    return
             except (urllib.error.URLError, OSError):
                 time.sleep(0.25)
         raise RuntimeError(f"moto server did not respond within {timeout}s")

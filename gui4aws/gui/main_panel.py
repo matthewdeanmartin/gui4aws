@@ -1,5 +1,7 @@
 """Main panel: resource table + detail grid + contextual action bars; output on bottom."""
 
+# pylint: disable=too-many-ancestors
+
 from __future__ import annotations
 
 import dataclasses
@@ -153,13 +155,13 @@ class MainPanel(ttk.Frame):
         # State
         self.current_rows: list[Any] = []
         self.current_columns: list[str] = []
-        self.current_row: Any = None
+        self._current_row: Any = None
         self.current_client_filter: str = ""
         self.on_row_action: Callable[[RowAction, Any], None] | None = None
         self.on_sub_row_select: Callable[[Any], None] | None = None
         self.current_row_actions: tuple[RowAction, ...] = ()
         self.sub_rows: list[Any] = []
-        self.current_sub_row: Any = None
+        self._current_sub_row: Any = None
         self.sub_row_actions: tuple[RowAction, ...] = ()
         self.on_sub_row_action: Callable[[RowAction, Any], None] | None = None
 
@@ -172,7 +174,7 @@ class MainPanel(ttk.Frame):
         self.output_panel.set_result("", None)
         self.scripts_cli = ""
         self.scripts_python = ""
-        self.current_row = None
+        self._current_row = None
         self.current_rows = []
         self.current_client_filter = ""
         self.set_row_actions((), None)
@@ -206,20 +208,22 @@ class MainPanel(ttk.Frame):
         """Current values from the filter bar (for the controller to use on refresh)."""
         return self.filter_bar.values()
 
+    @property
     def current_row(self) -> Any:
         """Return the currently selected root row."""
-        return self.current_row
+        return self._current_row
 
+    @property
     def current_sub_row(self) -> Any:
         """Return the currently selected sub-table row."""
-        return self.current_sub_row
+        return self._current_sub_row
 
     def show_sub_table(self, label: str, rows: list[Any], columns: list[str]) -> None:
         """Populate and show the sub-table panel (e.g. instances for a cluster)."""
         self.sub_frame.configure(text=label)
-        previous_key = row_identity(self.current_sub_row)
+        previous_key = row_identity(self._current_sub_row)
         self.sub_rows = list(rows)
-        self.current_sub_row = None
+        self._current_sub_row = None
         self.sub_tree.configure(columns=columns)
         for col in columns:
             self.sub_tree.heading(col, text=col)
@@ -236,7 +240,7 @@ class MainPanel(ttk.Frame):
             iid = str(selected_index)
             self.sub_tree.selection_set(iid)
             self.sub_tree.focus(iid)
-            self.current_sub_row = self.sub_rows[selected_index]
+            self._current_sub_row = self.sub_rows[selected_index]
         if not self.sub_visible:
             self.sub_frame.grid(row=self.sub_grid_row, column=0, sticky="nsew", padx=2, pady=2)
             self.sub_visible = True
@@ -249,12 +253,12 @@ class MainPanel(ttk.Frame):
         for child in self.sub_tree.get_children():
             self.sub_tree.delete(child)
         self.sub_rows = []
-        self.current_sub_row = None
+        self._current_sub_row = None
         self.set_sub_row_actions((), None)
 
     def show_table(self, rows: list[Any], columns: list[str]) -> None:
         """Replace the resource table with new rows and columns."""
-        previous_key = row_identity(self.current_row)
+        previous_key = row_identity(self._current_row)
         if tuple(columns) != self.resource_table.columns:
             old = self.resource_table
             old.grid_remove()
@@ -330,7 +334,7 @@ class MainPanel(ttk.Frame):
 
     def on_row_select(self, row: Any) -> None:
         """Populate the detail grid when a table row is selected."""
-        self.current_row = row
+        self._current_row = row
         if dataclasses.is_dataclass(row) and not isinstance(row, type):
             data = dataclasses.asdict(row)
         elif hasattr(row, "__dict__"):
@@ -344,25 +348,25 @@ class MainPanel(ttk.Frame):
     def fire_row_action(self, row_action: RowAction) -> None:
         """Dispatch a row action click to the registered handler for the current row."""
         if self.on_row_action is not None:
-            self.on_row_action(row_action, self.current_row)
+            self.on_row_action(row_action, self._current_row)
 
     def on_sub_table_select(self, event: object = None) -> None:
         """Handle selection changes in the sub-table panel."""
         del event
         selected = self.sub_tree.selection()
         if not selected:
-            self.current_sub_row = None
+            self._current_sub_row = None
             return
         try:
             idx = int(selected[0])
-            self.current_sub_row = self.sub_rows[idx]
+            self._current_sub_row = self.sub_rows[idx]
         except (ValueError, IndexError):
-            self.current_sub_row = None
+            self._current_sub_row = None
 
     def fire_sub_row_action(self, row_action: RowAction) -> None:
         """Dispatch a sub-row action click to the registered handler."""
         if self.on_sub_row_action is not None:
-            self.on_sub_row_action(row_action, self.current_sub_row)
+            self.on_sub_row_action(row_action, self._current_sub_row)
 
     def open_script_dialog(self) -> None:
         """Show the generated CLI/Python scripts in a popup dialog."""
@@ -400,7 +404,7 @@ class MainPanel(ttk.Frame):
             import jmespath  # transitive dep of boto3
 
             compiled = jmespath.compile(expression)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-exception-caught
             logger.debug("invalid JMESPath %r: %s", expression, exc)
             return list(self.current_rows)
         kept: list[Any] = []
@@ -409,7 +413,7 @@ class MainPanel(ttk.Frame):
             try:
                 if compiled.search(data):
                     kept.append(row)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-exception-caught
                 logger.debug("JMESPath eval failed on row: %s", exc)
                 kept.append(row)
         return kept

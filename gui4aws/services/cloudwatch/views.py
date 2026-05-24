@@ -65,7 +65,7 @@ def fmt_ts(ms: Any) -> str | None:
         import datetime
 
         return datetime.datetime.utcfromtimestamp(int(ms) / 1000).strftime("%Y-%m-%d %H:%M:%S")
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return str(ms)
 
 

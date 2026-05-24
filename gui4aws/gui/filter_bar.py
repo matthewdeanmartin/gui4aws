@@ -9,6 +9,8 @@ Hosts:
 Layout is horizontal — fields flow left-to-right and wrap to a second row if needed.
 """
 
+# pylint: disable=too-many-ancestors
+
 from __future__ import annotations
 
 import contextlib

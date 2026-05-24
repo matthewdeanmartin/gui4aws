@@ -1,5 +1,7 @@
 """MainWindow: composes toolbar + sidebar + main panel + status bar."""
 
+# pylint: disable=broad-exception-caught
+
 from __future__ import annotations
 
 import dataclasses
@@ -795,7 +797,7 @@ class MainWindow:
         for value in choices_raw:
             text = str(value)
             if "/" in text and text.startswith("arn:"):
-                text = text.split("/")[-1]
+                text = text.rsplit("/", maxsplit=1)[-1]
             if text:
                 choices.append(text)
         return choices
@@ -957,8 +959,6 @@ class MainWindow:
 
     def on_sub_action_row_select(self, row: Any) -> None:
         """Fire the sub_action when a row is selected and show results in the sub-panel."""
-        import dataclasses as _dc
-
         sub = self.current_sub_action
         if sub is None or self.current_service_id is None:
             return
@@ -971,7 +971,7 @@ class MainWindow:
         inputs: dict[str, str] = {}
         for field_name, attr_name in sub.prefill.items():
             value = None
-            if _dc.is_dataclass(row) and not isinstance(row, type):
+            if dataclasses.is_dataclass(row) and not isinstance(row, type):
                 value = getattr(row, attr_name, None)
             elif hasattr(row, attr_name):
                 value = getattr(row, attr_name)
@@ -1271,6 +1271,7 @@ class MainWindow:
         snapshot["endpoint"] = self.context.endpoint_config.resolved_url() or "(aws)"
         return snapshot
 
+    # pylint: disable=too-many-return-statements
     def dispatch_result(
         self,
         kind: str,
@@ -1363,9 +1364,7 @@ class MainWindow:
             result, sub_inputs = payload
             raw = getattr(result, "response", None) or getattr(result, "parsed_json", None)
             if raw is not None:
-                from gui4aws.models import SubAction as _SubAction
-
-                if isinstance(sub, _SubAction):
+                if isinstance(sub, SubAction):
                     try:
                         service = self.context.registry.get(self.current_service_id or "")
                         act = service.action(sub.action_id)
@@ -1373,7 +1372,7 @@ class MainWindow:
                             rows = act.view(raw)
                             rows = self.filter_rows_by_inputs(rows, sub_inputs)
                             self.main_panel.show_sub_table(sub.panel_label, rows, list(sub.columns))
-                    except Exception:
+                    except Exception:  # pylint: disable=broad-exception-caught
                         logger.exception("sub-panel view failed for %s", getattr(sub, "action_id", sub))
             return
 

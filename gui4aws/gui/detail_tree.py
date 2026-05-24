@@ -1,5 +1,7 @@
 """Key-value grid for displaying the fields of a selected resource row."""
 
+# pylint: disable=too-many-ancestors
+
 from __future__ import annotations
 
 import tkinter as tk
@@ -45,6 +47,7 @@ class DetailTree(ttk.Frame):
             self.tree.insert("", "end", values=("value", fmt(data)))
 
 
+# pylint: disable=too-many-return-statements
 def fmt(value: Any) -> str:
     """Render any value as a compact single-line string."""
     if value is None:

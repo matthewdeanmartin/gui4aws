@@ -1,5 +1,7 @@
 """Output panel: copyable text area showing the last action result or error."""
 
+# pylint: disable=too-many-ancestors
+
 from __future__ import annotations
 
 import json

@@ -1,5 +1,7 @@
 """ttk.Treeview wrapper for sortable resource lists."""
 
+# pylint: disable=too-many-ancestors
+
 from __future__ import annotations
 
 import tkinter as tk

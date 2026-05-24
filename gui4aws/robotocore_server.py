@@ -166,6 +166,7 @@ class RobotocoreManager:
         """
         self.append_output(f"=== pulling {ROBOTOCORE_IMAGE} ===")
         try:
+            # pylint: disable=consider-using-with
             proc = subprocess.Popen(
                 ["docker", "pull", ROBOTOCORE_IMAGE],
                 stdout=subprocess.PIPE,
@@ -213,7 +214,7 @@ class RobotocoreManager:
         # Parse port from URL (e.g. http://localhost:4566 → 4566).
         try:
             port = url.split(":")[-1].strip("/") or "4566"
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             port = "4566"
 
         # Remove any existing stopped container with the same name.
@@ -263,6 +264,7 @@ class RobotocoreManager:
         """Start a background thread that streams `docker logs -f` into the buffer."""
         def read_logs() -> None:
             try:
+                # pylint: disable=consider-using-with
                 proc = subprocess.Popen(
                     ["docker", "logs", "-f", self.container_name],
                     stdout=subprocess.PIPE,
@@ -278,7 +280,7 @@ class RobotocoreManager:
                             self.append_output(text)
                         if not self.running and self.output_lines:
                             break
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-exception-caught
                 self.append_output(f"[log reader error: {exc}]")
 
         self.log_reader_thread = threading.Thread(target=read_logs, name="robotocore-logs", daemon=True)
@@ -295,8 +297,8 @@ class RobotocoreManager:
         still counts as reachable.
         """
         try:
-            urllib.request.urlopen(self.endpoint_url, timeout=probe_timeout)  # nosec B310
-            return True
+            with urllib.request.urlopen(self.endpoint_url, timeout=probe_timeout):  # nosec B310
+                return True
         except urllib.error.HTTPError:
             # Server answered with an error code — it is listening.
             return True

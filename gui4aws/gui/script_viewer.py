@@ -1,5 +1,7 @@
 """Read-only viewer for generated CLI/Python scripts."""
 
+# pylint: disable=too-many-ancestors
+
 from __future__ import annotations
 
 import tkinter as tk

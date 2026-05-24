@@ -84,7 +84,7 @@ def register_task_def_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
         if not isinstance(doc, dict):
             return {}
         return cast(dict[str, Any], doc)
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return {}
 
 

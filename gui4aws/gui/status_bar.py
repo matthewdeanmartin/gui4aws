@@ -1,5 +1,7 @@
 """Bottom status bar."""
 
+# pylint: disable=too-many-ancestors
+
 from __future__ import annotations
 
 import tkinter as tk

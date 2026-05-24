@@ -60,8 +60,8 @@ class ActionDialog(tk.Toplevel):
     ) -> None:
         super().__init__(parent)
         self.action = action
-        self.on_run = on_run
-        self.on_generate_scripts = on_generate_scripts
+        self._on_run_cb = on_run
+        self._on_generate_scripts_cb = on_generate_scripts
         self.running = False
 
         self.title(action.display_name)
@@ -217,11 +217,11 @@ class ActionDialog(tk.Toplevel):
 
     def refresh_scripts(self) -> None:
         """Update the script preview panels based on current form values."""
-        if self.on_generate_scripts is None or self.cli_text is None:
+        if self._on_generate_scripts_cb is None or self.cli_text is None:
             return
         try:
-            cli, python = self.on_generate_scripts(self.action, self.form.values())
-        except Exception:
+            cli, python = self._on_generate_scripts_cb(self.action, self.form.values())
+        except Exception:  # pylint: disable=broad-exception-caught
             return
         self.set_text(self.cli_text, cli)
         if self.python_text is not None:
@@ -261,8 +261,8 @@ class ActionDialog(tk.Toplevel):
         self.run_btn.configure(state="disabled")
         self.status_var.set("Running…")
         self.set_result_text("(waiting for result…)")
-        if self.on_run is not None:
-            self.on_run(self.action, self.form.values())
+        if self._on_run_cb is not None:
+            self._on_run_cb(self.action, self.form.values())
 
     def on_cancel(self) -> None:
         """Close the dialog without running the action."""

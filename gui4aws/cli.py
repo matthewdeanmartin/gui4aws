@@ -135,7 +135,7 @@ def run_doctor(args: argparse.Namespace) -> int:
         docker_path = shutil.which("docker")
         print(f"docker: {docker_path or 'not found on PATH'}")
     try:
-        import moto  # noqa: F401
+        import moto  # pylint: disable=unused-import  # noqa: F401
 
         print("moto: importable")
     except ImportError:
@@ -165,7 +165,7 @@ def available_profiles() -> list[str]:
     try:
         session = boto3.Session()
         return list(session.available_profiles)
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return []
 
 
@@ -174,7 +174,7 @@ def available_regions(service: str = "ec2", partition: str = "aws") -> list[str]
     try:
         session = boto3.Session()
         return sorted(session.get_available_regions(service, partition_name=partition))
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return []
 
 
