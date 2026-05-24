@@ -7,10 +7,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import queue
-import threading
-import time
 import tkinter as tk
-from collections import deque
 from functools import partial
 from tkinter import messagebox, ttk
 from typing import Any
@@ -24,147 +21,29 @@ from gui4aws.gui.main_panel import MainPanel
 from gui4aws.gui.sidebar import Sidebar, SidebarSelection
 from gui4aws.gui.status_bar import StatusBar
 from gui4aws.gui.toolbar import Toolbar
+from gui4aws.gui.server_manager_mixin import ServerManagerMixin
+from gui4aws.gui.window_helpers import build_about_text as _build_about_text
+from gui4aws.gui.window_helpers import extract_choices_from_raw as _extract_choices_from_raw
+from gui4aws.gui.window_helpers import filter_rows_by_inputs as _filter_rows_by_inputs
+from gui4aws.gui.window_helpers import nav_action_inputs as _nav_action_inputs
+from gui4aws.gui.window_helpers import record_history as _record_history
+from gui4aws.gui.window_helpers import render_moto_output as _render_moto_output
+from gui4aws.gui.window_helpers import render_robotocore_output as _render_robotocore_output
+from gui4aws.gui.window_helpers import resolve_required_filter_value as _resolve_required_filter_value
+from gui4aws.gui.window_helpers import resolved_filter_values as _resolved_filter_values
+from gui4aws.gui.window_helpers import seed_filter_values as _seed_filter_values
+from gui4aws.gui.window_helpers import source_inputs_from_values as _source_inputs_from_values
+from gui4aws.gui.worker import SerialWorker
 from gui4aws.models import ActionDefinition, EagerChoiceSource, RiskLevel, RowAction, SubAction
 from gui4aws.moto_server import MotoServerManager
 from gui4aws.robotocore_server import RobotocoreManager
 
-__all__ = ["MainWindow", "create_main_window"]
+__all__ = ["MainWindow", "SerialWorker", "create_main_window"]
 
 logger = logging.getLogger(__name__)
 
 
-class SerialWorker:
-    """A single background thread that runs jobs FIFO, skipping stale ones.
-
-    ``submit(fn, is_current)`` queues ``fn``. When the worker dequeues a job,
-    it first calls ``is_current()`` — if False, the job is dropped without
-    being run. This lets rapid nav switches enqueue many jobs while ensuring
-    only the ones still relevant when the worker gets to them actually hit
-    moto.
-
-    Why serial and not a pool: moto's dev server is single-threaded, so
-    parallelism doesn't help and 100+ in-flight HTTP requests pile up faster
-    than moto can serve them, freezing the UI.
-    """
-
-    def __init__(self) -> None:
-        """Initialize the serial worker and start its background thread."""
-        self.queue: queue.Queue[Any] = queue.Queue()
-        self.closed = False
-        self.lock = threading.RLock()
-        self.current_description: str | None = None
-        self.submitted_jobs = 0
-        self.started_jobs = 0
-        self.completed_jobs = 0
-        self.dropped_jobs = 0
-        self.failed_jobs = 0
-        self.recent_events: deque[str] = deque(maxlen=100)
-        self.thread = threading.Thread(target=self.loop, name="action-worker", daemon=True)
-        self.thread.start()
-
-    def submit(self, fn: Any, is_current: Any, description: str = "job") -> None:
-        """Queue ``fn`` for serial execution.
-
-        ``is_current`` is a 0-arg callable returning bool, checked just before
-        dispatch. If it returns False, the job is dropped. This prevents stale
-        background tasks from updating the UI after navigation has changed.
-        """
-        if self.closed:
-            return
-        with self.lock:
-            self.submitted_jobs += 1
-            self.record_event(f"queued {description}")
-        self.queue.put((fn, is_current, description))
-
-    def close(self) -> None:
-        """Shut down the worker and its background thread."""
-        self.closed = True
-        # Wake the loop so it can notice.
-        self.queue.put((None, None, "shutdown"))
-
-    def clear_pending(self) -> int:
-        """Drop queued jobs that have not started yet.
-
-        Returns the number of jobs removed from the queue.
-        """
-        removed = 0
-        drained: list[tuple[Any, Any, str]] = []
-        while True:
-            try:
-                job = self.queue.get_nowait()
-            except queue.Empty:
-                break
-            if job[2] == "shutdown":
-                drained.append(job)
-                continue
-            removed += 1
-        for job in drained:
-            self.queue.put(job)
-        if removed:
-            with self.lock:
-                self.dropped_jobs += removed
-                self.record_event(f"cleared pending count={removed}")
-        return removed
-
-    def loop(self) -> None:
-        """Main worker loop that pulls jobs from the queue and runs them."""
-        while True:
-            fn, is_current, description = self.queue.get()
-            if self.closed:
-                return
-            if is_current is not None:
-                try:
-                    if not is_current():
-                        with self.lock:
-                            self.dropped_jobs += 1
-                            self.record_event(f"dropped stale {description}")
-                        continue
-                except Exception:
-                    logger.exception("worker is_current check raised — dropping job")
-                    with self.lock:
-                        self.dropped_jobs += 1
-                        self.record_event(f"dropped error-check {description}")
-                    continue
-            with self.lock:
-                self.started_jobs += 1
-                self.current_description = description
-                self.record_event(f"started {description}")
-            try:
-                fn()
-            except Exception:
-                logger.exception("worker job raised")
-                with self.lock:
-                    self.failed_jobs += 1
-                    self.record_event(f"failed {description}")
-            else:
-                with self.lock:
-                    self.completed_jobs += 1
-                    self.record_event(f"completed {description}")
-            finally:
-                with self.lock:
-                    self.current_description = None
-
-    def snapshot(self) -> dict[str, Any]:
-        """Return a snapshot of the worker's current state for diagnostics."""
-        with self.lock:
-            return {
-                "pending_jobs": self.queue.qsize(),
-                "current_job": self.current_description,
-                "submitted_jobs": self.submitted_jobs,
-                "started_jobs": self.started_jobs,
-                "completed_jobs": self.completed_jobs,
-                "dropped_jobs": self.dropped_jobs,
-                "failed_jobs": self.failed_jobs,
-                "recent_events": list(self.recent_events),
-            }
-
-    def record_event(self, message: str) -> None:
-        """Record a timestamped event for diagnostic history."""
-        stamp = time.strftime("%H:%M:%S")
-        self.recent_events.append(f"{stamp} {message}")
-
-
-class MainWindow:
+class MainWindow(ServerManagerMixin):
     """The application's top-level window."""
 
     def __init__(
@@ -248,20 +127,12 @@ class MainWindow:
 
         self.current_action: ActionDefinition | None = None
         self.current_inputs: dict[str, str] = {}
-        self.current_sub_action: Any = None  # SubAction | None
+        self.current_sub_action: Any = None
         self.current_service_id: str | None = None
-        self.current_nav: Any = None  # NavigationItem | None
-        # Monotonic nav-transition counter — bumped every time the user switches
-        # nav item OR triggers a refresh. Workers capture the generation they
-        # were launched in; results from older generations are dropped without
-        # touching the loading overlay so we don't get a stuck overlay race.
+        self.current_nav: Any = None
+        # Bumped on every nav switch; workers check this to drop stale results.
         self.nav_generation: int = 0
-        # Serialise default-action / eager-choice / sub-action workers through
-        # a single background thread. Rapid arrow-key bouncing previously
-        # spawned a daemon thread per nav, all blocked waiting for moto's
-        # single-threaded dev server — pile-ups of 100+ threads stalled every
-        # panel. Now we run one HTTP call at a time and skip jobs whose nav
-        # generation is no longer current at dispatch time.
+        # Single worker thread — see SerialWorker docstring for rationale.
         self.action_queue = SerialWorker()
         self.root.after(50, self.poll_queue)
         self.root.after(1000, self.refresh_diagnostics)
@@ -301,248 +172,11 @@ class MainWindow:
 
     def show_about(self) -> None:
         """Show the 'About' dialog with version and dependency information."""
-        import sys
-
-        import boto3
-        import botocore
-
-        from gui4aws.__about__ import __description__, __license__, __version__
-
-        try:
-            import moto
-
-            moto_ver = moto.__version__
-        except ImportError:
-            moto_ver = "not installed"
-        rc_status = (
-            f"connected ({self.robotocore_manager.endpoint_url})"
-            if self.robotocore_manager.running
-            else "not connected"
+        text = _build_about_text(
+            robotocore_running=self.robotocore_manager.running,
+            robotocore_endpoint_url=self.robotocore_manager.endpoint_url,
         )
-        lines = [
-            f"gui4aws  {__version__}",
-            f"{__description__}",
-            "",
-            f"License: {__license__}",
-            f"Python:  {sys.version.split()[0]}",
-            "",
-            "Runtime dependencies:",
-            f"  boto3      {boto3.__version__}",
-            f"  botocore   {botocore.__version__}",
-            "",
-            "Dev/test dependencies:",
-            f"  moto       {moto_ver}",
-            "",
-            "Local emulators:",
-            f"  robotocore {rc_status}",
-            "",
-            "Repository: https://github.com/matthewdeanmartin/gui4aws",
-            "Docs:       https://gui4aws.readthedocs.io/en/latest/",
-        ]
-        messagebox.showinfo("About gui4aws", "\n".join(lines))
-
-    # ── Moto ─────────────────────────────────────────────────────────────────
-
-    def seed_demo_resources(self) -> None:
-        """Seed Moto or Robotocore with dummy resources for demonstration."""
-        from gui4aws.demo_resources import seed_demo_resources
-
-        endpoint_url = self.context.endpoint_config.resolved_url()
-        is_robotocore = self.robotocore_manager.running
-        backend = "robotocore" if is_robotocore else ("moto" if self.moto_manager.running else "aws")
-        self.status_bar.set_status(f"Seeding demo resources via {backend}…")
-
-        def worker() -> None:
-            try:
-                report = seed_demo_resources(
-                    region_name=self.context.region_name,
-                    endpoint_url=endpoint_url,
-                    profile_name=self.context.profile_name,
-                    is_robotocore=is_robotocore,
-                )
-                self.results_queue.put(("demo_ok", None, report))
-            except Exception as exc:
-                self.results_queue.put(("demo_error", None, str(exc)))
-
-        threading.Thread(target=worker, daemon=True).start()
-
-    def restart_moto(self) -> None:
-        """Restart the Moto server in the background."""
-        self.status_bar.set_status("Restarting moto server…")
-
-        def restart_worker() -> None:
-            try:
-                self.moto_manager.restart(timeout=15.0)
-                self.results_queue.put(("moto_started", None, self.moto_manager.endpoint_url))
-            except Exception as exc:
-                self.results_queue.put(("moto_error", None, str(exc)))
-
-        threading.Thread(target=restart_worker, daemon=True).start()
-
-    def reset_moto_state(self) -> None:
-        """POST /moto-api/reset to wipe all moto state without restarting the server."""
-        if not self.moto_manager.running:
-            self.status_bar.set_status("Moto is not running")
-            return
-        self.status_bar.set_status("Resetting moto state…")
-
-        def worker() -> None:
-            try:
-                self.moto_manager.reset_state()
-                self.results_queue.put(("moto_state_reset", None, None))
-            except Exception as exc:
-                self.results_queue.put(("moto_error", None, str(exc)))
-
-        threading.Thread(target=worker, daemon=True).start()
-
-    def open_moto_dashboard(self) -> None:
-        """Open Moto's dashboard in the default browser."""
-        if not self.moto_manager.running:
-            self.status_bar.set_status("Moto is not running")
-            return
-        import webbrowser
-
-        webbrowser.open(self.moto_manager.dashboard_url)
-        self.status_bar.set_status("Opened Moto dashboard")
-
-    def on_moto_toggle(self, start: bool) -> None:
-        """Start or stop the Moto server based on the toolbar toggle state."""
-        if start:
-            self.status_bar.set_status("Starting moto server…")
-
-            def start_worker() -> None:
-                try:
-                    self.moto_manager.start(timeout=15.0)
-                    self.results_queue.put(("moto_started", None, self.moto_manager.endpoint_url))
-                except Exception as exc:
-                    self.results_queue.put(("moto_error", None, str(exc)))
-
-            threading.Thread(target=start_worker, daemon=True).start()
-        else:
-            self.moto_manager.stop()
-            self.context.set_endpoint(EndpointMode.AWS)
-            self.toolbar.endpoint_mode_var.set(EndpointMode.AWS.value)
-            self.toolbar.endpoint_url_var.set("")
-            self.status_bar.set_status("Moto stopped")
-            self.on_toolbar_changed()
-
-    # ── Robotocore ────────────────────────────────────────────────────────────
-
-    def on_robotocore_toggle(self, currently_running: bool) -> None:
-        """Toggle the Robotocore server state.
-
-        Called by the toolbar button. ``currently_running`` is the manager
-        state *before* the click, so we invert it to decide the action.
-        """
-        if currently_running:
-            self.robotocore_stop()
-        else:
-            self.robotocore_start()
-
-    def robotocore_start(self) -> None:
-        """Start the Robotocore server in a background thread."""
-        if self.robotocore_panel.use_moto:
-            self.robotocore_start_moto_mode()
-            return
-        custom_url = self.toolbar.endpoint_url_var.get().strip() or None
-        self.status_bar.set_status("Starting robotocore…")
-        self.robotocore_panel.set_status("Starting…")
-
-        def worker() -> None:
-            try:
-                self.robotocore_manager.start(endpoint_url=custom_url)
-                self.results_queue.put(("robotocore_started", None, self.robotocore_manager.endpoint_url))
-            except Exception as exc:
-                self.results_queue.put(("robotocore_error", None, str(exc)))
-
-        threading.Thread(target=worker, daemon=True).start()
-
-    def robotocore_stop(self) -> None:
-        """Stop the Robotocore server in a background thread."""
-        self.status_bar.set_status("Stopping robotocore…")
-
-        def worker() -> None:
-            try:
-                self.robotocore_manager.stop()
-                self.results_queue.put(("robotocore_stopped", None, None))
-            except Exception as exc:
-                self.results_queue.put(("robotocore_error", None, str(exc)))
-
-        threading.Thread(target=worker, daemon=True).start()
-
-    def robotocore_restart(self) -> None:
-        """Restart the Robotocore server in a background thread."""
-        self.status_bar.set_status("Restarting robotocore…")
-        self.robotocore_panel.set_status("Restarting…")
-
-        def worker() -> None:
-            try:
-                self.robotocore_manager.restart()
-                self.results_queue.put(("robotocore_started", None, self.robotocore_manager.endpoint_url))
-            except Exception as exc:
-                self.results_queue.put(("robotocore_error", None, str(exc)))
-
-        threading.Thread(target=worker, daemon=True).start()
-
-    def robotocore_pull(self) -> None:
-        """Pull the latest Robotocore Docker image in a background thread."""
-        self.status_bar.set_status("Pulling robotocore Docker image…")
-        self.robotocore_panel.set_status("Pulling image…")
-
-        def worker() -> None:
-            try:
-                self.robotocore_manager.pull()
-                self.results_queue.put(("robotocore_pulled", None, None))
-            except Exception as exc:
-                self.results_queue.put(("robotocore_error", None, str(exc)))
-
-        threading.Thread(target=worker, daemon=True).start()
-
-    def robotocore_reset_state(self) -> None:
-        """POST /_localstack/state/reset to wipe robotocore state without restarting."""
-        if not self.robotocore_manager.running:
-            self.status_bar.set_status("Robotocore is not running")
-            return
-        self.status_bar.set_status("Resetting robotocore state…")
-
-        def worker() -> None:
-            try:
-                self.robotocore_manager.reset_state()
-                self.results_queue.put(("robotocore_state_reset", None, None))
-            except Exception as exc:
-                self.results_queue.put(("robotocore_error", None, str(exc)))
-
-        threading.Thread(target=worker, daemon=True).start()
-
-    def robotocore_use_moto_changed(self, use_moto: bool) -> None:
-        """Update endpoint mode when the 'Use Moto instead' checkbox flips.
-
-        If robotocore is running, this switches between routing through
-        LocalStack/Robotocore and routing through the Moto dev server.
-        """
-        if not self.robotocore_manager.running:
-            return
-        if use_moto:
-            self.robotocore_start_moto_mode()
-        else:
-            # Switch back to robotocore endpoint.
-            url = self.robotocore_manager.endpoint_url
-            self.context.set_endpoint(EndpointMode.ROBOTOCORE, url)
-            self.toolbar.endpoint_mode_var.set(EndpointMode.ROBOTOCORE.value)
-            self.toolbar.endpoint_url_var.set(url)
-            self.on_toolbar_changed()
-
-    def robotocore_start_moto_mode(self) -> None:
-        """Point endpoint at a running moto server instead of robotocore."""
-        if not self.moto_manager.running:
-            self.status_bar.set_status("Start Moto first, then enable 'Use Moto instead'")
-            return
-        url = self.moto_manager.endpoint_url
-        self.context.set_endpoint(EndpointMode.MOTO, url)
-        self.toolbar.endpoint_mode_var.set(EndpointMode.MOTO.value)
-        self.toolbar.endpoint_url_var.set(url)
-        self.status_bar.set_status(f"Routing via Moto at {url}")
-        self.on_toolbar_changed()
+        messagebox.showinfo("About gui4aws", text)
 
     # ── Toolbar ───────────────────────────────────────────────────────────────
 
@@ -790,25 +424,11 @@ class MainWindow:
 
     def extract_choices_from_raw(self, jmespath_expression: str, raw: Any) -> list[str]:
         """Extract a list of strings from raw API response using JMESPath."""
-        import jmespath
-
-        choices_raw = jmespath.compile(jmespath_expression).search(raw) or []
-        choices: list[str] = []
-        for value in choices_raw:
-            text = str(value)
-            if "/" in text and text.startswith("arn:"):
-                text = text.rsplit("/", maxsplit=1)[-1]
-            if text:
-                choices.append(text)
-        return choices
+        return _extract_choices_from_raw(jmespath_expression, raw)
 
     def seed_filter_values(self, nav: Any, current_values: dict[str, str]) -> dict[str, str]:
         """Combine default values with current values for filter fields."""
-        values = {field.name: field.default for field in nav.filter_fields if field.default is not None}
-        for name, value in current_values.items():
-            if value:
-                values[name] = value
-        return values
+        return _seed_filter_values(nav, current_values)
 
     def source_inputs_from_values(
         self,
@@ -816,14 +436,7 @@ class MainWindow:
         values: dict[str, str],
     ) -> dict[str, str] | None:
         """Map filter field values to source action input parameters."""
-        inputs: dict[str, str] = {}
-        depends_on = source.depends_on or {}
-        for filter_field, source_param in depends_on.items():
-            value = values.get(filter_field, "").strip()
-            if not value:
-                return None
-            inputs[source_param] = value
-        return inputs
+        return _source_inputs_from_values(source, values)
 
     def resolve_required_filter_value(
         self,
@@ -834,38 +447,9 @@ class MainWindow:
         resolving: set[str],
     ) -> str | None:
         """Recursively resolve a required filter field by fetching its first choice."""
-        source = nav.eager_choices.get(field_name)
-        if source is None or field_name in resolving:
-            return None
-        resolving.add(field_name)
-        try:
-            for dependency_field in source.depends_on:
-                if values.get(dependency_field, "").strip():
-                    continue
-                dependency_value = self.resolve_required_filter_value(
-                    service,
-                    nav,
-                    dependency_field,
-                    values,
-                    resolving,
-                )
-                if dependency_value is None:
-                    return None
-                values[dependency_field] = dependency_value
-            source_inputs = self.source_inputs_from_values(source, values)
-            if source_inputs is None:
-                return None
-            src_action = service.action(source.action_id)
-            result = self.context.execute(src_action, source_inputs)
-            raw = getattr(result, "response", None) or getattr(result, "parsed_json", None)
-            if raw is None:
-                return None
-            choices = self.extract_choices_from_raw(source.jmespath, raw)
-            if not choices:
-                return None
-            return choices[0]
-        finally:
-            resolving.discard(field_name)
+        return _resolve_required_filter_value(
+            service, nav, field_name, values, resolving, execute=self.context.execute
+        )
 
     def resolved_filter_values(
         self,
@@ -874,22 +458,11 @@ class MainWindow:
         current_values: dict[str, str],
     ) -> dict[str, str] | None:
         """Try to fill all required filter fields by fetching choices."""
-        values = self.seed_filter_values(nav, current_values)
-        resolving: set[str] = set()
-        for field in nav.filter_fields:
-            if values.get(field.name, "").strip():
-                continue
-            if not field.required:
-                continue
-            resolved = self.resolve_required_filter_value(service, nav, field.name, values, resolving)
-            if resolved is None:
-                return None
-            values[field.name] = resolved
-        return values
+        return _resolved_filter_values(service, nav, current_values, execute=self.context.execute)
 
     def nav_action_inputs(self, nav: Any, values: dict[str, str]) -> dict[str, str]:
         """Extract inputs for the default nav action from resolved filter values."""
-        return {field.name: values[field.name] for field in nav.filter_fields if values.get(field.name, "").strip()}
+        return _nav_action_inputs(nav, values)
 
     def submit_nav_cache_warm(
         self,
@@ -1055,18 +628,7 @@ class MainWindow:
     @staticmethod
     def filter_rows_by_inputs(rows: list[Any], inputs: dict[str, str]) -> list[Any]:
         """Apply any exact-match filters whose input names also exist on the row objects."""
-        filtered = list(rows)
-        for field_name, expected in inputs.items():
-            if not filtered:
-                break
-            if not any(hasattr(row, field_name) for row in filtered):
-                continue
-            filtered = [
-                row
-                for row in filtered
-                if getattr(row, field_name, None) is not None and str(getattr(row, field_name)) == expected
-            ]
-        return filtered
+        return _filter_rows_by_inputs(rows, inputs)
 
     # ── ActionDialog ──────────────────────────────────────────────────────────
 
@@ -1135,20 +697,7 @@ class MainWindow:
             self.status_bar.set_status("Ready")
             return
 
-        cli = generate_cli_script(
-            action,
-            inputs,
-            profile_name=self.context.profile_name,
-            region_name=self.context.region_name,
-            endpoint_config=self.context.endpoint_config,
-        )
-        python = generate_python_script(
-            action,
-            inputs,
-            profile_name=self.context.profile_name,
-            region_name=self.context.region_name,
-            endpoint_config=self.context.endpoint_config,
-        )
+        cli, python = self.generate_scripts(action, inputs)
         self.main_panel.show_scripts(cli, python)
         self.status_bar.set_status("Loading")
         self.status_bar.set_last_action(action.action_id)
@@ -1214,44 +763,11 @@ class MainWindow:
 
     def render_moto_output(self) -> str:
         """Format Moto server status and logs for display."""
-        snapshot = self.moto_manager.snapshot()
-        lines = [
-            f"Running: {snapshot['running']}",
-            f"Endpoint: {snapshot['endpoint_url'] or '(not started)'}",
-            f"Port: {snapshot['port'] or '(none)'}",
-            f"Captured lines: {snapshot['output_line_count']}",
-            "",
-            "Recent output:",
-        ]
-        recent_output = snapshot["recent_output"]
-        if recent_output:
-            lines.extend(recent_output)
-        else:
-            lines.append("(no output yet)")
-        return "\n".join(lines)
+        return _render_moto_output(self.moto_manager.snapshot())
 
     def render_robotocore_output(self) -> str:
         """Format Robotocore status and logs for display."""
-        snapshot = self.robotocore_manager.snapshot()
-        lines = [
-            f"Running: {snapshot['running']}",
-            f"Endpoint: {snapshot['endpoint_url']}",
-            f"Container: {snapshot['container_name']}",
-            f"Captured lines: {snapshot['output_line_count']}",
-        ]
-        if not snapshot["running"]:
-            lines.append(
-                "Tip: if the container is still starting after a timeout, "
-                "click Start Robotocore again — it will probe the endpoint "
-                "and reconnect automatically."
-            )
-        lines += ["", "Recent output:"]
-        recent_output = snapshot["recent_output"]
-        if recent_output:
-            lines.extend(recent_output)
-        else:
-            lines.append("(no output yet — click Start Robotocore or Pull Docker Image first)")
-        return "\n".join(lines)
+        return _render_robotocore_output(self.robotocore_manager.snapshot())
 
     def queue_diagnostics_snapshot(self) -> dict[str, Any]:
         """Gather internal queue and navigation state for diagnostics."""
@@ -1466,47 +982,7 @@ class MainWindow:
 
     def record_history(self, action: ActionDefinition, kind: str, payload: Any) -> None:
         """Add an execution entry to the persistent action history."""
-        from datetime import datetime, timezone
-
-        from gui4aws.execution.action_history import ActionHistoryEntry
-
-        inputs = dict(self.current_inputs)
-        cli = generate_cli_script(
-            action,
-            inputs,
-            profile_name=self.context.profile_name,
-            region_name=self.context.region_name,
-            endpoint_config=self.context.endpoint_config,
-        )
-        python = generate_python_script(
-            action,
-            inputs,
-            profile_name=self.context.profile_name,
-            region_name=self.context.region_name,
-            endpoint_config=self.context.endpoint_config,
-        )
-        is_failure = kind == "error" or hasattr(payload, "exception_class")
-        error_message: str | None = None
-        duration = float(getattr(payload, "duration_seconds", 0.0) or 0.0)
-        if is_failure:
-            error_message = getattr(payload, "message", None) or getattr(payload, "reason", None) or str(payload)
-        self.context.history.add(
-            ActionHistoryEntry(
-                timestamp=datetime.now(timezone.utc),
-                service_id=action.service_id,
-                action_id=action.action_id,
-                mode=self.context.mode,
-                profile_name=self.context.profile_name,
-                region_name=self.context.region_name,
-                endpoint_url=self.context.endpoint_config.resolved_url(),
-                inputs=inputs,
-                cli_script=cli,
-                python_script=python,
-                status="failure" if is_failure else "success",
-                duration_seconds=duration,
-                error_message=error_message,
-            )
-        )
+        _record_history(action, kind, payload, context=self.context, current_inputs=self.current_inputs)
 
     def run(self) -> None:
         """Enter the Tkinter main event loop."""
