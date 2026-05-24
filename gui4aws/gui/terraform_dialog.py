@@ -54,7 +54,11 @@ class TerraformDialog(tk.Toplevel):
 
         ttk.Label(
             frame,
-            text="Not yet implemented.\n\nThis dialog will support: init, validate, plan, apply, destroy, output, and more.\nSee cdk_dialog.py for the reference pattern.",
+            text=(
+                "Not yet implemented.\n\n"
+                "This dialog will support: init, validate, plan, apply, destroy, output, and more.\n"
+                "See cdk_dialog.py for the reference pattern."
+            ),
             font=("", 11),
             anchor="center",
             justify="center",

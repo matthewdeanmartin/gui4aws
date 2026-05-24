@@ -621,7 +621,7 @@ class CdkDialog(tk.Toplevel):
             self.clipboard_clear()
             self.clipboard_append(line)
             self.status_var.set("Command copied to clipboard")
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-exception-caught
             self.status_var.set(f"Error building command: {exc}")
 
     # ── Execution ────────────────────────────────────────────────────────────
