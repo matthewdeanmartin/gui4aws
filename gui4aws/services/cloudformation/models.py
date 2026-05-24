@@ -9,6 +9,8 @@ __all__ = ["StackSummary"]
 
 @dataclass(frozen=True)
 class StackSummary:
+    """Summary information for a CloudFormation stack."""
+
     name: str
     status: str | None
     description: str | None

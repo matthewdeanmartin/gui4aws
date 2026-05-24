@@ -41,6 +41,7 @@ class StatusBar(ttk.Frame):
         self.context_var.set(self.context_text())
 
     def context_text(self) -> str:
+        """Generate a human-readable summary of the current application context."""
         ctx = self.context
         return (
             f"mode={ctx.mode}  profile={ctx.profile_name or '(env)'}  "

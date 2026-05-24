@@ -9,6 +9,8 @@ __all__ = ["ParameterSummary"]
 
 @dataclass(frozen=True)
 class ParameterSummary:
+    """Summary information for an SSM parameter."""
+
     name: str
     type: str | None
     description: str | None

@@ -11,6 +11,7 @@ __all__ = ["to_identity_summaries", "to_template_summaries"]
 
 
 def to_identity_summaries(response: Mapping[str, Any]) -> list[IdentitySummary]:
+    """Convert raw boto3 ListIdentities and GetIdentityVerificationAttributes into summary objects."""
     identities = response.get("Identities", []) or []
     verification_attrs = response.get("VerificationAttributes", {}) or {}
     results = []
@@ -29,6 +30,7 @@ def to_identity_summaries(response: Mapping[str, Any]) -> list[IdentitySummary]:
 
 
 def to_template_summaries(response: Mapping[str, Any]) -> list[TemplateSummary]:
+    """Convert a raw boto3 ListTemplates response into a list of TemplateSummary objects."""
     templates = response.get("TemplatesMetadata", []) or []
     results = []
     for t in templates:

@@ -27,7 +27,7 @@ __all__ = [
 
 
 def create_function_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
-
+    """Map UI inputs to boto3 create_function parameters."""
     params: dict[str, Any] = {
         "FunctionName": inputs["function_name"],
         "Runtime": inputs.get("runtime", "python3.11"),
@@ -50,6 +50,7 @@ def create_function_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
 
 
 def create_function_cli_args(inputs: Mapping[str, str]) -> list[str]:
+    """Map UI inputs to AWS CLI create-function arguments."""
     args = [
         "--function-name",
         inputs["function_name"],
@@ -69,7 +70,7 @@ def create_function_cli_args(inputs: Mapping[str, str]) -> list[str]:
 
 
 def invoke_function_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
-
+    """Map UI inputs to boto3 invoke parameters."""
     params: dict[str, Any] = {"FunctionName": inputs["function_name"]}
     payload = inputs.get("payload", "")
     if payload:
@@ -81,6 +82,7 @@ def invoke_function_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
 
 
 def invoke_function_cli_args(inputs: Mapping[str, str]) -> list[str]:
+    """Map UI inputs to AWS CLI invoke arguments."""
     args = ["--function-name", inputs["function_name"]]
     if inputs.get("payload"):
         args += ["--payload", inputs["payload"]]

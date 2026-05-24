@@ -11,6 +11,7 @@ __all__ = ["to_function_summaries"]
 
 
 def optional_int(value: Any) -> int | None:
+    """Safely convert a value to an integer, returning None on failure."""
     if value is None:
         return None
     try:
@@ -20,12 +21,14 @@ def optional_int(value: Any) -> int | None:
 
 
 def fmt_date(value: Any) -> str | None:
+    """Format a datetime value as a string, truncated to seconds."""
     if value is None:
         return None
     return str(value)[:19]
 
 
 def to_function_summaries(response: Mapping[str, Any]) -> list[FunctionSummary]:
+    """Convert a raw boto3 ListFunctions response into a list of FunctionSummary objects."""
     functions = response.get("Functions", []) or []
     summaries: list[FunctionSummary] = []
     for f in functions:

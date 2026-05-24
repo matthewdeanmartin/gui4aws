@@ -11,6 +11,7 @@ __all__ = ["to_queue_summaries"]
 
 
 def to_queue_summaries(response: Mapping[str, Any]) -> list[QueueSummary]:
+    """Convert a raw boto3 ListQueues response into a list of QueueSummary objects."""
     urls = response.get("QueueUrls", []) or []
     summaries: list[QueueSummary] = []
     for url in urls:

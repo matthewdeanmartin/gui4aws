@@ -9,6 +9,8 @@ __all__ = ["FunctionSummary"]
 
 @dataclass(frozen=True)
 class FunctionSummary:
+    """Summary information for an AWS Lambda function."""
+
     name: str
     runtime: str | None
     handler: str | None

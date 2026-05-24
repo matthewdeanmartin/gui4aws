@@ -44,6 +44,7 @@ __all__ = [
 
 
 def create_service_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+    """Map UI inputs to boto3 create_service parameters."""
     params: dict[str, Any] = {
         "cluster": inputs["cluster"],
         "serviceName": inputs["service_name"],
@@ -57,6 +58,7 @@ def create_service_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
 
 
 def create_service_cli_args(inputs: Mapping[str, str]) -> list[str]:
+    """Map UI inputs to AWS CLI create-service arguments."""
     args = [
         "--cluster",
         inputs["cluster"],
@@ -73,6 +75,7 @@ def create_service_cli_args(inputs: Mapping[str, str]) -> list[str]:
 
 
 def register_task_def_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+    """Map UI inputs to boto3 register_task_definition parameters."""
     import json
 
     raw = inputs.get("task_definition_json", "{}")
@@ -86,10 +89,12 @@ def register_task_def_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
 
 
 def register_task_def_cli_args(inputs: Mapping[str, str]) -> list[str]:
+    """Map UI inputs to AWS CLI register-task-definition arguments."""
     return ["--cli-input-json", inputs.get("task_definition_json", "{}")]
 
 
 def run_task_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+    """Map UI inputs to boto3 run_task parameters."""
     params: dict[str, Any] = {"taskDefinition": inputs["task_definition"]}
     if inputs.get("cluster"):
         params["cluster"] = inputs["cluster"]
@@ -103,6 +108,7 @@ def run_task_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
 
 
 def run_task_cli_args(inputs: Mapping[str, str]) -> list[str]:
+    """Map UI inputs to AWS CLI run-task arguments."""
     args = ["--task-definition", inputs["task_definition"]]
     if inputs.get("cluster"):
         args += ["--cluster", inputs["cluster"]]

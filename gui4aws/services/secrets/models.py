@@ -9,6 +9,8 @@ __all__ = ["SecretSummary"]
 
 @dataclass(frozen=True)
 class SecretSummary:
+    """Summary information for an AWS Secrets Manager secret."""
+
     name: str
     description: str | None
     last_changed_date: str | None

@@ -14,6 +14,8 @@ __all__ = [
 
 @dataclass(frozen=True)
 class EcsClusterSummary:
+    """Summary information for an ECS cluster."""
+
     cluster_name: str
     status: str
     running_tasks: int
@@ -24,6 +26,8 @@ class EcsClusterSummary:
 
 @dataclass(frozen=True)
 class EcsServiceSummary:
+    """Summary information for an ECS service."""
+
     service_name: str
     cluster_name: str
     status: str
@@ -37,6 +41,8 @@ class EcsServiceSummary:
 
 @dataclass(frozen=True)
 class EcsTaskSummary:
+    """Summary information for an ECS task."""
+
     task_id: str
     cluster_name: str
     task_definition: str | None
@@ -48,6 +54,8 @@ class EcsTaskSummary:
 
 @dataclass(frozen=True)
 class EcsTaskDefinitionSummary:
+    """Summary information for an ECS task definition."""
+
     task_definition_arn: str
     family: str
     revision: str

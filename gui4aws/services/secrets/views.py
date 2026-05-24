@@ -11,6 +11,7 @@ __all__ = ["to_secret_summaries"]
 
 
 def optional_str(value: Any) -> str | None:
+    """Convert a value to a string, returning None if the result is empty or the input was None."""
     if value is None:
         return None
     text = str(value)
@@ -18,12 +19,14 @@ def optional_str(value: Any) -> str | None:
 
 
 def fmt_date(value: Any) -> str | None:
+    """Format a datetime value as a string, truncated to seconds."""
     if value is None:
         return None
     return str(value)[:19]
 
 
 def to_secret_summaries(response: Mapping[str, Any]) -> list[SecretSummary]:
+    """Convert a raw boto3 ListSecrets response into a list of SecretSummary objects."""
     secrets = response.get("SecretList", []) or []
     summaries: list[SecretSummary] = []
     for s in secrets:

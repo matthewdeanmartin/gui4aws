@@ -342,10 +342,12 @@ class MainPanel(ttk.Frame):
             self.on_sub_row_select(row)
 
     def fire_row_action(self, row_action: RowAction) -> None:
+        """Dispatch a row action click to the registered handler for the current row."""
         if self.on_row_action is not None:
             self.on_row_action(row_action, self.current_row)
 
     def on_sub_table_select(self, event: object = None) -> None:
+        """Handle selection changes in the sub-table panel."""
         del event
         selected = self.sub_tree.selection()
         if not selected:
@@ -371,6 +373,7 @@ class MainPanel(ttk.Frame):
     # ── Client-side row filtering ────────────────────────────────────────────
 
     def on_client_filter_changed(self, expression: str) -> None:
+        """Handle changes to the client-side filter expression and update the table view."""
         self.current_client_filter = expression
         visible = self.apply_client_filter(expression)
         self.resource_table.set_rows(visible)
@@ -413,6 +416,7 @@ class MainPanel(ttk.Frame):
 
 
 def row_to_dict(row: Any) -> dict[str, Any]:
+    """Convert a row object (dataclass or object with __dict__) to a dictionary."""
     if dataclasses.is_dataclass(row) and not isinstance(row, type):
         return dataclasses.asdict(row)
     if hasattr(row, "__dict__"):
@@ -421,6 +425,7 @@ def row_to_dict(row: Any) -> dict[str, Any]:
 
 
 def row_substring_match(row: Any, columns: list[str], needle: str) -> bool:
+    """Check if any of the specified columns in a row contain the needle string (case-insensitive)."""
     data = row_to_dict(row)
     for col in columns or data.keys():
         value = data.get(col, "")
@@ -432,6 +437,10 @@ def row_substring_match(row: Any, columns: list[str], needle: str) -> bool:
 
 
 def row_identity(row: Any) -> tuple[str, str] | None:
+    """Extract a stable identity (attribute name and value) from a row object.
+
+    Used to maintain selection across refreshes.
+    """
     if row is None:
         return None
     for attr in (
@@ -452,6 +461,7 @@ def row_identity(row: Any) -> tuple[str, str] | None:
 
 
 def find_row_index_by_identity(rows: list[Any], key: tuple[str, str] | None) -> int:
+    """Find the index of a row that matches the provided identity key."""
     if key is None:
         return 0
     attr, value = key

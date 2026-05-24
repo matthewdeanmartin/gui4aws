@@ -11,12 +11,14 @@ __all__ = ["to_stack_summaries"]
 
 
 def fmt_date(value: Any) -> str | None:
+    """Format a datetime value as a string, truncated to seconds."""
     if value is None:
         return None
     return str(value)[:19]
 
 
 def to_stack_summaries(response: Mapping[str, Any]) -> list[StackSummary]:
+    """Convert a raw boto3 DescribeStacks response into a list of StackSummary objects."""
     stacks = response.get("Stacks", []) or []
     summaries: list[StackSummary] = []
     for s in stacks:

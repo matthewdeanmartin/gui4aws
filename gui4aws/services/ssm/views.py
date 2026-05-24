@@ -11,6 +11,7 @@ __all__ = ["to_parameter_summaries"]
 
 
 def optional_str(value: Any) -> str | None:
+    """Convert a value to a string, returning None if the result is empty or the input was None."""
     if value is None:
         return None
     text = str(value)
@@ -18,6 +19,7 @@ def optional_str(value: Any) -> str | None:
 
 
 def optional_int(value: Any) -> int | None:
+    """Safely convert a value to an integer, returning None on failure."""
     if value is None:
         return None
     try:
@@ -27,6 +29,7 @@ def optional_int(value: Any) -> int | None:
 
 
 def to_parameter_summaries(response: Mapping[str, Any]) -> list[ParameterSummary]:
+    """Convert a raw boto3 SSM parameter response into a list of ParameterSummary objects."""
     # describe_parameters returns "Parameters"; get_parameters_by_path returns "Parameters" too
     params = response.get("Parameters", []) or []
     summaries: list[ParameterSummary] = []

@@ -11,12 +11,14 @@ __all__ = ["to_group_summaries", "to_policy_summaries", "to_role_summaries", "to
 
 
 def fmt(value: Any) -> str | None:
+    """Format a datetime value as a string, truncated to seconds."""
     if value is None:
         return None
     return str(value)[:19]
 
 
 def to_user_summaries(response: Mapping[str, Any]) -> list[UserSummary]:
+    """Convert a raw boto3 ListUsers response into a list of UserSummary objects."""
     users = response.get("Users", []) or []
     return [
         UserSummary(
@@ -32,6 +34,7 @@ def to_user_summaries(response: Mapping[str, Any]) -> list[UserSummary]:
 
 
 def to_group_summaries(response: Mapping[str, Any]) -> list[GroupSummary]:
+    """Convert a raw boto3 ListGroups response into a list of GroupSummary objects."""
     groups = response.get("Groups", []) or []
     return [
         GroupSummary(
@@ -46,6 +49,7 @@ def to_group_summaries(response: Mapping[str, Any]) -> list[GroupSummary]:
 
 
 def to_role_summaries(response: Mapping[str, Any]) -> list[RoleSummary]:
+    """Convert a raw boto3 ListRoles response into a list of RoleSummary objects."""
     roles = response.get("Roles", []) or []
     return [
         RoleSummary(
@@ -61,6 +65,7 @@ def to_role_summaries(response: Mapping[str, Any]) -> list[RoleSummary]:
 
 
 def to_policy_summaries(response: Mapping[str, Any]) -> list[PolicySummary]:
+    """Convert a raw boto3 ListPolicies response into a list of PolicySummary objects."""
     policies = response.get("Policies", []) or []
     return [
         PolicySummary(

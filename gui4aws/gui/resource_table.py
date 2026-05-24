@@ -83,6 +83,7 @@ class ResourceTable(ttk.Frame):
             self.on_select(self.rows[index])
 
     def on_tree_select(self, event: object = None) -> None:
+        """Handle selection changes in the Treeview and notify the registered listener."""
         del event
         if self.on_select is None:
             return

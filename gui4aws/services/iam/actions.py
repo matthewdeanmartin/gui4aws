@@ -44,6 +44,7 @@ def list_policies_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
 
 
 def list_policies_cli_args(inputs: Mapping[str, str]) -> list[str]:
+    """Map UI inputs to AWS CLI list-policies arguments."""
     args: list[str] = []
     scope = inputs.get("scope", "Local").strip()
     if scope:

@@ -9,6 +9,8 @@ __all__ = ["BucketSummary", "S3ObjectSummary"]
 
 @dataclass(frozen=True)
 class BucketSummary:
+    """Summary information for an S3 bucket."""
+
     name: str
     region: str | None
     creation_date: str | None
@@ -17,6 +19,8 @@ class BucketSummary:
 
 @dataclass(frozen=True)
 class S3ObjectSummary:
+    """Summary information for an S3 object."""
+
     key: str
     size: int | None
     last_modified: str | None

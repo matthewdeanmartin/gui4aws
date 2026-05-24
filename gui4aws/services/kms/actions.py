@@ -32,6 +32,7 @@ __all__ = [
 
 
 def create_key_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+    """Map UI inputs to boto3 create_key parameters."""
     params: dict[str, Any] = {}
     if inputs.get("description"):
         params["Description"] = inputs["description"]
@@ -47,6 +48,7 @@ def create_key_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
 
 
 def create_key_cli_args(inputs: Mapping[str, str]) -> list[str]:
+    """Map UI inputs to AWS CLI create-key arguments."""
     args: list[str] = []
     if inputs.get("description"):
         args += ["--description", inputs["description"]]

@@ -11,6 +11,7 @@ __all__ = ["to_subscription_summaries", "to_topic_summaries"]
 
 
 def to_topic_summaries(response: Mapping[str, Any]) -> list[TopicSummary]:
+    """Convert a raw boto3 ListTopics response into a list of TopicSummary objects."""
     topics = response.get("Topics", []) or []
     results = []
     for t in topics:
@@ -21,6 +22,7 @@ def to_topic_summaries(response: Mapping[str, Any]) -> list[TopicSummary]:
 
 
 def to_subscription_summaries(response: Mapping[str, Any]) -> list[SubscriptionSummary]:
+    """Convert a raw boto3 ListSubscriptions response into a list of SubscriptionSummary objects."""
     subs = response.get("Subscriptions", []) or []
     results = []
     for s in subs:

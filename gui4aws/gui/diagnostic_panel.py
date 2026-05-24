@@ -56,6 +56,10 @@ class DiagnosticPanel(ttk.Frame):
         self.last_text = text
 
     def copy(self) -> None:
+        """Copy the visible text content of the diagnostic panel to the system clipboard.
+
+        Strips leading and trailing whitespace to ensure a clean copy.
+        """
         content = self.text.get("1.0", "end").strip()
         if content:
             self.clipboard_clear()
@@ -332,10 +336,11 @@ class RobotocorePanel(ttk.Frame):
         self.last_text = text
 
     def set_status(self, text: str) -> None:
+        """Update the human-readable status message for the robotocore container."""
         self.status_var.set(text)
 
     def set_running(self, running: bool) -> None:
-        """Update button states to reflect whether the container is up."""
+        """Update button states and status label to reflect the container's running state."""
         if running:
             self.start_btn.configure(state="disabled")
             self.stop_btn.configure(state="normal")
@@ -351,13 +356,16 @@ class RobotocorePanel(ttk.Frame):
 
     @property
     def use_moto(self) -> bool:
+        """Return True if the 'Use Moto instead' checkbox is currently checked."""
         return self.use_moto_var.get()
 
     def on_use_moto_changed(self) -> None:
+        """Handle toggle events for the 'Use Moto instead' checkbox."""
         if self.on_use_moto_changed_cb:
             self.on_use_moto_changed_cb(self.use_moto_var.get())
 
     def copy(self) -> None:
+        """Copy the robotocore log content to the system clipboard."""
         content = self.text.get("1.0", "end").strip()
         if content:
             self.clipboard_clear()
@@ -365,6 +373,10 @@ class RobotocorePanel(ttk.Frame):
 
 
 def replace_listbox(widget: tk.Listbox, items: Any) -> None:
+    """Update a Listbox with new items while minimizing flicker and preserving scroll position.
+
+    Only performs the update if the content has actually changed.
+    """
     new_items = [str(item) for item in items] or ["(none)"]
     current = list(widget.get(0, "end"))
     if current == new_items:
@@ -378,6 +390,10 @@ def replace_listbox(widget: tk.Listbox, items: Any) -> None:
 
 
 def replace_tree(widget: ttk.Treeview, rows: Sequence[tuple[Any, ...]]) -> None:
+    """Update a Treeview with new rows while minimizing flicker and preserving scroll position.
+
+    Only performs the update if the content has actually changed.
+    """
     current = [tuple(widget.item(item, "values")) for item in widget.get_children("")]
     new_rows: Sequence[tuple[Any, ...]]
     if rows:

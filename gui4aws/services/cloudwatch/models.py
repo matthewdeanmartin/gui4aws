@@ -9,6 +9,8 @@ __all__ = ["AlarmSummary", "LogEventSummary", "LogGroupSummary", "LogStreamSumma
 
 @dataclass(frozen=True)
 class AlarmSummary:
+    """Summary information for a CloudWatch alarm."""
+
     name: str
     state: str | None
     metric_name: str | None
@@ -21,6 +23,8 @@ class AlarmSummary:
 
 @dataclass(frozen=True)
 class LogGroupSummary:
+    """Summary information for a CloudWatch log group."""
+
     name: str
     retention_days: int | None
     stored_bytes: int | None
@@ -29,6 +33,8 @@ class LogGroupSummary:
 
 @dataclass(frozen=True)
 class LogStreamSummary:
+    """Summary information for a CloudWatch log stream."""
+
     stream_name: str
     last_event_time: str | None
     first_event_time: str | None
@@ -37,5 +43,7 @@ class LogStreamSummary:
 
 @dataclass(frozen=True)
 class LogEventSummary:
+    """Summary of a single CloudWatch log event."""
+
     timestamp: str
     message: str

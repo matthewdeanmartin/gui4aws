@@ -114,6 +114,11 @@ class FilterBar(ttk.LabelFrame):
     # ── Internal: rendering ──────────────────────────────────────────────────
 
     def render(self, fields: list[InputField], prefill: dict[str, str] | None = None) -> None:
+        """Create and lay out the actual input widgets based on a set of fields.
+
+        Clears any existing widgets and rebuilds the bar, optionally populating
+        initial values from prefill data.
+        """
         prefill = prefill or {}
         for child in self.inner.winfo_children():
             child.destroy()
@@ -190,16 +195,31 @@ class FilterBar(ttk.LabelFrame):
     # ── Internal: callbacks ──────────────────────────────────────────────────
 
     def fire_field_change(self, name: str, value: str) -> None:
+        """Notify the listener that a service-side filter field value has changed.
+
+        This event is suppressed during initial rendering to avoid redundant
+        callbacks before the UI is stable.
+        """
         if self.suppress_change:
             return
         if self.on_field_change is not None:
             self.on_field_change(name, value)
 
     def fire_refresh(self) -> None:
+        """Notify the listener that the user has explicitly requested a data refresh.
+
+        Triggered by clicking the Refresh button, pressing Enter in an entry field,
+        or selecting a value from a dropdown.
+        """
         if self.on_refresh is not None:
             self.on_refresh()
 
     def on_client_change(self) -> None:
+        """Handle user input in the client-side JMESPath filter entry.
+
+        Includes debouncing to prevent excessive re-filtering of large tables
+        while the user is typing.
+        """
         if self.on_client_filter is None:
             return
         # Debounce keystrokes so we don't filter the table on every character.
@@ -209,6 +229,7 @@ class FilterBar(ttk.LabelFrame):
         self.client_after_id = self.after(250, self.fire_client_filter)
 
     def fire_client_filter(self) -> None:
+        """Execute the debounced client-side filter callback."""
         self.client_after_id = None
         if self.on_client_filter is not None:
             self.on_client_filter(self.client_filter())

@@ -13,6 +13,8 @@ __all__ = [
 
 @dataclass(frozen=True)
 class KmsKeySummary:
+    """Summary information for a KMS key."""
+
     key_id: str
     key_arn: str | None
     description: str | None
@@ -26,6 +28,8 @@ class KmsKeySummary:
 
 @dataclass(frozen=True)
 class KmsAliasSummary:
+    """Summary information for a KMS alias."""
+
     alias_name: str
     target_key_id: str | None
     alias_arn: str | None
@@ -35,6 +39,8 @@ class KmsAliasSummary:
 
 @dataclass(frozen=True)
 class KmsGrantSummary:
+    """Summary information for a KMS grant."""
+
     grant_id: str
     key_id: str | None
     name: str | None

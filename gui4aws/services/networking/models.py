@@ -16,6 +16,8 @@ __all__ = [
 
 @dataclass(frozen=True)
 class VpcSummary:
+    """Summary information for an Amazon VPC."""
+
     vpc_id: str
     name: str | None
     cidr_block: str
@@ -25,6 +27,8 @@ class VpcSummary:
 
 @dataclass(frozen=True)
 class SubnetSummary:
+    """Summary information for a VPC subnet."""
+
     subnet_id: str
     name: str | None
     vpc_id: str
@@ -36,6 +40,8 @@ class SubnetSummary:
 
 @dataclass(frozen=True)
 class SecurityGroupSummary:
+    """Summary information for a VPC security group."""
+
     group_id: str
     group_name: str
     vpc_id: str | None
@@ -44,6 +50,8 @@ class SecurityGroupSummary:
 
 @dataclass(frozen=True)
 class SecurityGroupRuleSummary:
+    """Summary information for a single security group rule."""
+
     rule_id: str
     direction: str  # "inbound" or "outbound"
     protocol: str
@@ -55,6 +63,8 @@ class SecurityGroupRuleSummary:
 
 @dataclass(frozen=True)
 class AlbSummary:
+    """Summary information for an Application Load Balancer (ALB)."""
+
     name: str
     dns_name: str | None
     scheme: str | None
@@ -66,6 +76,8 @@ class AlbSummary:
 
 @dataclass(frozen=True)
 class TargetGroupSummary:
+    """Summary information for an ELB target group."""
+
     name: str
     protocol: str | None
     port: int | None

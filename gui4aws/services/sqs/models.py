@@ -9,6 +9,8 @@ __all__ = ["QueueSummary"]
 
 @dataclass(frozen=True)
 class QueueSummary:
+    """Summary information for an SQS queue."""
+
     name: str
     url: str
     approximate_messages: str | None

@@ -31,12 +31,18 @@ class CacheKey:
 
 @dataclass
 class CacheEntry:
+    """Wrapper for a cached action result and its expiration timestamp."""
+
     expires_at: float
     value: Any
 
 
 class ActionCache:
-    """Simple TTL cache keyed by action identity plus runtime context."""
+    """Thread-safe TTL cache for storing read-only AWS action results.
+
+    Provides mechanisms for building stable cache keys based on action context,
+    lazy eviction of expired entries, and targeted invalidation by service or entry.
+    """
 
     def __init__(self, ttl_seconds: float = 30 * 60, *, clock: Any | None = None) -> None:
         self.ttl_seconds = ttl_seconds

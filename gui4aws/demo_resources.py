@@ -21,6 +21,11 @@ DEMO_DESC_TAG_KEY = "Description"
 
 
 def tags(*extra: dict[str, str]) -> list[dict[str, str]]:
+    """Generate a list of AWS tags including the standard demo identifier and optional extra tags.
+
+    This helper ensures that all seeded resources are consistently tagged with 'gui4aws:demo=true'
+    so they can be easily identified in the GUI and distinguished from real infrastructure.
+    """
     return [DEMO_TAG, *extra]
 
 
@@ -75,6 +80,11 @@ def seed_demo_resources(
 
 
 def seed_aurora(rds: Any) -> dict[str, list[str]]:
+    """Seed demo Aurora clusters, instances, and snapshots.
+
+    Creates both MySQL and PostgreSQL clusters with associated instances and a sample
+    snapshot to demonstrate RDS resource browsing and management in the GUI.
+    """
     created: dict[str, list[str]] = {"aurora_clusters": [], "aurora_instances": [], "aurora_snapshots": []}
 
     clusters = [
@@ -149,6 +159,12 @@ def seed_aurora(rds: Any) -> dict[str, list[str]]:
 
 
 def seed_networking(ec2: Any, elbv2: Any) -> dict[str, list[str]]:
+    """Seed core networking infrastructure including VPCs, subnets, and load balancers.
+
+    Sets up a functional network environment with security groups and an Application
+    Load Balancer (ALB) targeting an IP-based target group to illustrate how the
+    GUI visualizes networking dependencies.
+    """
     created: dict[str, list[str]] = {
         "vpcs": [],
         "subnets": [],
@@ -362,6 +378,11 @@ def seed_ecs(ecs: Any, *, extended: bool = False) -> dict[str, list[str]]:
 
 
 def seed_secrets(sm: Any) -> dict[str, list[str]]:
+    """Seed demo secrets in AWS Secrets Manager.
+
+    Populates common secret types like database credentials and API keys to demonstrate
+    secret management and metadata viewing capabilities.
+    """
     created: dict[str, list[str]] = {"secrets": []}
 
     secrets = [
@@ -386,6 +407,11 @@ def seed_secrets(sm: Any) -> dict[str, list[str]]:
 
 
 def seed_ssm(ssm: Any) -> dict[str, list[str]]:
+    """Seed demo parameters in SSM Parameter Store.
+
+    Creates various parameter types (String, SecureString simulations) including
+    application config and feature flags to showcase parameter exploration.
+    """
     created: dict[str, list[str]] = {"ssm_parameters": []}
 
     params = [
@@ -572,6 +598,11 @@ def seed_backup_jobs(backup: Any, rds: Any, created: dict[str, list[str]]) -> No
 
 
 def seed_kms(kms: Any) -> dict[str, list[str]]:
+    """Seed KMS keys and aliases for cryptographic operations.
+
+    Creates both symmetric and asymmetric keys with descriptive aliases to demonstrate
+    how the GUI handles encryption keys and their metadata.
+    """
     created: dict[str, list[str]] = {"kms_keys": [], "kms_aliases": []}
 
     key_specs = [
@@ -610,6 +641,11 @@ def seed_kms(kms: Any) -> dict[str, list[str]]:
 
 
 def seed_s3(s3: Any) -> dict[str, list[str]]:
+    """Seed demo S3 buckets for various storage use cases.
+
+    Sets up buckets for assets, logs, and backups to illustrate bucket listing,
+    tagging, and resource discovery features.
+    """
     created: dict[str, list[str]] = {"s3_buckets": []}
 
     buckets = [
@@ -643,6 +679,11 @@ def seed_s3(s3: Any) -> dict[str, list[str]]:
 
 
 def seed_sqs(sqs: Any) -> dict[str, list[str]]:
+    """Seed SQS queues for message processing scenarios.
+
+    Creates standard and dead-letter queues to showcase how the GUI displays
+    messaging infrastructure and its associated metadata.
+    """
     created: dict[str, list[str]] = {"sqs_queues": []}
 
     queues = [
@@ -685,6 +726,11 @@ def make_lambda_zip() -> bytes:
 
 
 def seed_lambda(lambda_client: Any, iam: Any) -> dict[str, list[str]]:
+    """Seed demo Lambda functions and their execution roles.
+
+    Creates sample Python-based serverless functions to demonstrate function
+    browsing, configuration, and IAM role association in the GUI.
+    """
     created: dict[str, list[str]] = {"lambda_functions": []}
 
     zip_bytes = make_lambda_zip()
@@ -755,6 +801,11 @@ def seed_lambda(lambda_client: Any, iam: Any) -> dict[str, list[str]]:
 
 
 def seed_cloudwatch(cloudwatch: Any, logs: Any) -> dict[str, list[str]]:
+    """Seed CloudWatch alarms and Log Groups for monitoring visibility.
+
+    Sets up alarms for common resource metrics (CPU, storage) and log groups with
+    retention policies to demonstrate observability features in the GUI.
+    """
     created: dict[str, list[str]] = {"cloudwatch_alarms": [], "log_groups": []}
 
     # Seed metric alarms
@@ -825,6 +876,11 @@ def seed_cloudwatch(cloudwatch: Any, logs: Any) -> dict[str, list[str]]:
 
 
 def seed_cloudformation(cfn: Any) -> dict[str, list[str]]:
+    """Seed CloudFormation stacks with sample templates.
+
+    Creates infrastructure and application stacks to show how the GUI visualizes
+    stack resources, status, and configuration.
+    """
     import json
 
     created: dict[str, list[str]] = {"cloudformation_stacks": []}
@@ -873,6 +929,11 @@ def seed_cloudformation(cfn: Any) -> dict[str, list[str]]:
 
 
 def seed_sns(sns: Any) -> dict[str, list[str]]:
+    """Seed SNS topics for notification workflows.
+
+    Creates topics for events and alerts to illustrate how the GUI displays
+    pub/sub infrastructure.
+    """
     created: dict[str, list[str]] = {"sns_topics": []}
     topics = [
         ("demo-order-events", "Demo SNS topic for order lifecycle events"),
@@ -897,6 +958,11 @@ def seed_sns(sns: Any) -> dict[str, list[str]]:
 
 
 def seed_ses(ses: Any) -> dict[str, list[str]]:
+    """Seed SES verified email identities.
+
+    Creates sample identities to demonstrate how the GUI visualizes email
+    sending configurations.
+    """
     created: dict[str, list[str]] = {"ses_identities": []}
     identities = [
         "demo@example.com",
@@ -913,7 +979,11 @@ def seed_ses(ses: Any) -> dict[str, list[str]]:
 
 
 def seed_iam_extras(iam: Any) -> dict[str, list[str]]:
-    """Seed additional IAM resources (users, groups, policies) beyond the Lambda role."""
+    """Seed additional IAM resources including users, groups, and managed policies.
+
+    Sets up a small hierarchy of users and groups with specific managed policies
+    to showcase identity management and permission visualization in the GUI.
+    """
     import json
 
     created: dict[str, list[str]] = {"iam_users": [], "iam_groups": [], "iam_policies": []}

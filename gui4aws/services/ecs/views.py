@@ -21,6 +21,7 @@ __all__ = [
 
 
 def optional_str(value: Any) -> str | None:
+    """Convert a value to a string, returning None if the result is empty or the input was None."""
     if value is None:
         return None
     text = str(value)
@@ -43,6 +44,7 @@ def arn_to_family_revision(arn: str) -> tuple[str, str]:
 
 
 def to_cluster_summaries(response: Mapping[str, Any]) -> list[EcsClusterSummary]:
+    """Convert a raw boto3 ECS cluster response into a list of EcsClusterSummary objects."""
     # describe_clusters returns {"clusters": [{clusterName, ...}]}
     # list_clusters returns {"clusterArns": ["arn:...", ...]}
     clusters = response.get("clusters", []) or []
@@ -74,6 +76,7 @@ def to_cluster_summaries(response: Mapping[str, Any]) -> list[EcsClusterSummary]
 
 
 def to_service_summaries(response: Mapping[str, Any]) -> list[EcsServiceSummary]:
+    """Convert a raw boto3 ECS service response into a list of EcsServiceSummary objects."""
     # describe_services returns {"services": [{serviceName, ...}]}
     # list_services returns {"serviceArns": ["arn:...", ...]}
     services = response.get("services", []) or []
@@ -112,6 +115,7 @@ def to_service_summaries(response: Mapping[str, Any]) -> list[EcsServiceSummary]
 
 
 def to_task_summaries(response: Mapping[str, Any]) -> list[EcsTaskSummary]:
+    """Convert a raw boto3 ECS task response into a list of EcsTaskSummary objects."""
     # describe_tasks returns {"tasks": [{taskArn, ...}]}
     # list_tasks returns {"taskArns": ["arn:...", ...]}
     tasks = response.get("tasks", []) or []
@@ -147,6 +151,7 @@ def to_task_summaries(response: Mapping[str, Any]) -> list[EcsTaskSummary]:
 
 
 def to_task_definition_summaries(response: Mapping[str, Any]) -> list[EcsTaskDefinitionSummary]:
+    """Convert a raw boto3 ECS task definition response into a list of EcsTaskDefinitionSummary objects."""
     # list_task_definitions returns {"taskDefinitionArns": [...]}
     # describe_task_definition returns {"taskDefinition": {...}}
     arns = response.get("taskDefinitionArns", []) or []

@@ -15,6 +15,7 @@ __all__ = [
 
 
 def optional_str(value: Any) -> str | None:
+    """Convert a value to a string, returning None if the result is empty or the input was None."""
     if value is None:
         return None
     text = str(value)
@@ -22,12 +23,14 @@ def optional_str(value: Any) -> str | None:
 
 
 def fmt_date(value: Any) -> str | None:
+    """Format a datetime value as a string, truncated to seconds."""
     if value is None:
         return None
     return str(value)[:19]
 
 
 def to_key_summaries(response: Mapping[str, Any]) -> list[KmsKeySummary]:
+    """Convert a raw boto3 KMS key response into a list of KmsKeySummary objects."""
     keys = response.get("Keys", []) or []
     summaries: list[KmsKeySummary] = []
     for k in keys:
@@ -65,6 +68,7 @@ def to_key_summaries(response: Mapping[str, Any]) -> list[KmsKeySummary]:
 
 
 def to_alias_summaries(response: Mapping[str, Any]) -> list[KmsAliasSummary]:
+    """Convert a raw boto3 KMS alias response into a list of KmsAliasSummary objects."""
     aliases = response.get("Aliases", []) or []
     summaries: list[KmsAliasSummary] = []
     for a in aliases:
@@ -81,6 +85,7 @@ def to_alias_summaries(response: Mapping[str, Any]) -> list[KmsAliasSummary]:
 
 
 def to_grant_summaries(response: Mapping[str, Any]) -> list[KmsGrantSummary]:
+    """Convert a raw boto3 KMS grant response into a list of KmsGrantSummary objects."""
     grants = response.get("Grants", []) or []
     summaries: list[KmsGrantSummary] = []
     for g in grants:

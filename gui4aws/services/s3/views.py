@@ -11,12 +11,14 @@ __all__ = ["to_bucket_summaries", "to_object_summaries"]
 
 
 def fmt_date(value: Any) -> str | None:
+    """Format a datetime value as a string, truncated to seconds."""
     if value is None:
         return None
     return str(value)[:19]
 
 
 def to_bucket_summaries(response: Mapping[str, Any]) -> list[BucketSummary]:
+    """Convert a raw boto3 ListBuckets response into a list of BucketSummary objects."""
     buckets = response.get("Buckets", []) or []
     summaries: list[BucketSummary] = []
     for b in buckets:
@@ -32,6 +34,7 @@ def to_bucket_summaries(response: Mapping[str, Any]) -> list[BucketSummary]:
 
 
 def to_object_summaries(response: Mapping[str, Any]) -> list[S3ObjectSummary]:
+    """Convert a raw boto3 ListObjectsV2 response into a list of S3ObjectSummary objects."""
     objects = response.get("Contents", []) or []
     summaries: list[S3ObjectSummary] = []
     for obj in objects:

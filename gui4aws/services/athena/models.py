@@ -12,6 +12,8 @@ __all__ = [
 
 @dataclass(frozen=True)
 class AthenaWorkGroupSummary:
+    """Summary information for an Athena workgroup."""
+
     name: str
     state: str | None
     description: str | None
@@ -20,6 +22,8 @@ class AthenaWorkGroupSummary:
 
 @dataclass(frozen=True)
 class AthenaQueryExecutionSummary:
+    """Summary information for an Athena query execution."""
+
     query_execution_id: str
     query: str | None
     state: str | None

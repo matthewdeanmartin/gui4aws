@@ -28,6 +28,7 @@ __all__ = [
 
 
 def list_secrets_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+    """Map UI inputs to boto3 list_secrets parameters."""
     params: dict[str, Any] = {}
     include_deleted = inputs.get("include_deleted", "false").lower() == "true"
     if include_deleted:
@@ -39,6 +40,7 @@ def list_secrets_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
 
 
 def list_secrets_cli_args(inputs: Mapping[str, str]) -> list[str]:
+    """Map UI inputs to AWS CLI list-secrets arguments."""
     args: list[str] = []
     if inputs.get("include_deleted", "false").lower() == "true":
         args += ["--include-planned-deletion"]

@@ -9,6 +9,8 @@ __all__ = ["IdentitySummary", "TemplateSummary"]
 
 @dataclass(frozen=True)
 class IdentitySummary:
+    """Summary information for an SES email identity."""
+
     identity: str
     identity_type: str
     verification_status: str | None
@@ -17,5 +19,7 @@ class IdentitySummary:
 
 @dataclass(frozen=True)
 class TemplateSummary:
+    """Summary information for an SES email template."""
+
     name: str
     created_timestamp: str | None

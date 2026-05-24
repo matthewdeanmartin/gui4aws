@@ -13,6 +13,7 @@ __all__ = ["TerraformDialog"]
 
 
 def size_and_center(win: tk.Toplevel) -> None:
+    """Size the window to 90% of the screen and center it."""
     win.update_idletasks()
     sw = win.winfo_screenwidth()
     sh = win.winfo_screenheight()

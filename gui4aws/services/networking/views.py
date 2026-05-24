@@ -25,6 +25,7 @@ __all__ = [
 
 
 def optional_str(value: Any) -> str | None:
+    """Convert a value to a string, returning None if the result is empty or the input was None."""
     if value is None:
         return None
     text = str(value)
@@ -32,6 +33,7 @@ def optional_str(value: Any) -> str | None:
 
 
 def name_from_tags(tags: list[dict[str, str]]) -> str | None:
+    """Extract the 'Name' tag value from a list of AWS tags."""
     for tag in tags or []:
         if tag.get("Key") == "Name":
             return tag.get("Value") or None
@@ -39,6 +41,7 @@ def name_from_tags(tags: list[dict[str, str]]) -> str | None:
 
 
 def to_vpc_summaries(response: Mapping[str, Any]) -> list[VpcSummary]:
+    """Convert a raw boto3 DescribeVpcs response into a list of VpcSummary objects."""
     vpcs = response.get("Vpcs", []) or []
     summaries: list[VpcSummary] = []
     for v in vpcs:
@@ -55,6 +58,7 @@ def to_vpc_summaries(response: Mapping[str, Any]) -> list[VpcSummary]:
 
 
 def to_subnet_summaries(response: Mapping[str, Any]) -> list[SubnetSummary]:
+    """Convert a raw boto3 DescribeSubnets response into a list of SubnetSummary objects."""
     subnets = response.get("Subnets", []) or []
     summaries: list[SubnetSummary] = []
     for s in subnets:
@@ -73,6 +77,7 @@ def to_subnet_summaries(response: Mapping[str, Any]) -> list[SubnetSummary]:
 
 
 def to_security_group_summaries(response: Mapping[str, Any]) -> list[SecurityGroupSummary]:
+    """Convert a raw boto3 DescribeSecurityGroups response into a list of SecurityGroupSummary objects."""
     groups = response.get("SecurityGroups", []) or []
     summaries: list[SecurityGroupSummary] = []
     for g in groups:
@@ -159,6 +164,7 @@ def to_security_group_rule_summaries(response: Mapping[str, Any]) -> list[Securi
 
 
 def to_alb_summaries(response: Mapping[str, Any]) -> list[AlbSummary]:
+    """Convert a raw boto3 DescribeLoadBalancers response into a list of AlbSummary objects."""
     lbs = response.get("LoadBalancers", []) or []
     summaries: list[AlbSummary] = []
     for lb in lbs:
@@ -178,6 +184,7 @@ def to_alb_summaries(response: Mapping[str, Any]) -> list[AlbSummary]:
 
 
 def to_target_group_summaries(response: Mapping[str, Any]) -> list[TargetGroupSummary]:
+    """Convert a raw boto3 DescribeTargetGroups response into a list of TargetGroupSummary objects."""
     tgs = response.get("TargetGroups", []) or []
     summaries: list[TargetGroupSummary] = []
     for tg in tgs:

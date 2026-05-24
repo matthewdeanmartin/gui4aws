@@ -11,6 +11,7 @@ __all__ = ["to_alarm_summaries", "to_log_event_summaries", "to_log_group_summari
 
 
 def optional_int(value: Any) -> int | None:
+    """Safely convert a value to an integer, returning None on failure."""
     if value is None:
         return None
     try:
@@ -20,6 +21,7 @@ def optional_int(value: Any) -> int | None:
 
 
 def to_alarm_summaries(response: Mapping[str, Any]) -> list[AlarmSummary]:
+    """Convert a raw boto3 DescribeAlarms response into a list of AlarmSummary objects."""
     alarms = response.get("MetricAlarms", []) or []
     summaries: list[AlarmSummary] = []
     for a in alarms:
@@ -40,6 +42,7 @@ def to_alarm_summaries(response: Mapping[str, Any]) -> list[AlarmSummary]:
 
 
 def to_log_group_summaries(response: Mapping[str, Any]) -> list[LogGroupSummary]:
+    """Convert a raw boto3 DescribeLogGroups response into a list of LogGroupSummary objects."""
     log_groups = response.get("logGroups", []) or []
     summaries: list[LogGroupSummary] = []
     for g in log_groups:
@@ -55,6 +58,7 @@ def to_log_group_summaries(response: Mapping[str, Any]) -> list[LogGroupSummary]
 
 
 def fmt_ts(ms: Any) -> str | None:
+    """Format a millisecond timestamp into a human-readable UTC date string."""
     if ms is None:
         return None
     try:
@@ -66,6 +70,7 @@ def fmt_ts(ms: Any) -> str | None:
 
 
 def to_log_stream_summaries(response: Mapping[str, Any]) -> list[LogStreamSummary]:
+    """Convert a raw boto3 DescribeLogStreams response into a list of LogStreamSummary objects."""
     streams = response.get("logStreams", []) or []
     summaries: list[LogStreamSummary] = []
     for s in streams:
@@ -81,6 +86,7 @@ def to_log_stream_summaries(response: Mapping[str, Any]) -> list[LogStreamSummar
 
 
 def to_log_event_summaries(response: Mapping[str, Any]) -> list[LogEventSummary]:
+    """Convert a raw boto3 GetLogEvents response into a list of LogEventSummary objects."""
     events = response.get("events", []) or []
     summaries: list[LogEventSummary] = []
     for e in events:

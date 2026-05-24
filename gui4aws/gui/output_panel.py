@@ -54,12 +54,14 @@ class OutputPanel(ttk.LabelFrame):
         self.render()
 
     def copy_text(self) -> None:
+        """Copy the current content of the output text area to the system clipboard."""
         content = self.text.get("1.0", "end").strip()
         if content:
             self.clipboard_clear()
             self.clipboard_append(content)
 
     def render(self) -> None:
+        """Update the text area content based on the current summary or raw JSON payload."""
         self.text.configure(state="normal")
         self.text.delete("1.0", "end")
         if self.raw_visible and self.raw_payload is not None:
