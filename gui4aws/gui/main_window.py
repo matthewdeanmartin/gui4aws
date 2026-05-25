@@ -594,6 +594,27 @@ class MainWindow(ServerManagerMixin):
             TerraformDialog(self.root)
             return
 
+        # ── Sentinel: SQL runner ──────────────────────────────────────────────
+        if row_action.action_id == "sql://query":
+            from gui4aws.gui.sql_runner_dialog import open_sql_runner
+
+            cluster_id = ""
+            cluster_engine = ""
+            if row is not None:
+                cluster_id = str(getattr(row, "cluster_identifier", "") or "")
+                cluster_engine = str(getattr(row, "engine", "") or "")
+            try:
+                boto3_session = self.context.boto3_executor().build_session()
+            except Exception:  # pylint: disable=broad-exception-caught
+                boto3_session = None
+            open_sql_runner(
+                self.root,
+                cluster_identifier=cluster_id,
+                cluster_engine=cluster_engine,
+                boto3_session=boto3_session,
+            )
+            return
+
         try:
             service = self.context.registry.get(service_id)
             action = service.action(row_action.action_id)
@@ -691,7 +712,7 @@ class MainWindow(ServerManagerMixin):
                 logger.exception("text_generator failed for %s", action.action_id)
                 self.main_panel.output_panel.set_error(f"Text generation failed: {exc}")
                 return
-            self.main_panel.show_output(generated, None)
+            self.main_panel.show_output(generated, None, cli="")
             self.status_bar.set_status("Ready")
             return
 
@@ -951,6 +972,8 @@ class MainWindow(ServerManagerMixin):
             if action.risk_level is not RiskLevel.READ_ONLY:
                 self.schedule_cache_refreshes_for_action(action)
                 self.refresh_visible_data_after_write(action)
+                if action.action_id == "aurora.modify_db_cluster_password":
+                    self._save_cluster_password_to_keyring(self.current_inputs)
 
             if action.text_generator is not None:
                 try:
@@ -959,7 +982,8 @@ class MainWindow(ServerManagerMixin):
                     logger.exception("text_generator failed for %s", action.action_id)
                     self.main_panel.output_panel.set_error(f"Text generation failed: {exc}")
                     return
-                self.main_panel.show_output(generated, raw_response)
+                _cli = self.main_panel.scripts_cli
+                self.main_panel.show_output(generated, raw_response, cli=_cli)
                 return
 
             if view is not None and raw_response is not None:
@@ -972,14 +996,50 @@ class MainWindow(ServerManagerMixin):
                 columns = list(action.result_view.columns) or (list(vars(rows[0]).keys()) if rows else [])
                 self.main_panel.show_table(rows, columns)
                 count = len(rows)
-                self.main_panel.show_output(f"{count} {'item' if count == 1 else 'items'}", raw_response)
+                _cli = self.main_panel.scripts_cli
+                self.main_panel.show_output(f"{count} {'item' if count == 1 else 'items'}", raw_response, cli=_cli)
                 return
 
-            self.main_panel.show_output(f"{action.action_id} ok", raw_response)
+            _cli = self.main_panel.scripts_cli
+            self.main_panel.show_output(f"{action.action_id} ok", raw_response, cli=_cli)
 
     def record_history(self, action: ActionDefinition, kind: str, payload: Any) -> None:
         """Add an execution entry to the persistent action history."""
         _record_history(action, kind, payload, context=self.context, current_inputs=self.current_inputs)
+
+    def _save_cluster_password_to_keyring(self, inputs: dict[str, str]) -> None:
+        """Persist an Aurora connection string to the OS keyring after a password update."""
+        from gui4aws.sql_runner.connection import save_to_keyring
+
+        cluster_id = inputs.get("cluster_identifier", "").strip()
+        username = inputs.get("master_username", "").strip()
+        password = inputs.get("new_master_password", "").strip()
+        host = inputs.get("host", "").strip()
+        port_raw = inputs.get("port", "").strip()
+        database = inputs.get("database", "").strip()
+        if not (cluster_id and username and password):
+            return
+        engine = inputs.get("engine", "aurora-mysql").strip() or "aurora-mysql"
+        conn_dict = {
+            "username": username,
+            "password": password,
+            "host": host or cluster_id,
+            "dbClusterIdentifier": cluster_id,
+            "engine": engine,
+        }
+        if port_raw:
+            try:
+                conn_dict["port"] = int(port_raw)
+            except ValueError:
+                pass
+        if database:
+            conn_dict["dbname"] = database
+        try:
+            save_to_keyring(cluster_id, conn_dict)
+            self.status_bar.set_status(f"Password updated and saved to keyring for {cluster_id}")
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            logger.warning("keyring save failed for %s: %s", cluster_id, exc)
+            self.status_bar.set_status("Password updated (keyring save failed)")
 
     def run(self) -> None:
         """Enter the Tkinter main event loop."""

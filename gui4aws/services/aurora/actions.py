@@ -37,6 +37,7 @@ __all__ = [
     "DESCRIBE_DB_PARAMETER_GROUPS",
     "DESCRIBE_DB_SUBNET_GROUPS",
     "FAILOVER_DB_CLUSTER",
+    "MODIFY_DB_CLUSTER_PASSWORD",
     "REBOOT_DB_INSTANCE",
     "RESTORE_DB_CLUSTER_FROM_SNAPSHOT",
     "START_DB_CLUSTER",
@@ -965,6 +966,86 @@ DELETE_DB_INSTANCE = ActionDefinition(
 )
 
 
+def _modify_cluster_password_params(inputs: Mapping[str, str]) -> dict[str, Any]:
+    """Build boto3 params for modify_db_cluster (master password only)."""
+    return {
+        "DBClusterIdentifier": inputs["cluster_identifier"],
+        "MasterUserPassword": inputs["new_master_password"],
+        "ApplyImmediately": True,
+    }
+
+
+def _modify_cluster_password_cli(inputs: Mapping[str, str]) -> list[str]:
+    args: list[str] = []
+    append_cli_value(args, "db-cluster-identifier", inputs.get("cluster_identifier"))
+    append_cli_value(args, "master-user-password", inputs.get("new_master_password"))
+    args.append("--apply-immediately")
+    return args
+
+
+MODIFY_DB_CLUSTER_PASSWORD = ActionDefinition(
+    action_id="aurora.modify_db_cluster_password",
+    display_name="Update master password",
+    service_id="aurora",
+    risk_level=RiskLevel.SAFE_WRITE,
+    input_fields=(
+        InputField(name="cluster_identifier", label="Cluster identifier", required=True),
+        InputField(
+            name="engine",
+            label="Engine",
+            kind="choice",
+            choices=("aurora-mysql", "aurora-postgresql"),
+            required=False,
+            default="aurora-mysql",
+            help_text="Prefilled from the selected cluster. Used when saving the connection string to keyring.",
+        ),
+        InputField(
+            name="master_username",
+            label="Master username",
+            required=True,
+            default="admin",
+            help_text="Stored in keyring alongside the new password.",
+        ),
+        InputField(
+            name="new_master_password",
+            label="New master password",
+            required=True,
+            help_text="Password is applied immediately and also saved to the keyring as a connection string.",
+        ),
+        InputField(
+            name="host",
+            label="Cluster endpoint (host)",
+            required=False,
+            help_text="Writer endpoint to store in keyring. Prefilled from the cluster endpoint when available.",
+        ),
+        InputField(
+            name="port",
+            label="Port",
+            kind="int",
+            required=False,
+            help_text="3306 for MySQL, 5432 for PostgreSQL.",
+        ),
+        InputField(
+            name="database",
+            label="Default database (optional)",
+            required=False,
+        ),
+    ),
+    cli_template=CliTemplate(service="rds", command="modify-db-cluster"),
+    boto3_template=Boto3Template(service="rds", operation="modify_db_cluster"),
+    result_view=ResultViewDefinition(kind=ResultViewKind.RAW_JSON, title="Modify cluster result"),
+    iam_permissions=("rds:ModifyDBCluster",),
+    description=(
+        "Update the master password for an Aurora DB cluster. "
+        "The new password is applied immediately and saved to the OS keyring "
+        "as a JSON connection string under service='gui4aws' so the SQL runner can use it."
+    ),
+    cache_refresh_nav_ids=("clusters",),
+    boto3_params_builder=_modify_cluster_password_params,
+    cli_args_builder=_modify_cluster_password_cli,
+)
+
+
 ALL_ACTIONS = (
     DESCRIBE_DB_CLUSTERS,
     DESCRIBE_DB_CLUSTER_SNAPSHOTS,
@@ -984,4 +1065,5 @@ ALL_ACTIONS = (
     STOP_DB_INSTANCE,
     REBOOT_DB_INSTANCE,
     DELETE_DB_INSTANCE,
+    MODIFY_DB_CLUSTER_PASSWORD,
 )

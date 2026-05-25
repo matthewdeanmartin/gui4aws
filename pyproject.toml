@@ -21,8 +21,14 @@ classifiers = [
 ]
 dependencies = [
     "boto3>=1.35.0",
+    "keyring>=25.0.0",
     "tomli>=2.4.1 ; python_full_version < '3.11'",
 ]
+
+[project.optional-dependencies]
+mysql = ["pymysql>=1.1.0"]
+postgresql = ["pg8000>=1.31.0"]
+sql = ["pymysql>=1.1.0", "pg8000>=1.31.0"]
 
 [project.urls]
 Repository = "https://github.com/matthewdeanmartin/gui4aws"

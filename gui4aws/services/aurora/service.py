@@ -17,6 +17,7 @@ from gui4aws.services.aurora.actions import (
     DESCRIBE_DB_PARAMETER_GROUPS,
     DESCRIBE_DB_SUBNET_GROUPS,
     FAILOVER_DB_CLUSTER,
+    MODIFY_DB_CLUSTER_PASSWORD,
     REBOOT_DB_INSTANCE,
     RESTORE_DB_CLUSTER_FROM_SNAPSHOT,
     START_DB_CLUSTER,
@@ -84,6 +85,20 @@ SERVICE = ServiceDefinition(
                     action_id="kms.describe_key",
                     button_label="View KMS Key",
                     prefill={"key_id": "kms_key_id"},
+                ),
+                RowAction(
+                    action_id=MODIFY_DB_CLUSTER_PASSWORD.action_id,
+                    button_label="Update Password",
+                    prefill={
+                        "cluster_identifier": "cluster_identifier",
+                        "engine": "engine",
+                        "host": "endpoint",
+                    },
+                ),
+                RowAction(
+                    action_id="sql://query",
+                    button_label="Query",
+                    prefill={},
                 ),
             ),
             sub_action=SubAction(

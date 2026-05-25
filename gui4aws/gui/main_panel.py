@@ -275,9 +275,9 @@ class MainPanel(ttk.Frame):
             self.resource_table.set_selected_index(selected_index)
         self.detail_tree.set_data({})
 
-    def show_output(self, summary: str, raw: Any) -> None:
+    def show_output(self, summary: str, raw: Any, cli: str = "") -> None:
         """Show an output summary in the output panel."""
-        self.output_panel.set_result(summary, raw)
+        self.output_panel.set_result(summary, raw, cli=cli)
 
     def show_scripts(self, cli: str, python: str) -> None:
         """Store the latest generated scripts (opened on demand via Show Scripts)."""

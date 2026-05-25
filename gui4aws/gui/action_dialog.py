@@ -10,6 +10,7 @@ from tkinter import ttk
 from typing import Any
 
 from gui4aws.gui.action_form import ActionForm
+from gui4aws.gui.json_viewer_dialog import JsonViewerDialog
 from gui4aws.gui.review_dialog import needs_review, warning_banner
 from gui4aws.models import ActionDefinition
 
@@ -63,6 +64,7 @@ class ActionDialog(tk.Toplevel):
         self._on_run_cb = on_run
         self._on_generate_scripts_cb = on_generate_scripts
         self.running = False
+        self._raw_result: Any = None
 
         self.title(action.display_name)
         self.resizable(True, True)
@@ -177,16 +179,20 @@ class ActionDialog(tk.Toplevel):
         # ── Bottom pane: result — fills remaining dialog height ───────────────
         result_lf = ttk.LabelFrame(paned, text="Result")
         result_lf.grid_columnconfigure(0, weight=1)
-        result_lf.grid_rowconfigure(0, weight=1)
+        result_lf.grid_rowconfigure(1, weight=1)
+
+        result_btn_bar = ttk.Frame(result_lf)
+        result_btn_bar.grid(row=0, column=0, columnspan=2, sticky="ew", padx=4, pady=(4, 0))
+        ttk.Button(result_btn_bar, text="View JSON", command=self._open_json_viewer).pack(side="left", padx=2)
 
         self.result_text = tk.Text(result_lf, wrap="word", font=("Courier", 9))
         self.result_text.configure(state="disabled")
         result_scroll = ttk.Scrollbar(result_lf, orient="vertical", command=self.result_text.yview)
         result_hscroll = ttk.Scrollbar(result_lf, orient="horizontal", command=self.result_text.xview)
         self.result_text.configure(yscrollcommand=result_scroll.set, xscrollcommand=result_hscroll.set)
-        self.result_text.grid(row=0, column=0, sticky="nsew")
-        result_scroll.grid(row=0, column=1, sticky="ns")
-        result_hscroll.grid(row=1, column=0, sticky="ew")
+        self.result_text.grid(row=1, column=0, sticky="nsew")
+        result_scroll.grid(row=1, column=1, sticky="ns")
+        result_hscroll.grid(row=2, column=0, sticky="ew")
 
         paned.add(result_lf, weight=2)
 
@@ -278,8 +284,15 @@ class ActionDialog(tk.Toplevel):
             self.run_btn.configure(state="normal")
             self.close_btn.configure(state="normal")
 
+    def _open_json_viewer(self) -> None:
+        """Open the full-screen JSON tree viewer for the current result payload."""
+        if self._raw_result is None:
+            return
+        JsonViewerDialog(self, self._raw_result, title=f"JSON — {self.action.display_name}")
+
     def set_result(self, raw: Any) -> None:
         """Display raw result data in the result panel."""
+        self._raw_result = raw
         try:
             text = json.dumps(raw, indent=2, default=str)
         except TypeError:
