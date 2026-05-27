@@ -27,6 +27,7 @@ def test_execute_client_error():
     action = MagicMock(spec=ActionDefinition)
     action.boto3_template = Boto3Template(service="s3", operation="list_buckets")
     action.boto3_params_builder = None
+    action.boto3_execute_fn = None
     action.input_fields = []
 
     # Mock client to raise ClientError
@@ -52,6 +53,7 @@ def test_execute_botocore_error():
     action = MagicMock(spec=ActionDefinition)
     action.boto3_template = Boto3Template(service="s3", operation="list_buckets")
     action.boto3_params_builder = None
+    action.boto3_execute_fn = None
     action.input_fields = []
 
     # Mock client to raise BotoCoreError

@@ -9,6 +9,7 @@ from tkinter import ttk
 from typing import Any
 
 from gui4aws.gui.json_viewer_dialog import JsonViewerDialog
+from gui4aws.gui.jmespath_designer_dialog import JmespathDesignerDialog
 
 __all__ = ["OutputPanel"]
 
@@ -48,6 +49,7 @@ class OutputPanel(ttk.LabelFrame):
         btn_bar.grid(row=1, column=0, columnspan=2, sticky="ew", padx=4, pady=(2, 0))
         ttk.Button(btn_bar, text="Copy", command=self.copy_text).pack(side="left", padx=2)
         ttk.Button(btn_bar, text="View raw JSON", command=self.open_json_viewer).pack(side="left", padx=2)
+        ttk.Button(btn_bar, text="JMESPath Designer", command=self.open_jmespath_designer).pack(side="left", padx=2)
 
         # ── Summary text area ────────────────────────────────────────────────
         self.text = tk.Text(self, height=5, wrap="word", font=("Courier", 9))
@@ -89,6 +91,11 @@ class OutputPanel(ttk.LabelFrame):
         if raw is None:
             return
         JsonViewerDialog(self, raw, title="Raw JSON Viewer")
+
+    def open_jmespath_designer(self) -> None:
+        """Open the JMESPath Query Designer pre-loaded with the active result payload."""
+        raw = self._active_raw()
+        JmespathDesignerDialog(self, payload=raw, title="JMESPath Query Designer")
 
     def copy_text(self) -> None:
         """Copy the visible summary text to the clipboard."""

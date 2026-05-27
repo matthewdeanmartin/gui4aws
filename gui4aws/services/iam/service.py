@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from gui4aws.models import NavigationItem, RowAction, ServiceDefinition
+from gui4aws.models import InputField, NavigationItem, RowAction, ServiceDefinition
 from gui4aws.services.iam.actions import (
     ALL_ACTIONS,
     CREATE_GROUP,
@@ -12,6 +12,7 @@ from gui4aws.services.iam.actions import (
     DELETE_ROLE,
     DELETE_USER,
     GET_POLICY,
+    GET_POLICY_DOCUMENT,
     GET_ROLE,
     GET_USER,
     LIST_GROUPS,
@@ -93,10 +94,32 @@ SERVICE = ServiceDefinition(
             item_id="policies",
             display_name="Policies",
             default_action_id=LIST_POLICIES.action_id,
+            filter_fields=(
+                InputField(
+                    name="scope",
+                    label="Scope",
+                    kind="choice",
+                    choices=("Local", "AWS", "All"),
+                    default="Local",
+                    required=False,
+                ),
+                InputField(
+                    name="only_attached",
+                    label="Only attached",
+                    kind="bool",
+                    default="false",
+                    required=False,
+                ),
+            ),
             row_actions=(
                 RowAction(
                     action_id=GET_POLICY.action_id,
                     button_label="Get Policy",
+                    prefill={"policy_arn": "arn"},
+                ),
+                RowAction(
+                    action_id=GET_POLICY_DOCUMENT.action_id,
+                    button_label="View Document",
                     prefill={"policy_arn": "arn"},
                 ),
             ),

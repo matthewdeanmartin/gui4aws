@@ -105,8 +105,18 @@ class MainPanel(ttk.Frame):
         self.resource_table = ResourceTable(top_frame, columns=("identifier", "status"), on_select=self.on_row_select)
         self.resource_table.grid(row=1, column=0, sticky="nsew")
 
+        # Pagination bar — hidden until a paginated result arrives.
+        self.pagination_bar = ttk.Frame(top_frame)
+        self.pagination_prev_btn = ttk.Button(self.pagination_bar, text="← Prev", state="disabled")
+        self.pagination_page_label = ttk.Label(self.pagination_bar, text="Page 1")
+        self.pagination_next_btn = ttk.Button(self.pagination_bar, text="Next →", state="disabled")
+        self.pagination_prev_btn.pack(side="left", padx=4, pady=2)
+        self.pagination_page_label.pack(side="left", padx=8)
+        self.pagination_next_btn.pack(side="left", padx=4, pady=2)
+        self.pagination_bar_visible = False
+
         detail_frame = ttk.LabelFrame(top_frame, text="Detail")
-        detail_frame.grid(row=2, column=0, sticky="nsew", padx=2, pady=2)
+        detail_frame.grid(row=3, column=0, sticky="nsew", padx=2, pady=2)
         detail_frame.grid_columnconfigure(0, weight=1)
         detail_frame.grid_rowconfigure(0, weight=1)
         self.detail_tree = DetailTree(detail_frame)
@@ -114,7 +124,7 @@ class MainPanel(ttk.Frame):
 
         # Row-action button bar — populated by set_row_actions()
         self.row_action_bar = ttk.Frame(top_frame)
-        self.row_action_bar.grid(row=3, column=0, sticky="ew", padx=4, pady=4)
+        self.row_action_bar.grid(row=4, column=0, sticky="ew", padx=4, pady=4)
         self.row_action_label = ttk.Label(self.row_action_bar, text="", foreground="gray")
         self.row_action_label.pack(side="left", padx=4)
 
@@ -132,7 +142,7 @@ class MainPanel(ttk.Frame):
         self.sub_row_action_bar.grid(row=1, column=0, columnspan=2, sticky="ew", padx=4, pady=(0, 4))
         # Hidden by default; show_sub_table / clear_sub_table toggle visibility.
         self.sub_visible = False
-        self.sub_grid_row = 4
+        self.sub_grid_row = 5
 
         outer.add(top_frame, weight=3)
 
@@ -179,6 +189,36 @@ class MainPanel(ttk.Frame):
         self.current_client_filter = ""
         self.set_row_actions((), None)
         self.clear_sub_table()
+        self.clear_pagination()
+
+    def set_pagination(
+        self,
+        *,
+        has_prev: bool,
+        has_next: bool,
+        page_num: int,
+        on_prev: "Callable[[], None] | None",
+        on_next: "Callable[[], None] | None",
+    ) -> None:
+        """Show the pagination bar with Prev/Next buttons."""
+        self.pagination_prev_btn.configure(
+            state="normal" if has_prev else "disabled",
+            command=on_prev or (lambda: None),
+        )
+        self.pagination_next_btn.configure(
+            state="normal" if has_next else "disabled",
+            command=on_next or (lambda: None),
+        )
+        self.pagination_page_label.configure(text=f"Page {page_num}")
+        if not self.pagination_bar_visible:
+            self.pagination_bar.grid(row=2, column=0, sticky="ew", padx=4, pady=(0, 2))
+            self.pagination_bar_visible = True
+
+    def clear_pagination(self) -> None:
+        """Hide the pagination bar."""
+        if self.pagination_bar_visible:
+            self.pagination_bar.grid_remove()
+            self.pagination_bar_visible = False
 
     def configure_filter_bar(
         self,

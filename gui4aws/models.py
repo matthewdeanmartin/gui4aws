@@ -13,6 +13,7 @@ from typing import Any
 
 __all__ = [
     "ActionDefinition",
+    "Boto3ExecuteFn",
     "Boto3ParamsBuilder",
     "Boto3Template",
     "CliArgsBuilder",
@@ -127,6 +128,9 @@ ViewFunction = Callable[[Mapping[str, Any]], list[Any]]
 CliArgsBuilder = Callable[[Mapping[str, str]], list[str]]
 Boto3ParamsBuilder = Callable[[Mapping[str, str]], dict[str, Any]]
 TextGenerator = Callable[[Mapping[str, str]], str]
+# Custom executor: receives (boto3_client, inputs) and returns a response dict.
+# Use when an action needs to chain multiple API calls (e.g. list then describe).
+Boto3ExecuteFn = Callable[[Any, Mapping[str, str]], Mapping[str, Any]]
 
 
 @dataclass(frozen=True)
@@ -151,6 +155,10 @@ class ActionDefinition:
     # When set, the action result is shown as generated text (ignoring boto3 response).
     # Receives the user's input values and returns a formatted string to display.
     text_generator: TextGenerator | None = field(default=None, compare=False, repr=False)
+    # When set, replaces the normal single-operation boto3 call with a custom function
+    # that receives (client, inputs) and returns the response dict. Use for multi-step
+    # actions (e.g. list → describe). boto3_template.service is still used to build the client.
+    boto3_execute_fn: "Boto3ExecuteFn | None" = field(default=None, compare=False, repr=False)
 
 
 @dataclass(frozen=True)

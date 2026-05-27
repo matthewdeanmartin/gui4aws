@@ -25,6 +25,7 @@ __all__ = [
     "DELETE_ROLE",
     "DELETE_USER",
     "GET_POLICY",
+    "GET_POLICY_DOCUMENT",
     "GET_ROLE",
     "GET_USER",
     "LIST_GROUPS",
@@ -40,6 +41,8 @@ def list_policies_boto3_params(inputs: Mapping[str, str]) -> dict[str, Any]:
     scope = inputs.get("scope", "Local").strip()
     if scope:
         params["Scope"] = scope
+    if inputs.get("only_attached", "").lower() in ("true", "yes", "1"):
+        params["OnlyAttached"] = True
     return params
 
 
@@ -49,7 +52,24 @@ def list_policies_cli_args(inputs: Mapping[str, str]) -> list[str]:
     scope = inputs.get("scope", "Local").strip()
     if scope:
         args += ["--scope", scope]
+    if inputs.get("only_attached", "").lower() in ("true", "yes", "1"):
+        args += ["--only-attached"]
     return args
+
+
+def _get_policy_document(client: Any, inputs: Mapping[str, str]) -> Mapping[str, Any]:
+    """Fetch the active policy document by chaining get_policy → get_policy_version."""
+    policy_arn = inputs.get("policy_arn", "").strip()
+    policy_resp = client.get_policy(PolicyArn=policy_arn)
+    default_version_id = policy_resp["Policy"]["DefaultVersionId"]
+    version_resp = client.get_policy_version(PolicyArn=policy_arn, VersionId=default_version_id)
+    doc = version_resp.get("PolicyVersion", {}).get("Document", {})
+    return {
+        "PolicyArn": policy_arn,
+        "VersionId": default_version_id,
+        "Document": doc,
+        "Policy": policy_resp.get("Policy", {}),
+    }
 
 
 LIST_USERS = ActionDefinition(
@@ -275,6 +295,14 @@ LIST_POLICIES = ActionDefinition(
             required=False,
             help_text="Local = customer-managed; AWS = AWS-managed; All = both.",
         ),
+        InputField(
+            name="only_attached",
+            label="Only attached",
+            kind="bool",
+            default="false",
+            required=False,
+            help_text="Show only policies with at least one attachment.",
+        ),
     ),
     cli_template=CliTemplate(service="iam", command="list-policies", arg_map={"scope": "scope"}),
     boto3_template=Boto3Template(service="iam", operation="list_policies", param_map={"scope": "Scope"}),
@@ -303,6 +331,25 @@ GET_POLICY = ActionDefinition(
     description="Get details for a specific IAM policy.",
 )
 
+GET_POLICY_DOCUMENT = ActionDefinition(
+    action_id="iam.get_policy_document",
+    display_name="Get policy document",
+    service_id="iam",
+    risk_level=RiskLevel.READ_ONLY,
+    input_fields=(InputField(name="policy_arn", label="Policy ARN", required=True),),
+    cli_template=CliTemplate(
+        service="iam",
+        command="get-policy-version",
+        arg_map={"policy_arn": "policy-arn"},
+    ),
+    boto3_template=Boto3Template(service="iam", operation="get_policy_version", param_map={}),
+    result_view=ResultViewDefinition(kind=ResultViewKind.RAW_JSON, title="Policy document"),
+    iam_permissions=("iam:GetPolicy", "iam:GetPolicyVersion"),
+    description="Fetch and display the active policy document (default version).",
+    boto3_execute_fn=_get_policy_document,
+)
+
+
 ALL_ACTIONS = (
     LIST_USERS,
     GET_USER,
@@ -317,4 +364,5 @@ ALL_ACTIONS = (
     DELETE_ROLE,
     LIST_POLICIES,
     GET_POLICY,
+    GET_POLICY_DOCUMENT,
 )

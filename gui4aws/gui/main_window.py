@@ -18,6 +18,7 @@ from gui4aws.execution.script_generator import generate_cli_script, generate_pyt
 from gui4aws.gui.action_dialog import ActionDialog
 from gui4aws.gui.diagnostic_panel import CacheDiagnosticsPanel, DiagnosticPanel, QueueDiagnosticsPanel, RobotocorePanel
 from gui4aws.gui.main_panel import MainPanel
+from gui4aws.gui.script_editor_panel import ScriptEditorPanel
 from gui4aws.gui.server_manager_mixin import ServerManagerMixin
 from gui4aws.gui.sidebar import Sidebar, SidebarSelection
 from gui4aws.gui.status_bar import StatusBar
@@ -43,6 +44,21 @@ __all__ = ["MainWindow", "SerialWorker", "create_main_window"]
 logger = logging.getLogger(__name__)
 
 
+def _maximize_window(root: tk.Tk) -> None:
+    """Maximize the window in a cross-platform way."""
+    import sys
+
+    if sys.platform.startswith("win"):
+        root.state("zoomed")
+    else:
+        # Linux/macOS: -zoomed attribute (works on most compositing WMs);
+        # fall back to filling the screen geometry if the attribute is unsupported.
+        try:
+            root.attributes("-zoomed", True)
+        except tk.TclError:
+            root.geometry(f"{root.winfo_screenwidth()}x{root.winfo_screenheight()}+0+0")
+
+
 class MainWindow(ServerManagerMixin):
     """The application's top-level window."""
 
@@ -61,7 +77,7 @@ class MainWindow(ServerManagerMixin):
         self.context = context
         self.root = root or tk.Tk()
         self.root.title("gui4aws — AWS Think Console")
-        self.root.state("zoomed")  # maximise on Windows; harmless on other platforms
+        _maximize_window(self.root)
 
         self.results_queue: queue.Queue[Any] = queue.Queue()
         self.moto_manager = MotoServerManager()
@@ -80,6 +96,7 @@ class MainWindow(ServerManagerMixin):
             on_moto_toggle=self.on_moto_toggle,
             on_robotocore_toggle=self.on_robotocore_toggle,
             on_clear_cache=self.clear_all_cache_entries,
+            on_partition_changed=self.on_partition_changed,
         )
         self.toolbar.grid(row=0, column=0, columnspan=2, sticky="ew")
 
@@ -113,7 +130,9 @@ class MainWindow(ServerManagerMixin):
             on_clear_selected=self.clear_selected_cache_entry,
             on_clear_all=self.clear_all_cache_entries,
         )
+        self.script_editor = ScriptEditorPanel(self.content_tabs)
         self.content_tabs.add(self.main_panel, text="Browser")
+        self.content_tabs.add(self.script_editor, text="Script Editor")
         self.content_tabs.add(self.moto_output_panel, text="Moto Output")
         self.content_tabs.add(self.robotocore_panel, text="Robotocore")
         self.content_tabs.add(self.queue_panel, text="Request Queue")
@@ -137,12 +156,27 @@ class MainWindow(ServerManagerMixin):
         self.root.after(50, self.poll_queue)
         self.root.after(1000, self.refresh_diagnostics)
 
+        # Pagination state — reset on every nav selection / manual refresh.
+        self._page_base_inputs: dict[str, str] = {}
+        self._page_tokens: list[str | None] = [None]  # tokens[i] = token used to reach page i
+        self._page_idx: int = 0
+        self._page_next_token: str | None = None
+        self._page_token_input_key: str | None = None  # "NextToken" | "Marker" etc.
+
     # ── Menu ─────────────────────────────────────────────────────────────────
 
     def build_menu(self) -> None:
         """Create the top-level menu bar."""
         menubar = tk.Menu(self.root)
         self.root.configure(menu=menubar)
+
+        file_menu = tk.Menu(menubar, tearoff=False)
+        menubar.add_cascade(label="File", menu=file_menu)
+        file_menu.add_command(label="Switch to Script Editor", command=self.switch_to_script_editor)
+        file_menu.add_command(label="Switch to Browser", command=self.switch_to_browser)
+        file_menu.add_command(label="Save Script...", command=self.save_script)
+        file_menu.add_separator()
+        file_menu.add_command(label="Exit", command=self.root.quit)
 
         demo_menu = tk.Menu(menubar, tearoff=False)
         menubar.add_cascade(label="Demo", menu=demo_menu)
@@ -154,7 +188,8 @@ class MainWindow(ServerManagerMixin):
                 "Demo resources",
                 "Seeding creates Aurora clusters, snapshots, and AWS Backup vaults tagged with\n"
                 "'gui4aws:demo = true' so you can explore the GUI without real AWS access.\n\n"
-                "Start Moto (toolbar button) or connect Robotocore, then select Demo → Seed demo resources.",
+                "Start Moto (toolbar button) or connect Robotocore, then select Demo → Seed demo resources.\n\n"
+                "WARNING: Seeding on live AWS will create real billable resources.",
             ),
         )
 
@@ -163,6 +198,18 @@ class MainWindow(ServerManagerMixin):
         help_menu.add_command(label="Documentation", command=self.open_docs)
         help_menu.add_separator()
         help_menu.add_command(label="About gui4aws", command=self.show_about)
+
+    def switch_to_script_editor(self) -> None:
+        """Bring the Script Editor tab to the front."""
+        self.content_tabs.select(self.script_editor)
+
+    def switch_to_browser(self) -> None:
+        """Bring the Browser tab to the front."""
+        self.content_tabs.select(self.main_panel)
+
+    def save_script(self) -> None:
+        """Delegate to the Script Editor's save dialog."""
+        self.script_editor._save()  # noqa: SLF001
 
     def open_docs(self) -> None:
         """Open the documentation website in the default browser."""
@@ -183,6 +230,28 @@ class MainWindow(ServerManagerMixin):
     def on_toolbar_changed(self) -> None:
         """Refresh the status bar when toolbar settings (profile, region) change."""
         self.status_bar.refresh_context()
+        self._save_config()
+
+    def _save_config(self) -> None:
+        """Persist the current profile/region/partition to the config file."""
+        try:
+            from gui4aws.config import AppConfig, save_config
+
+            cfg = AppConfig(
+                default_profile=self.context.profile_name or "",
+                default_region=self.context.region_name,
+                default_partition=self.context.partition,
+            )
+            save_config(cfg)
+        except Exception:  # pylint: disable=broad-exception-caught
+            logger.debug("config save failed", exc_info=True)
+
+    def on_partition_changed(self, partition: str) -> None:
+        """Update the region list when the partition changes."""
+        from gui4aws.cli import available_regions
+
+        regions = available_regions(partition=partition)
+        self.toolbar.update_regions(regions)
 
     def refresh_diagnostics_now(self) -> None:
         """Refresh diagnostic widgets immediately without scheduling timers."""
@@ -256,6 +325,7 @@ class MainWindow(ServerManagerMixin):
             return
 
         self.main_panel.clear_for_navigation()
+        self._reset_pagination()
 
         self.current_sub_action = nav.sub_action
         self.current_service_id = service.service_id
@@ -323,6 +393,7 @@ class MainWindow(ServerManagerMixin):
         # Treat a refresh as a new generation too — any previously in-flight
         # default-action worker is now stale.
         self.nav_generation += 1
+        self._reset_pagination()
         self.run_action(action, inputs=values)
 
     def on_filter_field_changed(self, field_name: str, value: str) -> None:
@@ -528,6 +599,97 @@ class MainWindow(ServerManagerMixin):
             for nav in service.navigation_items:
                 self.submit_nav_cache_warm(service, nav, {})
 
+    # ── Pagination ────────────────────────────────────────────────────────────
+
+    def _reset_pagination(self) -> None:
+        """Clear all pagination state for the current nav view."""
+        self._page_base_inputs = {}
+        self._page_tokens = [None]
+        self._page_idx = 0
+        self._page_next_token = None
+        self._page_token_input_key = None
+        self.main_panel.clear_pagination()
+
+    def _update_pagination_from_response(self, raw_response: Any) -> None:
+        """Detect a next-page token in the response and show/hide the pagination bar."""
+        # Guard: if pagination state was never initialized (e.g. in tests that use
+        # object.__new__), skip silently rather than crashing.
+        if not hasattr(self, "_page_tokens"):
+            return
+
+        next_token: str | None = None
+        token_input_key: str | None = None
+        if isinstance(raw_response, dict):
+            for resp_key, inp_key in (
+                ("NextToken", "NextToken"),
+                ("Marker", "Marker"),
+                ("NextMarker", "Marker"),
+            ):
+                val = raw_response.get(resp_key)
+                if val:
+                    next_token = str(val)
+                    token_input_key = inp_key
+                    break
+
+        self._page_next_token = next_token
+        if token_input_key:
+            self._page_token_input_key = token_input_key
+
+        if not self._page_base_inputs:
+            # Snapshot the current inputs (minus any token) as the base for this result set.
+            _token_keys = {"NextToken", "Marker", "StartingToken"}
+            self._page_base_inputs = {k: v for k, v in self.current_inputs.items() if k not in _token_keys}
+
+        if next_token is not None:
+            # Grow the token list if we haven't cached the next-page token yet.
+            expected_next = self._page_idx + 1
+            if len(self._page_tokens) <= expected_next:
+                self._page_tokens.append(next_token)
+            self.main_panel.set_pagination(
+                has_prev=self._page_idx > 0,
+                has_next=True,
+                page_num=self._page_idx + 1,
+                on_prev=self._on_prev_page,
+                on_next=self._on_next_page,
+            )
+        elif self._page_idx > 0:
+            # Last page of a multi-page result set — still show Prev.
+            self.main_panel.set_pagination(
+                has_prev=True,
+                has_next=False,
+                page_num=self._page_idx + 1,
+                on_prev=self._on_prev_page,
+                on_next=None,
+            )
+        else:
+            self.main_panel.clear_pagination()
+
+    def _on_next_page(self) -> None:
+        if self._page_next_token is None or self.current_action is None:
+            return
+        self._page_idx += 1
+        token = (
+            self._page_tokens[self._page_idx]
+            if self._page_idx < len(self._page_tokens)
+            else self._page_next_token
+        )
+        inputs = dict(self._page_base_inputs)
+        if token and self._page_token_input_key:
+            inputs[self._page_token_input_key] = token
+        self.nav_generation += 1
+        self.run_action(self.current_action, inputs)
+
+    def _on_prev_page(self) -> None:
+        if self._page_idx <= 0 or self.current_action is None:
+            return
+        self._page_idx -= 1
+        inputs = dict(self._page_base_inputs)
+        token = self._page_tokens[self._page_idx]
+        if token and self._page_token_input_key:
+            inputs[self._page_token_input_key] = token
+        self.nav_generation += 1
+        self.run_action(self.current_action, inputs)
+
     def on_sub_action_row_select(self, row: Any) -> None:
         """Fire the sub_action when a row is selected and show results in the sub-panel."""
         sub = self.current_sub_action
@@ -615,11 +777,20 @@ class MainWindow(ServerManagerMixin):
             )
             return
 
+        # Action IDs like "kms.describe_key" reference a different service than the current one.
+        target_service_id = service_id
+        if "." in row_action.action_id:
+            maybe_service_id = row_action.action_id.split(".", 1)[0]
+            try:
+                self.context.registry.get(maybe_service_id)
+                target_service_id = maybe_service_id
+            except KeyError:
+                pass
         try:
-            service = self.context.registry.get(service_id)
+            service = self.context.registry.get(target_service_id)
             action = service.action(row_action.action_id)
         except KeyError:
-            logger.warning("row action %r references unknown action in service %r", row_action.action_id, service_id)
+            logger.warning("row action %r references unknown action in service %r", row_action.action_id, target_service_id)
             return
         prefill: dict[str, str] = {}
         if row is not None:
@@ -829,12 +1000,15 @@ class MainWindow(ServerManagerMixin):
             return
         if kind == "moto_started":
             endpoint_url: str = payload
+            # Clear profile so live AWS data never mingles with moto data.
+            self.toolbar.set_profile(None)
             self.context.set_endpoint(EndpointMode.MOTO, endpoint_url)
+            self.context.invalidate_read_cache()
             self.toolbar.endpoint_mode_var.set(EndpointMode.MOTO.value)
             self.toolbar.endpoint_url_var.set(endpoint_url)
             self.toolbar.moto_running = True
             self.toolbar.moto_btn.configure(text="Stop Moto")
-            self.status_bar.set_status(f"Moto running at {endpoint_url}")
+            self.status_bar.set_status(f"Moto running at {endpoint_url} — profile cleared")
             self.on_toolbar_changed()
             return
         if kind == "moto_error":
@@ -968,6 +1142,11 @@ class MainWindow(ServerManagerMixin):
                 self.active_dialog.set_result(raw_response)
 
         if isinstance(action, ActionDefinition):
+            # Record every successful action in the Script Editor.
+            _cli_for_editor = getattr(self.main_panel, "scripts_cli", "")
+            if _cli_for_editor and hasattr(self, "script_editor"):
+                self.script_editor.append_action(action, _cli_for_editor)
+
             view = action.view
             if action.risk_level is not RiskLevel.READ_ONLY:
                 self.schedule_cache_refreshes_for_action(action)
@@ -982,7 +1161,7 @@ class MainWindow(ServerManagerMixin):
                     logger.exception("text_generator failed for %s", action.action_id)
                     self.main_panel.output_panel.set_error(f"Text generation failed: {exc}")
                     return
-                _cli = self.main_panel.scripts_cli
+                _cli = getattr(self.main_panel, "scripts_cli", "")
                 self.main_panel.show_output(generated, raw_response, cli=_cli)
                 return
 
@@ -996,11 +1175,12 @@ class MainWindow(ServerManagerMixin):
                 columns = list(action.result_view.columns) or (list(vars(rows[0]).keys()) if rows else [])
                 self.main_panel.show_table(rows, columns)
                 count = len(rows)
-                _cli = self.main_panel.scripts_cli
+                _cli = getattr(self.main_panel, "scripts_cli", "")
                 self.main_panel.show_output(f"{count} {'item' if count == 1 else 'items'}", raw_response, cli=_cli)
+                self._update_pagination_from_response(raw_response)
                 return
 
-            _cli = self.main_panel.scripts_cli
+            _cli = getattr(self.main_panel, "scripts_cli", "")
             self.main_panel.show_output(f"{action.action_id} ok", raw_response, cli=_cli)
 
     def record_history(self, action: ActionDefinition, kind: str, payload: Any) -> None:

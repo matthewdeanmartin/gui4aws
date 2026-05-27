@@ -182,6 +182,11 @@ class FilterBar(ttk.LabelFrame):
         col += 1
         client_entry = ttk.Entry(self.inner, textvariable=self.client_var, width=30)
         client_entry.grid(row=0, column=col, sticky="ew", padx=(0, 4), pady=2)
+        client_entry.bind("<Return>", lambda _e: self.fire_client_filter())
+        col += 1
+        ttk.Button(self.inner, text="Apply", command=self.fire_client_filter, width=6).grid(
+            row=0, column=col, padx=(0, 4), pady=2
+        )
         col += 1
         # Hint as ghost label on the right.
         ttk.Label(

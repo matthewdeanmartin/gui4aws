@@ -20,8 +20,9 @@ __all__ = ["AppConfig", "config_path", "load_config", "save_config"]
 class AppConfig:
     """User-visible app config."""
 
-    default_profile: str = "default"
+    default_profile: str = ""
     default_region: str = "us-east-1"
+    default_partition: str = "aws"
     default_mode: str = "boto3"
     default_endpoint_mode: str = "aws"
     window_width: int = 1400
@@ -81,6 +82,7 @@ def apply(data: dict[str, Any]) -> AppConfig:
     for key in (
         "default_profile",
         "default_region",
+        "default_partition",
         "default_mode",
         "default_endpoint_mode",
     ):
@@ -113,6 +115,7 @@ def render_toml(config: AppConfig) -> str:
     lines = [
         f'default_profile = "{config.default_profile}"',
         f'default_region = "{config.default_region}"',
+        f'default_partition = "{config.default_partition}"',
         f'default_mode = "{config.default_mode}"',
         f'default_endpoint_mode = "{config.default_endpoint_mode}"',
         "",

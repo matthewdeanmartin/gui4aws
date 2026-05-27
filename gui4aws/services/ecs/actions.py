@@ -33,6 +33,7 @@ __all__ = [
     "DESCRIBE_TASKS",
     "DESCRIBE_TASK_DEFINITION",
     "LIST_CLUSTERS",
+    "LIST_DESCRIBE_SERVICES",
     "LIST_SERVICES",
     "LIST_TASKS",
     "LIST_TASK_DEFINITIONS",
@@ -254,6 +255,57 @@ LIST_SERVICES = ActionDefinition(
     iam_permissions=("ecs:ListServices",),
     description="List ECS services in a cluster.",
     view=to_service_summaries,
+)
+
+
+def _list_and_describe_services(client: Any, inputs: Mapping[str, str]) -> dict[str, Any]:
+    """List all services in a cluster, then describe them for full status/counts."""
+    params: dict[str, Any] = {}
+    if inputs.get("cluster"):
+        params["cluster"] = inputs["cluster"]
+    arns: list[str] = []
+    paginator = client.get_paginator("list_services")
+    for page in paginator.paginate(**params):
+        arns.extend(page.get("serviceArns", []))
+    if not arns:
+        return {"services": []}
+    # describe_services accepts at most 10 per call.
+    described: list[Any] = []
+    for i in range(0, len(arns), 10):
+        chunk = arns[i : i + 10]
+        resp = client.describe_services(cluster=inputs.get("cluster", "default"), services=chunk)
+        described.extend(resp.get("services", []))
+    return {"services": described}
+
+
+LIST_DESCRIBE_SERVICES = ActionDefinition(
+    action_id="ecs.list_describe_services",
+    display_name="List services (with status)",
+    service_id="ecs",
+    risk_level=RiskLevel.READ_ONLY,
+    input_fields=(
+        InputField(
+            name="cluster",
+            label="Cluster name or ARN",
+            required=False,
+            help_text="Leave blank for the default cluster.",
+        ),
+    ),
+    cli_template=CliTemplate(
+        service="ecs",
+        command="list-services",
+        arg_map={"cluster": "cluster"},
+    ),
+    boto3_template=Boto3Template(service="ecs", operation="list_services", param_map={}),
+    result_view=ResultViewDefinition(
+        kind=ResultViewKind.TABLE,
+        columns=("service_name", "status", "desired_count", "running_count", "pending_count", "launch_type"),
+        title="ECS Services",
+    ),
+    iam_permissions=("ecs:ListServices", "ecs:DescribeServices"),
+    description="List ECS services in a cluster with full status (list + describe).",
+    view=to_service_summaries,
+    boto3_execute_fn=_list_and_describe_services,
 )
 
 
@@ -692,6 +744,7 @@ ALL_ACTIONS = (
     CREATE_CLUSTER,
     DELETE_CLUSTER,
     LIST_SERVICES,
+    LIST_DESCRIBE_SERVICES,
     DESCRIBE_SERVICES,
     UPDATE_SERVICE,
     CREATE_SERVICE,

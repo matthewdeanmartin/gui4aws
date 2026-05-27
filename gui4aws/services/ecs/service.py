@@ -20,6 +20,7 @@ from gui4aws.services.ecs.actions import (
     DESCRIBE_TASK_DEFINITION,
     DESCRIBE_TASKS,
     LIST_CLUSTERS,
+    LIST_DESCRIBE_SERVICES,
     LIST_SERVICES,
     LIST_TASK_DEFINITIONS,
     LIST_TASKS,
@@ -49,7 +50,7 @@ SERVICE = ServiceDefinition(
             display_name="Clusters",
             default_action_id=LIST_CLUSTERS.action_id,
             sub_action=SubAction(
-                action_id=LIST_SERVICES.action_id,
+                action_id=LIST_DESCRIBE_SERVICES.action_id,
                 panel_label="Services in cluster",
                 prefill={"cluster": "cluster_name"},
                 columns=("service_name", "status", "desired_count", "running_count", "launch_type"),
@@ -71,7 +72,7 @@ SERVICE = ServiceDefinition(
         NavigationItem(
             item_id="services",
             display_name="Services",
-            default_action_id=LIST_SERVICES.action_id,
+            default_action_id=LIST_DESCRIBE_SERVICES.action_id,
             filter_fields=(
                 InputField(
                     name="cluster",

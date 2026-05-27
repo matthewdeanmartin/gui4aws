@@ -101,18 +101,30 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 def run_gui(args: argparse.Namespace) -> int:
     """Launch the GUI window."""
-    partition = getattr(args, "partition", "aws")
+    from gui4aws.config import load_config
+    from gui4aws.gui.main_window import create_main_window
+
+    saved = load_config()
+
+    # CLI args take precedence over saved config; config takes precedence over defaults.
+    cli_profile = getattr(args, "profile", None)
+    cli_region = getattr(args, "region", None)
+    cli_partition = getattr(args, "partition", None)
+
+    profile = cli_profile or (saved.default_profile or None)
+    partition = cli_partition or saved.default_partition or "aws"
+    region = cli_region or saved.default_region or "us-east-1"
+
     context = AppContext(
-        profile_name=getattr(args, "profile", None),
-        region_name=getattr(args, "region", "us-east-1"),
+        profile_name=profile,
+        region_name=region,
         partition=partition,
-        mode=ExecutionMode(getattr(args, "mode", ExecutionMode.BOTO3.value)),
+        mode=ExecutionMode(getattr(args, "mode", saved.default_mode or ExecutionMode.BOTO3.value)),
         endpoint_config=EndpointConfig.for_mode(
-            EndpointMode(getattr(args, "endpoint_mode", EndpointMode.AWS.value)),
+            EndpointMode(getattr(args, "endpoint_mode", saved.default_endpoint_mode or EndpointMode.AWS.value)),
             getattr(args, "endpoint_url", None),
         ),
     )
-    from gui4aws.gui.main_window import create_main_window
 
     profiles = available_profiles()
     regions = available_regions(partition=partition)

@@ -25,7 +25,7 @@ class FakePanel:
     def show_table(self, rows: list[Any], columns: list[str]) -> None:
         pass
 
-    def show_output(self, text: str, raw: Any) -> None:
+    def show_output(self, text: str, raw: Any, **kwargs: Any) -> None:
         pass
 
 

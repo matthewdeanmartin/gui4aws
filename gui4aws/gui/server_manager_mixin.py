@@ -34,7 +34,23 @@ class ServerManagerMixin:
 
     def seed_demo_resources(self) -> None:
         """Seed Moto or Robotocore with dummy resources for demonstration."""
+        from tkinter import messagebox
+
         from gui4aws.demo_resources import seed_demo_resources
+        from gui4aws.execution.endpoint_config import EndpointMode
+
+        # Guard: refuse to seed on live AWS without an explicit double-confirmation.
+        if self.context.endpoint_config.mode is EndpointMode.AWS:
+            confirmed = messagebox.askyesno(
+                "WARNING: Connected to live AWS",
+                "You are NOT using a local emulator — this will create REAL billable "
+                "resources in your live AWS account.\n\n"
+                "Start Moto or Robotocore first, then seed demo resources.\n\n"
+                "Proceed on live AWS anyway?",
+                icon="warning",
+            )
+            if not confirmed:
+                return
 
         endpoint_url = self.context.endpoint_config.resolved_url()
         is_robotocore = self.robotocore_manager.running

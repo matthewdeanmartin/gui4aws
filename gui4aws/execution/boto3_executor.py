@@ -28,6 +28,11 @@ _BOTOCORE_CONFIG = BotocoreConfig(
 
 __all__ = ["Boto3Executor", "Boto3Failure", "Boto3Result"]
 
+# Pagination parameters that are passed through to boto3 even when not declared
+# in an action's input_fields. This lets MainWindow inject page tokens without
+# requiring every service definition to list them explicitly.
+_PAGINATION_PASSTHROUGH: frozenset[str] = frozenset({"NextToken", "Marker", "StartingToken"})
+
 logger = logging.getLogger(__name__)
 
 
@@ -103,15 +108,20 @@ class Boto3Executor:
     ) -> dict[str, Any]:
         """Translate {input_field_name: str_value} into boto3 PascalCase params."""
         if action.boto3_params_builder is not None:
-            return action.boto3_params_builder(inputs)
-        params: dict[str, Any] = {}
-        param_map = action.boto3_template.param_map
-        for input_field in action.input_fields:
-            value = inputs.get(input_field.name)
-            if value is None or value == "":
-                continue
-            boto_name = param_map.get(input_field.name, input_field.name)
-            params[boto_name] = coerce_value(value, input_field.kind)
+            params = dict(action.boto3_params_builder(inputs))
+        else:
+            params = {}
+            param_map = action.boto3_template.param_map
+            for input_field in action.input_fields:
+                value = inputs.get(input_field.name)
+                if value is None or value == "":
+                    continue
+                boto_name = param_map.get(input_field.name, input_field.name)
+                params[boto_name] = coerce_value(value, input_field.kind)
+        # Inject pagination tokens passed from the UI even when not declared in input_fields.
+        for key in _PAGINATION_PASSTHROUGH:
+            if key in inputs and inputs[key] and key not in params:
+                params[key] = inputs[key]
         return params
 
     def execute(
@@ -133,8 +143,11 @@ class Boto3Executor:
         start = time.monotonic()
         try:
             client = self.build_client(template.service)
-            operation = getattr(client, template.operation)
-            response = operation(**params)
+            if action.boto3_execute_fn is not None:
+                response = action.boto3_execute_fn(client, inputs)
+            else:
+                operation = getattr(client, template.operation)
+                response = operation(**params)
             duration = time.monotonic() - start
             return Boto3Result(
                 service=template.service,

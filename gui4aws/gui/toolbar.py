@@ -30,6 +30,7 @@ class Toolbar(ttk.Frame):
         on_moto_toggle: Callable[[bool], None] | None = None,
         on_robotocore_toggle: Callable[[bool], None] | None = None,
         on_clear_cache: Callable[[], None] | None = None,
+        on_partition_changed: Callable[[str], None] | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(parent, **kwargs)
@@ -38,6 +39,7 @@ class Toolbar(ttk.Frame):
         self.on_moto_toggle = on_moto_toggle or (lambda running: None)
         self.on_robotocore_toggle = on_robotocore_toggle or (lambda running: None)
         self.on_clear_cache = on_clear_cache or (lambda: None)
+        self.on_partition_changed_cb = on_partition_changed or (lambda partition: None)
         self.moto_running = False
         self.robotocore_running = False
 
@@ -57,13 +59,14 @@ class Toolbar(ttk.Frame):
         mode_combo.bind("<<ComboboxSelected>>", self.on_mode_changed)
         col += 1
 
-        self.profile_var = tk.StringVar(value=context.profile_name or "")
+        self.profile_var = tk.StringVar(value=context.profile_name or "(none)")
         ttk.Label(self, text="Profile:").grid(row=0, column=col, padx=(16, 4))
         col += 1
-        profile_combo = ttk.Combobox(self, textvariable=self.profile_var, values=list(profiles), width=18)
-        profile_combo.grid(row=0, column=col, padx=4)
-        profile_combo.bind("<<ComboboxSelected>>", self.on_profile_changed)
-        profile_combo.bind("<FocusOut>", self.on_profile_changed)
+        profile_values = ["(none)"] + list(profiles)
+        self.profile_combo = ttk.Combobox(self, textvariable=self.profile_var, values=profile_values, width=18)
+        self.profile_combo.grid(row=0, column=col, padx=4)
+        self.profile_combo.bind("<<ComboboxSelected>>", self.on_profile_changed)
+        self.profile_combo.bind("<FocusOut>", self.on_profile_changed)
         col += 1
 
         # ── Partition / Region compound group ────────────────────────────────
@@ -90,10 +93,10 @@ class Toolbar(ttk.Frame):
         ttk.Label(pr_frame, text="/").grid(row=0, column=1, padx=2)
 
         self.region_var = tk.StringVar(value=context.region_name)
-        region_combo = ttk.Combobox(pr_frame, textvariable=self.region_var, values=list(regions), width=16)
-        region_combo.grid(row=0, column=2, padx=(2, 0))
-        region_combo.bind("<<ComboboxSelected>>", self.on_region_changed)
-        region_combo.bind("<FocusOut>", self.on_region_changed)
+        self.region_combo = ttk.Combobox(pr_frame, textvariable=self.region_var, values=list(regions), width=16)
+        self.region_combo.grid(row=0, column=2, padx=(2, 0))
+        self.region_combo.bind("<<ComboboxSelected>>", self.on_region_changed)
+        self.region_combo.bind("<FocusOut>", self.on_region_changed)
 
         self.endpoint_mode_var = tk.StringVar(value=str(context.endpoint_config.mode))
         ttk.Label(self, text="Endpoint:").grid(row=0, column=col, padx=(16, 4))
@@ -136,8 +139,17 @@ class Toolbar(ttk.Frame):
         """Push the profile selector value into AppContext."""
         del event
         value = self.profile_var.get().strip()
-        self.context.set_profile(value or None)
+        if value in ("(none)", ""):
+            self.context.set_profile(None)
+            self.profile_var.set("(none)")
+        else:
+            self.context.set_profile(value)
         self.on_change()
+
+    def set_profile(self, profile_name: str | None) -> None:
+        """Update the profile selector from external code (e.g. when moto starts)."""
+        self.profile_var.set(profile_name or "(none)")
+        self.context.set_profile(profile_name)
 
     def on_region_changed(self, event: object = None) -> None:
         """Push the region selector value into AppContext."""
@@ -148,15 +160,22 @@ class Toolbar(ttk.Frame):
             self.on_change()
 
     def on_partition_changed(self, event: object = None) -> None:
-        """Push the partition selector value into AppContext."""
+        """Push the partition selector value into AppContext and refresh the region list."""
         del event
-        # The combobox shows "aws (AWS Standard)" etc.; extract the partition id from our list.
         current_idx = self.partition_combo.current()
         if current_idx < 0 or current_idx >= len(self.partition_ids):
             return
         partition = self.partition_ids[current_idx]
         self.context.set_partition(partition)
+        self.on_partition_changed_cb(partition)
         self.on_change()
+
+    def update_regions(self, regions: list[str]) -> None:
+        """Replace the region combobox choices (called after partition change)."""
+        self.region_combo.configure(values=regions)
+        if regions and self.region_var.get() not in regions:
+            self.region_var.set(regions[0])
+            self.context.set_region(regions[0])
 
     def on_endpoint_mode_changed(self, event: object = None) -> None:
         """Push the endpoint mode selector value into AppContext."""
