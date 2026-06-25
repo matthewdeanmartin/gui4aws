@@ -194,8 +194,12 @@ def record_history(
 
     from gui4aws.execution.action_history import ActionHistoryEntry
     from gui4aws.execution.script_generator import generate_cli_script, generate_python_script
+    from gui4aws.models import redact_secrets
 
     inputs = dict(current_inputs)
+    # The generators redact secrets internally; the stored ``inputs`` snapshot must be
+    # redacted too so passwords never land in history JSON / diagnostics.
+    redacted_inputs = redact_secrets(inputs, action.secret_field_names())
     cli = generate_cli_script(
         action,
         inputs,
@@ -224,7 +228,7 @@ def record_history(
             profile_name=context.profile_name,
             region_name=context.region_name,
             endpoint_url=context.endpoint_config.resolved_url(),
-            inputs=inputs,
+            inputs=redacted_inputs,
             cli_script=cli,
             python_script=python,
             status="failure" if is_failure else "success",

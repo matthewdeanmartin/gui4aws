@@ -125,6 +125,7 @@ CREATE_SECRET = ActionDefinition(
             label="Secret value",
             kind="multiline",
             required=True,
+            is_secret=True,
             help_text="Plain text or JSON string.",
         ),
     ),
@@ -157,6 +158,7 @@ PUT_SECRET_VALUE = ActionDefinition(
             label="New secret value",
             kind="multiline",
             required=True,
+            is_secret=True,
         ),
     ),
     cli_template=CliTemplate(

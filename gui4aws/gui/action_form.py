@@ -64,6 +64,8 @@ class ActionForm(ttk.Frame):
                 self.text_widgets[field.name] = widget
                 if on_change is not None:
                     widget.bind("<<Modified>>", self.on_text_modified(widget, on_change), add="+")
+            elif field.is_secret:
+                widget = ttk.Entry(self, textvariable=var, width=40, show="•")
             else:
                 widget = ttk.Entry(self, textvariable=var, width=40)
             if field.kind != "multiline" and on_change is not None:

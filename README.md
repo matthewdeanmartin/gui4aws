@@ -3,6 +3,7 @@
 Is the web console for AWS slow and annoying? Do you have python? You could have a nice GUI for most services.
 
 Design goals
+
 - minimal dependencies
 - safety guardrails
 - fast

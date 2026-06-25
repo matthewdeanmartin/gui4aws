@@ -53,6 +53,9 @@ class InputField:
         default: Default value (string form). None means no default.
         choices: For kind == "choice", the allowed values.
         help_text: Short hint shown beside the field.
+        is_secret: True if the value is a secret (e.g. a password). Secret values are
+            masked in the form, redacted from action history / diagnostics, and emitted
+            as a shell/env placeholder (never the literal) in generated scripts.
     """
 
     name: str
@@ -62,6 +65,7 @@ class InputField:
     default: str | None = None
     choices: tuple[str, ...] = ()
     help_text: str = ""
+    is_secret: bool = False
 
 
 @dataclass(frozen=True)
@@ -159,6 +163,22 @@ class ActionDefinition:
     # that receives (client, inputs) and returns the response dict. Use for multi-step
     # actions (e.g. list → describe). boto3_template.service is still used to build the client.
     boto3_execute_fn: Boto3ExecuteFn | None = field(default=None, compare=False, repr=False)
+
+    def secret_field_names(self) -> frozenset[str]:
+        """Names of input fields marked ``is_secret`` (e.g. passwords)."""
+        return frozenset(f.name for f in self.input_fields if f.is_secret)
+
+
+REDACTED = "***REDACTED***"
+
+
+def redact_secrets(inputs: Mapping[str, str], secret_names: frozenset[str]) -> dict[str, str]:
+    """Return a copy of *inputs* with any secret-named, non-empty value replaced by a marker.
+
+    Empty values are left as-is so the redacted dict still reflects which optional
+    fields were unset.
+    """
+    return {name: (REDACTED if name in secret_names and value else value) for name, value in inputs.items()}
 
 
 @dataclass(frozen=True)

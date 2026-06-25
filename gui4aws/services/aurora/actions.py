@@ -433,7 +433,7 @@ CREATE_DB_CLUSTER = ActionDefinition(
             ),
         ),
         InputField(name="master_username", label="Master username", required=True, default="admin"),
-        InputField(name="master_user_password", label="Master user password", required=True),
+        InputField(name="master_user_password", label="Master user password", required=True, is_secret=True),
         InputField(name="engine_version", label="Engine version"),
         InputField(name="db_subnet_group_name", label="DB subnet group"),
         InputField(
@@ -1012,6 +1012,7 @@ MODIFY_DB_CLUSTER_PASSWORD = ActionDefinition(
             name="new_master_password",
             label="New master password",
             required=True,
+            is_secret=True,
             help_text="Password is applied immediately and also saved to the keyring as a connection string.",
         ),
         InputField(

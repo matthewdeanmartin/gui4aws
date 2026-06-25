@@ -195,7 +195,16 @@ convention = "google"
 
 [tool.bandit]
 exclude_dirs = ["tests"]
-skips = ["B101", "B404", "B602", "B603", "B604", "B605", "B606", "B607", "B105"]
+# Skips are limited to checks that are pure noise or that flag commands we run on
+# purpose. The shell-injection family (B602/B604/B605/B606) is intentionally NOT
+# skipped — we never use shell=True, so those checks guard against future regressions.
+#   B101 - assert_used: asserts are fine outside of security-critical paths.
+#   B404 - import subprocess: launching the aws CLI / docker / moto is the whole point.
+#   B603 - subprocess without shell: we always pass argv lists, never shell=True.
+#   B607 - partial executable path: 'aws'/'docker'/'npx' are deliberate PATH lookups.
+#   B105 - hardcoded password: false-positives on boto3 param *names* ('SecretId',
+#          'secret-string') and on the intentional moto fake creds ('testing').
+skips = ["B101", "B404", "B603", "B607", "B105"]
 
 # changelogmanager (keepachangelog-manager-fork) drives the release workflows.
 # See .github/workflows/create_draft_release.yml and release.yml.

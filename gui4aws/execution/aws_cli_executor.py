@@ -182,6 +182,11 @@ def parse_aws_cli_error(stderr: str) -> str:
     return "aws CLI exited non-zero"
 
 
+def _is_env_var_ref(part: str) -> bool:
+    """True if *part* is exactly a ``$ENV_VAR`` reference (used for redacted secrets)."""
+    return len(part) > 1 and part.startswith("$") and part[1:].replace("_", "").isalnum() and part[1].isalpha()
+
+
 def quote_for_shell(parts: Sequence[str]) -> str:
     """Shell-quote a sequence of argv parts for display in the script viewer.
 
@@ -190,6 +195,11 @@ def quote_for_shell(parts: Sequence[str]) -> str:
     """
     quoted: list[str] = []
     for part in parts:
+        # A bare ``$ENV_VAR`` placeholder (emitted for redacted secrets) must stay
+        # unquoted so the shell expands it at runtime.
+        if _is_env_var_ref(part):
+            quoted.append(part)
+            continue
         if not part or any(ch in part for ch in " \t\"'$`\\!*?[](){}<>|;&"):
             escaped = part.replace("'", "'\\''")
             quoted.append(f"'{escaped}'")
