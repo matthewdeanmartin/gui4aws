@@ -13,7 +13,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-__all__ = ["AppConfig", "config_path", "load_config", "save_config"]
+__all__ = [
+    "AppConfig",
+    "config_path",
+    "load_config",
+    "network_config_from_app_config",
+    "save_config",
+]
 
 
 @dataclass
@@ -30,6 +36,14 @@ class AppConfig:
     history_enabled: bool = True
     history_max_entries: int = 500
     local_endpoints: dict[str, str] = field(default_factory=dict)
+    # Network / proxy / TLS-trust settings (see execution.network_config.NetworkConfig).
+    network_use_env_proxy: bool = True
+    network_http_proxy: str = ""
+    network_https_proxy: str = ""
+    network_no_proxy: str = ""
+    network_ca_bundle_path: str = ""
+    network_client_cert_path: str = ""
+    network_verify_ssl: bool = True
 
 
 def config_path() -> Path:
@@ -76,6 +90,21 @@ def save_config(config: AppConfig, path: Path | None = None) -> None:
     path.write_text(render_toml(config), encoding="utf-8")
 
 
+def network_config_from_app_config(config: AppConfig) -> Any:
+    """Build a ``NetworkConfig`` from the persisted ``AppConfig`` fields."""
+    from gui4aws.execution.network_config import NetworkConfig
+
+    return NetworkConfig(
+        use_env_proxy=config.network_use_env_proxy,
+        http_proxy=config.network_http_proxy,
+        https_proxy=config.network_https_proxy,
+        no_proxy=config.network_no_proxy,
+        ca_bundle_path=config.network_ca_bundle_path,
+        client_cert_path=config.network_client_cert_path,
+        verify_ssl=config.network_verify_ssl,
+    )
+
+
 def apply(data: dict[str, Any]) -> AppConfig:
     """Map a raw dictionary (from TOML/JSON) onto an AppConfig instance."""
     config = AppConfig()
@@ -107,7 +136,33 @@ def apply(data: dict[str, Any]) -> AppConfig:
                 config.local_endpoints[str(service)] = str(value["endpoint_url"])
             elif isinstance(value, str):
                 config.local_endpoints[str(service)] = value
+    network = data.get("network", {})
+    if isinstance(network, dict):
+        if "use_env_proxy" in network:
+            config.network_use_env_proxy = bool(network["use_env_proxy"])
+        if "http_proxy" in network:
+            config.network_http_proxy = str(network["http_proxy"])
+        if "https_proxy" in network:
+            config.network_https_proxy = str(network["https_proxy"])
+        if "no_proxy" in network:
+            config.network_no_proxy = str(network["no_proxy"])
+        if "ca_bundle_path" in network:
+            config.network_ca_bundle_path = str(network["ca_bundle_path"])
+        if "client_cert_path" in network:
+            config.network_client_cert_path = str(network["client_cert_path"])
+        if "verify_ssl" in network:
+            config.network_verify_ssl = bool(network["verify_ssl"])
     return config
+
+
+def _toml_str(value: str) -> str:
+    """Render a string as a TOML basic-string literal, escaping backslashes/quotes.
+
+    Windows CA-bundle paths contain backslashes, which must be escaped in a TOML
+    basic string (or the file fails to parse on reload).
+    """
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
 
 
 def render_toml(config: AppConfig) -> str:
@@ -126,6 +181,15 @@ def render_toml(config: AppConfig) -> str:
         "[history]",
         f"enabled = {'true' if config.history_enabled else 'false'}",
         f"max_entries = {config.history_max_entries}",
+        "",
+        "[network]",
+        f"use_env_proxy = {'true' if config.network_use_env_proxy else 'false'}",
+        f"http_proxy = {_toml_str(config.network_http_proxy)}",
+        f"https_proxy = {_toml_str(config.network_https_proxy)}",
+        f"no_proxy = {_toml_str(config.network_no_proxy)}",
+        f"ca_bundle_path = {_toml_str(config.network_ca_bundle_path)}",
+        f"client_cert_path = {_toml_str(config.network_client_cert_path)}",
+        f"verify_ssl = {'true' if config.network_verify_ssl else 'false'}",
     ]
     for service, url in sorted(config.local_endpoints.items()):
         lines.extend(

@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from gui4aws.execution.endpoint_config import EndpointConfig
+from gui4aws.execution.network_config import NetworkConfig
 from gui4aws.models import ActionDefinition
 
 __all__ = ["AwsCliExecutor", "AwsCliFailure", "AwsCliResult"]
@@ -54,10 +55,12 @@ class AwsCliExecutor:
         region_name: str,
         endpoint_config: EndpointConfig,
         aws_binary: str | None = None,
+        network_config: NetworkConfig | None = None,
     ) -> None:
         self.profile_name = profile_name
         self.region_name = region_name
         self.endpoint_config = endpoint_config
+        self.network_config = network_config or NetworkConfig()
         self.aws_binary = aws_binary or shutil.which("aws") or "aws"
 
     def build_argv(
@@ -74,6 +77,11 @@ class AwsCliExecutor:
         endpoint_url = self.endpoint_config.resolved_url()
         if endpoint_url is not None:
             argv.extend(["--endpoint-url", endpoint_url])
+        net = self.network_config
+        if not net.verify_ssl:
+            argv.append("--no-verify-ssl")
+        elif net.ca_bundle_path.strip():
+            argv.extend(["--ca-bundle", net.ca_bundle_path.strip()])
         argv.extend(["--output", "json"])
 
         if action.cli_args_builder is not None:
@@ -118,6 +126,7 @@ class AwsCliExecutor:
                 text=True,
                 check=False,
                 timeout=120,
+                env=self.network_config.apply_to_environ(),
             )
         except FileNotFoundError as exc:
             duration = time.monotonic() - start

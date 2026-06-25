@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import tkinter as tk
 from collections.abc import Callable, Sequence
 from tkinter import ttk
@@ -31,6 +32,7 @@ class Toolbar(ttk.Frame):
         on_robotocore_toggle: Callable[[bool], None] | None = None,
         on_clear_cache: Callable[[], None] | None = None,
         on_partition_changed: Callable[[str], None] | None = None,
+        on_network_settings: Callable[[], None] | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(parent, **kwargs)
@@ -40,6 +42,7 @@ class Toolbar(ttk.Frame):
         self.on_robotocore_toggle = on_robotocore_toggle or (lambda running: None)
         self.on_clear_cache = on_clear_cache or (lambda: None)
         self.on_partition_changed_cb = on_partition_changed or (lambda partition: None)
+        self.on_network_settings = on_network_settings or (lambda: None)
         self.moto_running = False
         self.robotocore_running = False
 
@@ -127,7 +130,20 @@ class Toolbar(ttk.Frame):
         col += 1
 
         clear_cache_btn = ttk.Button(self, text="Clear Cache", command=self.on_clear_cache, width=11)
-        clear_cache_btn.grid(row=0, column=col, padx=(4, 8), pady=4)
+        clear_cache_btn.grid(row=0, column=col, padx=(4, 4), pady=4)
+        col += 1
+
+        # Proxy / TLS settings — for users behind a corporate proxy or a
+        # TLS-inspecting firewall whose cert must be trusted.
+        self.network_btn = ttk.Button(self, text="🌐 Network…", command=self.on_network_settings, width=12)
+        self.network_btn.grid(row=0, column=col, padx=(4, 8), pady=4)
+        self._refresh_network_button()
+
+    def _refresh_network_button(self) -> None:
+        """Bold the Network button when non-default proxy/TLS settings are active."""
+        active = not self.context.network_config.is_default()
+        with contextlib.suppress(tk.TclError):
+            self.network_btn.configure(text="🌐 Network *" if active else "🌐 Network…")
 
     def on_mode_changed(self, event: object = None) -> None:
         """Push the mode selector value into AppContext."""

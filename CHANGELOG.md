@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Added
+- Network & Proxy settings dialog, opened from the new "🌐 Network…" toolbar button, for configuring an HTTP/HTTPS proxy, no-proxy hosts, a trusted CA bundle, and a client certificate. Includes a toggle to ignore the proxy environment variables entirely ("try without the proxy despite the vars") and an option to disable TLS verification as a last-resort diagnostic. Settings are persisted and are reflected in generated AWS CLI and boto3 scripts.
+
+### Fixed
+- AWS calls failed with "certificate verify failed" for users behind a TLS-inspecting enterprise proxy, because there was no way to trust the proxy's (or AWS's) CA certificate — the app appeared broken. Users can now point the app at a CA bundle so certificate verification succeeds.
+- Users behind a corporate HTTP proxy could not configure or override proxy settings from the GUI, and had no way to bypass proxy environment variables when they were set incorrectly.
+
 ## [0.0.1] - 2026-06-25
 ### Added
 - Tkinter desktop GUI for browsing and managing AWS resources, organized as a sidebar of services with a resource table, detail tree, and result panels.

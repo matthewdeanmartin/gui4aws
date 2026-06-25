@@ -50,6 +50,36 @@ def test_toolbar(tk_root: tk.Tk) -> None:
     assert on_change.call_count == 2
 
 
+def test_toolbar_network_button_present(tk_root: tk.Tk) -> None:
+    context = AppContext(region_name="us-east-1")
+    on_network = MagicMock()
+    toolbar = Toolbar(tk_root, context, on_network_settings=on_network)
+    toolbar.network_btn.invoke()
+    assert on_network.call_count == 1
+    # Default config -> non-starred label.
+    assert "*" not in toolbar.network_btn.cget("text")
+
+
+def test_network_settings_dialog_round_trip(tk_root: tk.Tk) -> None:
+    from gui4aws.execution.network_config import NetworkConfig
+    from gui4aws.gui.network_settings_dialog import NetworkSettingsDialog
+
+    captured: list[NetworkConfig] = []
+    dialog = NetworkSettingsDialog(
+        tk_root,
+        NetworkConfig(http_proxy="http://p:8080"),
+        on_apply=captured.append,
+    )
+    # The seeded value shows up in the widget.
+    assert dialog.http_proxy_var.get() == "http://p:8080"
+    # Edit + apply -> callback receives the updated config and dialog closes.
+    dialog.https_proxy_var.set("http://s:8443")
+    dialog.verify_ssl_var.set(False)
+    dialog._apply()  # pylint: disable=protected-access
+    assert captured and captured[0].https_proxy == "http://s:8443"
+    assert captured[0].verify_ssl is False
+
+
 def test_detail_tree(tk_root: tk.Tk) -> None:
     tree = DetailTree(tk_root)
     data = {"k1": "v1", "k2": {"sub": 1}, "k3": [1, 2]}

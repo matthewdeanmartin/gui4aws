@@ -15,6 +15,7 @@ from gui4aws.execution.aws_cli_executor import AwsCliExecutor
 from gui4aws.execution.boto3_executor import Boto3Executor
 from gui4aws.execution.endpoint_config import EndpointConfig, EndpointMode
 from gui4aws.execution.execution_mode import ExecutionMode
+from gui4aws.execution.network_config import NetworkConfig
 from gui4aws.services.service_registry import ServiceRegistry, default_registry
 
 __all__ = ["AWS_PARTITIONS", "AppContext"]
@@ -41,6 +42,7 @@ class AppContext:
     partition: str = "aws"
     mode: ExecutionMode = ExecutionMode.BOTO3
     endpoint_config: EndpointConfig = field(default_factory=EndpointConfig)
+    network_config: NetworkConfig = field(default_factory=NetworkConfig)
     history: ActionHistory = field(default_factory=ActionHistory)
     registry: ServiceRegistry = field(default_factory=default_registry)
     action_cache: ActionCache = field(default_factory=ActionCache)
@@ -75,12 +77,28 @@ class AppContext:
         logger.info("endpoint -> %s url=%s", mode, endpoint_url)
         self.action_cache.clear()
 
+    def set_network_config(self, network_config: NetworkConfig) -> None:
+        """Replace the proxy/TLS settings used for every call."""
+        self.network_config = network_config
+        logger.info(
+            "network -> use_env_proxy=%s http=%s https=%s ca_bundle=%s verify_ssl=%s",
+            network_config.use_env_proxy,
+            bool(network_config.http_proxy),
+            bool(network_config.https_proxy),
+            bool(network_config.ca_bundle_path),
+            network_config.verify_ssl,
+        )
+        # Connectivity/trust changes can flip calls between success and failure,
+        # so drop cached results that were captured under the old settings.
+        self.action_cache.clear()
+
     def boto3_executor(self) -> Boto3Executor:
         """Build a fresh Boto3Executor that reflects current selections."""
         return Boto3Executor(
             profile_name=self.profile_name,
             region_name=self.region_name,
             endpoint_config=self.endpoint_config,
+            network_config=self.network_config,
         )
 
     def aws_cli_executor(self) -> AwsCliExecutor:
@@ -89,6 +107,7 @@ class AppContext:
             profile_name=self.profile_name,
             region_name=self.region_name,
             endpoint_config=self.endpoint_config,
+            network_config=self.network_config,
         )
 
     def execute(self, action: Any, inputs: dict[str, str]) -> Any:

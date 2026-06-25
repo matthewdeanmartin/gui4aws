@@ -101,7 +101,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 def run_gui(args: argparse.Namespace) -> int:
     """Launch the GUI window."""
-    from gui4aws.config import load_config
+    from gui4aws.config import load_config, network_config_from_app_config
     from gui4aws.gui.main_window import create_main_window
 
     saved = load_config()
@@ -124,6 +124,7 @@ def run_gui(args: argparse.Namespace) -> int:
             EndpointMode(getattr(args, "endpoint_mode", saved.default_endpoint_mode or EndpointMode.AWS.value)),
             getattr(args, "endpoint_url", None),
         ),
+        network_config=network_config_from_app_config(saved),
     )
 
     profiles = available_profiles()

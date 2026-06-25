@@ -13,6 +13,7 @@ from botocore.config import Config as BotocoreConfig
 from botocore.exceptions import BotoCoreError, ClientError
 
 from gui4aws.execution.endpoint_config import EndpointConfig
+from gui4aws.execution.network_config import NetworkConfig
 from gui4aws.models import ActionDefinition
 
 # Bound every HTTP call so a wedged endpoint (e.g. an overloaded moto dev
@@ -74,10 +75,12 @@ class Boto3Executor:
         profile_name: str | None,
         region_name: str,
         endpoint_config: EndpointConfig,
+        network_config: NetworkConfig | None = None,
     ) -> None:
         self.profile_name = profile_name
         self.region_name = region_name
         self.endpoint_config = endpoint_config
+        self.network_config = network_config or NetworkConfig()
 
     def build_session(self) -> boto3.Session:
         """Construct a boto3 Session honoring the configured profile."""
@@ -85,9 +88,25 @@ class Boto3Executor:
             return boto3.Session(profile_name=self.profile_name, region_name=self.region_name)
         return boto3.Session(region_name=self.region_name)
 
+    def _client_config(self) -> BotocoreConfig:
+        """Botocore config with timeouts/retries plus any explicit proxy settings."""
+        net = self.network_config
+        proxies = net.explicit_proxies()
+        if proxies or not net.use_env_proxy:
+            # When the user disables env-proxy honoring, pass an explicit proxies
+            # map (possibly empty) so botocore does not fall back to the
+            # environment. An empty dict means "no proxy, despite the vars".
+            return _BOTOCORE_CONFIG.merge(BotocoreConfig(proxies=proxies))
+        return _BOTOCORE_CONFIG
+
     def build_client(self, service_name: str) -> Any:
-        """Construct a boto3 client honoring the configured endpoint."""
+        """Construct a boto3 client honoring the configured endpoint, proxy, and TLS trust."""
         session = self.build_session()
+        config = self._client_config()
+        verify = self.network_config.botocore_verify()
+        client_kwargs: dict[str, Any] = {"config": config}
+        if verify is not None:
+            client_kwargs["verify"] = verify
         endpoint_url = self.endpoint_config.resolved_url()
         if endpoint_url is not None:
             logger.info(
@@ -96,10 +115,10 @@ class Boto3Executor:
                 endpoint_url,
                 "moto" if self.endpoint_config.mode.value == "moto" else "custom endpoint",
             )
-            return cast(Any, session).client(service_name, endpoint_url=endpoint_url, config=_BOTOCORE_CONFIG)
+            return cast(Any, session).client(service_name, endpoint_url=endpoint_url, **client_kwargs)
         profile_hint = f"profile={self.profile_name}" if self.profile_name else "default credentials"
         logger.info("connecting to %s on real AWS (%s, region=%s)", service_name, profile_hint, self.region_name)
-        return cast(Any, session).client(service_name, config=_BOTOCORE_CONFIG)
+        return cast(Any, session).client(service_name, **client_kwargs)
 
     def render_params(
         self,

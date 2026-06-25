@@ -98,6 +98,7 @@ class MainWindow(ServerManagerMixin):
             on_robotocore_toggle=self.on_robotocore_toggle,
             on_clear_cache=self.clear_all_cache_entries,
             on_partition_changed=self.on_partition_changed,
+            on_network_settings=self.open_network_settings,
         )
         self.toolbar.grid(row=0, column=0, columnspan=2, sticky="ew")
 
@@ -234,14 +235,22 @@ class MainWindow(ServerManagerMixin):
         self._save_config()
 
     def _save_config(self) -> None:
-        """Persist the current profile/region/partition to the config file."""
+        """Persist the current profile/region/partition + network settings to the config file."""
         try:
             from gui4aws.config import AppConfig, save_config
 
+            net = self.context.network_config
             cfg = AppConfig(
                 default_profile=self.context.profile_name or "",
                 default_region=self.context.region_name,
                 default_partition=self.context.partition,
+                network_use_env_proxy=net.use_env_proxy,
+                network_http_proxy=net.http_proxy,
+                network_https_proxy=net.https_proxy,
+                network_no_proxy=net.no_proxy,
+                network_ca_bundle_path=net.ca_bundle_path,
+                network_client_cert_path=net.client_cert_path,
+                network_verify_ssl=net.verify_ssl,
             )
             save_config(cfg)
         except Exception:  # pylint: disable=broad-exception-caught
@@ -253,6 +262,24 @@ class MainWindow(ServerManagerMixin):
 
         regions = available_regions(partition=partition)
         self.toolbar.update_regions(regions)
+
+    def open_network_settings(self) -> None:
+        """Open the proxy / TLS settings dialog and apply the result on save."""
+        from gui4aws.gui.network_settings_dialog import open_network_settings
+
+        open_network_settings(
+            self.root,
+            self.context.network_config,
+            on_apply=self.apply_network_settings,
+        )
+
+    def apply_network_settings(self, network_config: Any) -> None:
+        """Apply new proxy/TLS settings, persist them, and refresh the toolbar."""
+        self.context.set_network_config(network_config)
+        self.toolbar._refresh_network_button()  # pylint: disable=protected-access
+        self._save_config()
+        summary = "default" if network_config.is_default() else "custom proxy/TLS"
+        self.status_bar.set_status(f"Network settings applied ({summary}) — cache cleared")
 
     def refresh_diagnostics_now(self) -> None:
         """Refresh diagnostic widgets immediately without scheduling timers."""
@@ -840,6 +867,7 @@ class MainWindow(ServerManagerMixin):
             profile_name=self.context.profile_name,
             region_name=self.context.region_name,
             endpoint_config=self.context.endpoint_config,
+            network_config=self.context.network_config,
         )
         python = generate_python_script(
             action,
@@ -847,6 +875,7 @@ class MainWindow(ServerManagerMixin):
             profile_name=self.context.profile_name,
             region_name=self.context.region_name,
             endpoint_config=self.context.endpoint_config,
+            network_config=self.context.network_config,
         )
         return cli, python
 
