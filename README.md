@@ -7,7 +7,7 @@ Design goals
 - safety guardrails
 - fast
 
-![main screen](https://raw.githubusercontent.com/matthewdeanmartin/gui4aws/main/docs/main_page.png)
+![png](https://raw.githubusercontent.com/matthewdeanmartin/gui4aws/main/docs/img/main_page.png)
 
 <!-- TODO (generated from template — delete this block once done)
   - [ ] Replace this description with a real one-paragraph summary
