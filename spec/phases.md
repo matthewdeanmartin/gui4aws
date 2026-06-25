@@ -8,7 +8,7 @@ The package name in this repo is `gui4aws` (not `aws_think_console` as in the or
 Everywhere the spec says `aws_think_console`, read `gui4aws`. Everywhere it says
 `aws-think-console` as a CLI, read `gui4aws`.
 
----
+______________________________________________________________________
 
 ## Guiding rules for every phase
 
@@ -17,23 +17,23 @@ These rules come from `spec/spec.md` and `AGENTS.md`. They are not optional:
 1. **Stdlib first.** tkinter, argparse, dataclasses, pathlib, logging, threading, queue. The only
    non-stdlib runtime dependencies are `boto3` / `botocore`. No click, no typer, no rich, no
    textual, no customtkinter, no PyQt.
-2. **`_` means unused, not private.** Use module boundaries, `__all__`, and clear naming for
+1. **`_` means unused, not private.** Use module boundaries, `__all__`, and clear naming for
    encapsulation. Never write `def _helper(...)` to mean "internal helper".
-3. **Type annotations on everything.** Public *and* internal functions.
-4. **`logging`, not `print`.** Configure logging once via `gui4aws/logging_config.py`.
-5. **`pathlib.Path`, not string path math.**
-6. **GUI logic is testable without tkinter.** Each service module exposes plain functions /
+1. **Type annotations on everything.** Public *and* internal functions.
+1. **`logging`, not `print`.** Configure logging once via `gui4aws/logging_config.py`.
+1. **`pathlib.Path`, not string path math.**
+1. **GUI logic is testable without tkinter.** Each service module exposes plain functions /
    dataclasses that the GUI binds to. Widget construction lives in `gui/`, AWS logic does not.
-7. **AWS calls never block the tk event loop.** Run them in a worker thread, deliver results
+1. **AWS calls never block the tk event loop.** Run them in a worker thread, deliver results
    through a `queue.Queue`, and let the main loop poll with `widget.after(...)`.
-8. **No raw JSON dumps as the primary UI.** Tables, trees, key/value grids. Raw JSON is
+1. **No raw JSON dumps as the primary UI.** Tables, trees, key/value grids. Raw JSON is
    available behind a "View raw response" button.
-9. **Every GUI action is also an exportable script.** AWS CLI and boto3. The exported code must
+1. **Every GUI action is also an exportable script.** AWS CLI and boto3. The exported code must
    be boring, explicit, paste-into-a-real-project Python — no `gui4aws` imports in generated
    scripts.
-10. **Moto-first.** Development and CI run against moto. Real AWS comes later and is opt-in.
+1. **Moto-first.** Development and CI run against moto. Real AWS comes later and is opt-in.
 
----
+______________________________________________________________________
 
 ## Moto constraints we are designing around
 
@@ -57,7 +57,7 @@ tests have to accept these realities:
 When a moto limitation forces a design choice, document it in the relevant service module's
 top-of-file docstring, not in scattered comments.
 
----
+______________________________________________________________________
 
 ## Phase 0 — Project hygiene (done before phase 1)
 
@@ -72,7 +72,7 @@ What this phase still owes:
 - [ ] Add `boto3` as a runtime dep (already declared in `pyproject.toml`).
 - [ ] Make sure `uv sync --all-extras && uv run pytest` is green before starting phase 1.
 
----
+______________________________________________________________________
 
 ## Phase 1 — Application shell
 
@@ -123,15 +123,15 @@ gui4aws/
 ### Acceptance for phase 1
 
 1. `gui4aws gui` opens a window with the three-region layout, a toolbar, and a status bar.
-2. The toolbar shows mode (AWS CLI / boto3), profile, region, and endpoint selectors. Changing
+1. The toolbar shows mode (AWS CLI / boto3), profile, region, and endpoint selectors. Changing
    them updates `AppContext` (verified via a unit test on `AppContext`, not the widget).
-3. `gui4aws doctor` prints environment diagnostics: python version, boto3 version, aws CLI on
+1. `gui4aws doctor` prints environment diagnostics: python version, boto3 version, aws CLI on
    PATH yes/no, moto importable yes/no, default profile/region.
-4. `gui4aws list-profiles` and `gui4aws list-regions` work.
-5. `import gui4aws` and every `gui4aws.gui.*` module import cleanly **without** opening a tk
+1. `gui4aws list-profiles` and `gui4aws list-regions` work.
+1. `import gui4aws` and every `gui4aws.gui.*` module import cleanly **without** opening a tk
    window. Tk widget construction must be inside class `__init__` methods or factory functions,
    not at module import time.
-6. `uv run pytest` is green and covers: `AppContext`, `script_generator` with a fake action,
+1. `uv run pytest` is green and covers: `AppContext`, `script_generator` with a fake action,
    `action_history` add/list/export, `endpoint_config` parsing.
 
 ### Notes / gotchas
@@ -142,7 +142,7 @@ gui4aws/
 - The `ScriptGenerator` should accept a frozen dataclass of inputs and produce a string. It
   must not introspect tk widgets.
 
----
+______________________________________________________________________
 
 ## Phase 2 — RDS Aurora (read-only) against moto
 
@@ -173,13 +173,13 @@ gui4aws/services/aurora/
 
 1. `services/aurora/service.py` exposes a `SERVICE: ServiceDefinition` constant. Importing it
    does not touch AWS.
-2. `actions.describe_db_clusters(executor, region, **filters)` runs through both the boto3 and
+1. `actions.describe_db_clusters(executor, region, **filters)` runs through both the boto3 and
    AWS CLI executors and returns a `list[AuroraClusterSummary]`.
-3. A moto-backed test plants two clusters and verifies the action returns both, normalized.
-4. The Aurora sidebar entry appears under "Aurora" with `Clusters`, `Snapshots`,
+1. A moto-backed test plants two clusters and verifies the action returns both, normalized.
+1. The Aurora sidebar entry appears under "Aurora" with `Clusters`, `Snapshots`,
    `Instances`. Clicking each populates a `resource_table` widget. (This is a widget test —
    may be marked integration if display is unavailable.)
-5. `Copy current action as AWS CLI` and `Copy current action as Python` produce text that, if
+1. `Copy current action as AWS CLI` and `Copy current action as Python` produce text that, if
    pasted into a shell or `.py` file, runs the same describe and prints results — verified by
    parsing the generated text in a unit test (no need to actually execute it).
 
@@ -189,7 +189,7 @@ We do *not* run restore against moto in phase 2. We do generate the CLI and Pyth
 form, and we add a unit test asserting the generated script matches the spec §17.2 example
 shape. Running the restore is phase 4.
 
----
+______________________________________________________________________
 
 ## Phase 3 — AWS Backup (read-only) against moto
 
@@ -212,15 +212,15 @@ gui4aws/services/backup/
 ### Acceptance for phase 3
 
 1. Moto-backed test creates a backup vault, asserts `list_backup_vaults` returns it.
-2. Moto-backed test creates a backup plan, asserts `list_backup_plans` returns it normalized.
-3. Recovery points: because moto's behavior here is partial, the test plants a recovery point
+1. Moto-backed test creates a backup plan, asserts `list_backup_plans` returns it normalized.
+1. Recovery points: because moto's behavior here is partial, the test plants a recovery point
    via the moto backend directly (using `moto.backup.models.backup_backends`) when needed, and
    that is the documented exception to "use the public API in tests".
-4. The action history captures every list call with timing and request params.
-5. CLI and Python export match what `aws backup list-...` and `boto3.client("backup").list_...`
+1. The action history captures every list call with timing and request params.
+1. CLI and Python export match what `aws backup list-...` and `boto3.client("backup").list_...`
    would write.
 
----
+______________________________________________________________________
 
 ## Phase 4 — Safe write workflows against moto ✅
 
@@ -247,16 +247,16 @@ This phase introduced:
 ### Acceptance for phase 4
 
 - [x] Restore Aurora cluster from snapshot, end-to-end against moto: plant a snapshot, run the
-      form, assert a new cluster appears in `describe_db_clusters`.
-      (`tests/test_phase4_write_flows.py::test_create_db_cluster_snapshot_then_restore_creates_new_cluster`)
+  form, assert a new cluster appears in `describe_db_clusters`.
+  (`tests/test_phase4_write_flows.py::test_create_db_cluster_snapshot_then_restore_creates_new_cluster`)
 - [x] Create backup vault via the form, list it back.
-      (`tests/test_phase4_write_flows.py::test_create_backup_vault_then_list`)
+  (`tests/test_phase4_write_flows.py::test_create_backup_vault_then_list`)
 - [x] Generated script export for the restore matches the spec example shape.
-      (`tests/test_phase4_write_flows.py::test_restore_python_script_matches_spec_example_shape`)
+  (`tests/test_phase4_write_flows.py::test_restore_python_script_matches_spec_example_shape`)
 - [x] Dialog decision logic covered headlessly.
-      (`tests/test_dialogs.py`)
+  (`tests/test_dialogs.py`)
 
----
+______________________________________________________________________
 
 ## Phase 5 — Plain RDS, ElastiCache, OpenSearch, DynamoDB
 
@@ -267,12 +267,12 @@ as Aurora.
 ### Sequence
 
 1. Plain RDS (instances, snapshots, parameter groups). Most code reuses Aurora's machinery.
-2. DynamoDB (tables, items, backups). Add a conservative item editor.
-3. ElastiCache (replication groups, cache clusters, snapshots). Distinguish Redis / Valkey /
+1. DynamoDB (tables, items, backups). Add a conservative item editor.
+1. ElastiCache (replication groups, cache clusters, snapshots). Distinguish Redis / Valkey /
    Memcached in the UI but preserve AWS names in scripts.
-4. OpenSearch (domains, versions). Cost-affecting warning on create.
+1. OpenSearch (domains, versions). Cost-affecting warning on create.
 
----
+______________________________________________________________________
 
 ## Phase 6 — Destructive workflows
 
@@ -280,7 +280,7 @@ Goal: delete with typed confirmation per spec §18.1, only after a review-screen
 generated CLI/Python. AWS Backup deletion stays disabled until further notice because of
 retention-lock complications (spec §17.3 footnote).
 
----
+______________________________________________________________________
 
 ## Phase 7 — Real AWS, endpoints, packaging
 
@@ -291,20 +291,20 @@ Goal: stop being moto-only.
 - `gui4aws doctor` learns to call `sts:GetCallerIdentity` and report account / ARN.
 - Build a wheel and verify `gui4aws gui` launches from a fresh `uv tool install`.
 
----
+______________________________________________________________________
 
 ## How to start work in any phase
 
 1. `git pull && uv sync --all-extras`.
-2. `uv run pytest` must be green before you write a line.
-3. Find the next unchecked acceptance bullet in the current phase. That is your scope.
-4. Add or update tests **first**. Moto fixtures live in `gui4aws/testing/moto_support.py` and
+1. `uv run pytest` must be green before you write a line.
+1. Find the next unchecked acceptance bullet in the current phase. That is your scope.
+1. Add or update tests **first**. Moto fixtures live in `gui4aws/testing/moto_support.py` and
    `tests/conftest.py`. Reuse them.
-5. Implement until the new test passes. Run `uv run make check`.
-6. One commit per logical change. Update the phase checklist in this file if you completed an
+1. Implement until the new test passes. Run `uv run make check`.
+1. One commit per logical change. Update the phase checklist in this file if you completed an
    acceptance bullet.
 
----
+______________________________________________________________________
 
 ## Open questions / parked decisions
 

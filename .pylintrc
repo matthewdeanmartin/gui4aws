@@ -17,7 +17,8 @@ disable=
     import-error,
     logging-fstring-interpolation,
     import-outside-toplevel,
-    implicit-str-concat
+    implicit-str-concat,
+    cyclic-import
 
 [FORMAT]
 max-line-length=120

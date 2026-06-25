@@ -1,5 +1,7 @@
 """Aurora action definitions."""
 
+# pylint: disable=too-many-lines
+
 from __future__ import annotations
 
 from collections.abc import Mapping

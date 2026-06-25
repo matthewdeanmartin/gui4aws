@@ -5,7 +5,7 @@ from __future__ import annotations
 
 def test_import() -> None:
     """Package can be imported."""
-    import gui4aws  # noqa: F401
+    import gui4aws  # noqa: F401  # pylint: disable=unused-import
 
 
 def test_version() -> None:

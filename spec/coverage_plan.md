@@ -4,13 +4,13 @@
 **Date:** 2026-05-23
 **Goal:** ~70% without touching GUI/main-window integration paths that require a full running app
 
----
+______________________________________________________________________
 
 ## Current state by bucket
 
 | Bucket | Files | Status |
 |---|---|---|
-| Models / dataclasses | models.py, all services/*/models.py | 99-100% ✓ |
+| Models / dataclasses | models.py, all services/\*/models.py | 99-100% ✓ |
 | Service definitions (actions + service.py) | Most services | 69-100% ✓ |
 | **View functions** (boto3 → Summary) | networking, ecs, cloudwatch, athena, ssm, ses, sns, lambdas | 16-36% ← big target |
 | **Moto action integration** | ecs, cloudformation, sns, ses, ssm, lambdas, networking | 0-46% ← big target |
@@ -19,7 +19,7 @@
 | GUI widgets | main_window, main_panel, sidebar, filter_bar, toolbar, dialogs | 12-78% |
 | Unstarted modules | config.py, demo_resources.py, cdk_dialog.py, terraform_dialog.py | 0% |
 
----
+______________________________________________________________________
 
 ## Priority 1 — view function pure tests (no moto needed)
 
@@ -102,7 +102,7 @@ Read the file, then cover all normalizer functions.
 - `to_backup_job_summaries` (the uncovered path)
 - Check the exact missing lines (53-74, 102-119, 124-125, 142, 151)
 
----
+______________________________________________________________________
 
 ## Priority 2 — moto action integration tests (new service files)
 
@@ -114,6 +114,7 @@ assert summaries.
 ### `tests/test_ecs_actions.py`
 
 Moto supports ECS fully. Cover:
+
 - `LIST_CLUSTERS` / `DESCRIBE_CLUSTERS` — create cluster via boto3, assert it appears
 - `CREATE_CLUSTER` via action
 - `REGISTER_TASK_DEFINITION` via action — creates a task def, verify with `LIST_TASK_DEFINITIONS`
@@ -126,6 +127,7 @@ Moto supports ECS fully. Cover:
 ### `tests/test_ssm_actions.py`
 
 Moto supports SSM. Cover:
+
 - `PUT_PARAMETER` (create) via action
 - `GET_PARAMETER` by name
 - `DESCRIBE_PARAMETERS` returns planted parameter
@@ -136,6 +138,7 @@ Moto supports SSM. Cover:
 ### `tests/test_sns_actions.py`
 
 Moto supports SNS. Cover:
+
 - `CREATE_TOPIC` via action
 - `LIST_TOPICS` returns planted topic
 - `SUBSCRIBE` (to SQS endpoint — moto supports this)
@@ -146,6 +149,7 @@ Moto supports SNS. Cover:
 ### `tests/test_cloudformation_actions.py`
 
 Moto supports CloudFormation. Cover:
+
 - `LIST_STACKS` empty
 - Create a stack via boto3, `LIST_STACKS` returns it, `DESCRIBE_STACK` describes it
 - `_list_stacks_boto3_params` builder with status filter (pure — no moto needed)
@@ -155,6 +159,7 @@ Moto supports CloudFormation. Cover:
 ### `tests/test_networking_actions.py`
 
 Moto supports EC2 networking. Cover:
+
 - `DESCRIBE_VPCS` returns default VPC
 - Create VPC via boto3, `DESCRIBE_VPCS` shows it
 - `DESCRIBE_SUBNETS` with planted subnet
@@ -165,6 +170,7 @@ Moto supports EC2 networking. Cover:
 ### `tests/test_cloudwatch_actions.py`
 
 Moto supports CloudWatch and CloudWatch Logs. Cover:
+
 - `DESCRIBE_ALARMS` empty, then with planted alarm
 - Create log group via boto3, `DESCRIBE_LOG_GROUPS` returns it
 - `DESCRIBE_LOG_STREAMS` with planted stream
@@ -173,6 +179,7 @@ Moto supports CloudWatch and CloudWatch Logs. Cover:
 ### `tests/test_iam_actions.py`
 
 Moto supports IAM. Cover:
+
 - `LIST_USERS` empty, then with planted user
 - `LIST_ROLES` empty, then with planted role
 - `LIST_POLICIES` with planted policy
@@ -182,6 +189,7 @@ Moto supports IAM. Cover:
 ### `tests/test_ses_actions.py`
 
 Moto supports SES (email identity verification). Cover:
+
 - `LIST_IDENTITIES` with planted verified email
 - Verify an email identity via boto3, assert it appears
 - Check what other actions exist in ses/actions.py
@@ -189,13 +197,14 @@ Moto supports SES (email identity verification). Cover:
 ### `tests/test_lambda_actions.py`
 
 Moto supports Lambda. Cover:
+
 - `LIST_FUNCTIONS` empty, then with planted function
 - `CREATE_FUNCTION` via action (needs zip bytes — use a minimal zip in the test)
 - `GET_FUNCTION` by name
 - `DELETE_FUNCTION` removes it
 - `_create_function_boto3_params` builder (pure — test the zip_file_path absent/present branches)
 
----
+______________________________________________________________________
 
 ## Priority 3 — execution layer gaps
 
@@ -230,7 +239,7 @@ Missing: lines 48-62, 89 — the CLI script path for endpoint injection and the 
 - `generate_cli_script` with profile — verify `--profile` in output
 - `generate_python_script` for an action that has a `boto3_params_builder` (e.g. LIST_SECRETS)
 
----
+______________________________________________________________________
 
 ## Priority 4 — GUI widget tests (Tk, medium difficulty)
 
@@ -268,7 +277,7 @@ Missing: lines 112-119, 220, 223-224, 237-260, 263, 269-287 — run/stop/copy bu
 - The result text widget: feed a Boto3Result via `dialog.show_result(result)`,
   verify `result_text` contains expected content.
 
----
+______________________________________________________________________
 
 ## Priority 5 — config, demo, and zero-coverage modules
 
@@ -296,7 +305,7 @@ Tk dialogs. Use the same pattern as `test_action_dialog_*.py`: construct with `t
 verify `winfo_exists()`, pump the event loop, destroy. The cdk_dialog has 309 stmts so
 it's complex — just cover construction and the main UI elements.
 
----
+______________________________________________________________________
 
 ## What NOT to test
 
@@ -310,7 +319,7 @@ it's complex — just cover construction and the main UI elements.
   `_docker_stop`, `_start_log_reader`. These require Docker to be running. Leave them
   in `tests_robotocore/`.
 
----
+______________________________________________________________________
 
 ## Expected coverage after this plan
 
@@ -323,7 +332,7 @@ it's complex — just cover construction and the main UI elements.
 | Config/demo | 0% | ~70% | ~70% |
 | **Overall** | **47%** | **~62%** | **~70%** |
 
----
+______________________________________________________________________
 
 ## Test file checklist for next clanker
 

@@ -25,7 +25,7 @@ IAM roles, where needed for service forms
 
 OpenStack and paid/nonlocal cloud emulators are out of scope.
 
----
+______________________________________________________________________
 
 ## 1. Goals
 
@@ -34,27 +34,33 @@ OpenStack and paid/nonlocal cloud emulators are out of scope.
 Primary goals:
 
 1. Let users browse supported AWS resources without memorizing CLI commands.
-2. Let users perform common safe operations through forms.
-3. Let users see current state in structured GUI views, not raw JSON dumps.
-4. Let users switch between **AWS CLI mode** and **boto3 mode**.
-5. Let users export the current workflow as:
 
-   * AWS CLI shell script
-   * Python boto3 script
-6. Let users test workflows locally against moto and Docker-backed service emulators where practical.
-7. Make destructive operations explicit, reviewable, and scriptable.
+1. Let users perform common safe operations through forms.
+
+1. Let users see current state in structured GUI views, not raw JSON dumps.
+
+1. Let users switch between **AWS CLI mode** and **boto3 mode**.
+
+1. Let users export the current workflow as:
+
+   - AWS CLI shell script
+   - Python boto3 script
+
+1. Let users test workflows locally against moto and Docker-backed service emulators where practical.
+
+1. Make destructive operations explicit, reviewable, and scriptable.
 
 Non-goals:
 
 1. Replacing every AWS Console feature.
-2. Recreating visual designers, mini-IDEs, or graphical orchestration editors.
-3. Creating a new cloud abstraction layer.
-4. Supporting OpenStack.
-5. Supporting all AWS services in the first release.
-6. Hiding AWS concepts from users.
-7. Inventing a state-management engine like Terraform or CloudFormation.
+1. Recreating visual designers, mini-IDEs, or graphical orchestration editors.
+1. Creating a new cloud abstraction layer.
+1. Supporting OpenStack.
+1. Supporting all AWS services in the first release.
+1. Hiding AWS concepts from users.
+1. Inventing a state-management engine like Terraform or CloudFormation.
 
----
+______________________________________________________________________
 
 ## 2. Product positioning
 
@@ -81,7 +87,7 @@ The core product promise:
 
 > Every GUI action teaches you the AWS CLI or boto3 equivalent.
 
----
+______________________________________________________________________
 
 ## 3. Package identity
 
@@ -104,7 +110,7 @@ aws-workbench-lite
 
 This spec uses `aws-think-console`.
 
----
+______________________________________________________________________
 
 ## 4. Technical stack
 
@@ -157,7 +163,7 @@ Electron
 
 Rationale: the initial application should remain close to the Python standard library, except for AWS SDK dependencies and test/emulation tooling.
 
----
+______________________________________________________________________
 
 ## 5. Coding conventions
 
@@ -240,7 +246,7 @@ Use `pathlib.Path`, not string path manipulation.
 
 Use `argparse`, not Click or Typer.
 
----
+______________________________________________________________________
 
 ## 6. Application modes
 
@@ -317,7 +323,7 @@ or:
 boto3 restore_db_cluster_from_snapshot call
 ```
 
----
+______________________________________________________________________
 
 ## 7. User interface layout
 
@@ -460,7 +466,7 @@ Mode
 Endpoint mode
 ```
 
----
+______________________________________________________________________
 
 ## 8. GUI representation rules
 
@@ -468,18 +474,18 @@ The GUI should avoid dumping raw JSON unless requested.
 
 Preferred representations:
 
-| AWS data shape          | GUI representation                   |
+| AWS data shape | GUI representation |
 | ----------------------- | ------------------------------------ |
-| List of resources       | sortable table/grid                  |
-| Nested properties       | tree view                            |
-| Tags                    | editable or read-only key/value grid |
-| ARNs                    | text field with copy button          |
-| Status values           | label with refresh button            |
-| Relationships           | clickable links                      |
-| Events                  | chronological table                  |
-| Parameters              | name/value/source table              |
-| JSON policy or document | formatted text viewer                |
-| Item attributes         | tree or attribute grid               |
+| List of resources | sortable table/grid |
+| Nested properties | tree view |
+| Tags | editable or read-only key/value grid |
+| ARNs | text field with copy button |
+| Status values | label with refresh button |
+| Relationships | clickable links |
+| Events | chronological table |
+| Parameters | name/value/source table |
+| JSON policy or document | formatted text viewer |
+| Item attributes | tree or attribute grid |
 
 Raw JSON remains available through:
 
@@ -489,7 +495,7 @@ Copy raw JSON
 Save raw JSON
 ```
 
----
+______________________________________________________________________
 
 ## 9. Service design
 
@@ -574,7 +580,7 @@ src/aws_think_console/
     fixtures.py
 ```
 
----
+______________________________________________________________________
 
 ## 10. Service module contract
 
@@ -614,7 +620,7 @@ ServiceDefinition(
 )
 ```
 
----
+______________________________________________________________________
 
 ## 11. Action model
 
@@ -645,17 +651,17 @@ class RiskLevel(StrEnum):
 
 Examples:
 
-| Action                | Risk           |
+| Action | Risk |
 | --------------------- | -------------- |
-| Describe DB clusters  | Read-only      |
-| Create snapshot       | Safe write     |
+| Describe DB clusters | Read-only |
+| Create snapshot | Safe write |
 | Restore from snapshot | Cost-affecting |
-| Delete DB cluster     | Destructive    |
-| Delete DynamoDB table | Destructive    |
-| Modify cache cluster  | Cost-affecting |
-| Start backup job      | Cost-affecting |
+| Delete DB cluster | Destructive |
+| Delete DynamoDB table | Destructive |
+| Modify cache cluster | Cost-affecting |
+| Start backup job | Cost-affecting |
 
----
+______________________________________________________________________
 
 ## 12. Action history and script export
 
@@ -744,7 +750,7 @@ if __name__ == "__main__":
 
 The exported code should be boring, explicit, and easy to paste into a real project.
 
----
+______________________________________________________________________
 
 ## 13. Endpoint modes
 
@@ -806,7 +812,7 @@ custom AWS-compatible endpoints
 
 OpenStack remains out of scope.
 
----
+______________________________________________________________________
 
 ## 14. Authentication and profiles
 
@@ -842,7 +848,7 @@ A “Test credentials” action should call:
 sts:GetCallerIdentity
 ```
 
----
+______________________________________________________________________
 
 ## 15. Region handling
 
@@ -858,7 +864,7 @@ Refresh available regions
 
 Region-sensitive resources should refresh when the region changes.
 
----
+______________________________________________________________________
 
 ## 16. Read-only network support
 
@@ -876,7 +882,7 @@ These are shown in selection dialogs when needed.
 
 Example: when restoring an Aurora cluster, the subnet group and VPC-related details should be selectable or viewable, but the app does not initially create VPCs, subnets, or security groups.
 
----
+______________________________________________________________________
 
 # 17. Initial service coverage
 
@@ -925,7 +931,7 @@ Delete DB snapshot
 
 Destructive actions require confirmation and script review.
 
----
+______________________________________________________________________
 
 ## 17.2 RDS Aurora
 
@@ -1008,7 +1014,7 @@ Secrets Manager update notes, if user supplies secret ARN
 Manual app configuration notes
 ```
 
----
+______________________________________________________________________
 
 ## 17.3 AWS Backup
 
@@ -1071,7 +1077,7 @@ Track restore job status
 Link restored resource to service-specific view where possible
 ```
 
----
+______________________________________________________________________
 
 ## 17.4 ElastiCache
 
@@ -1125,7 +1131,7 @@ Memcached
 
 Where AWS API terminology differs from user terminology, the UI should preserve the AWS names in generated scripts.
 
----
+______________________________________________________________________
 
 ## 17.5 OpenSearch
 
@@ -1170,7 +1176,7 @@ Delete domain
 
 The UI should show cost-affecting warnings for domain creation and instance-count changes.
 
----
+______________________________________________________________________
 
 ## 17.6 DynamoDB
 
@@ -1241,7 +1247,7 @@ Copy as Python
 
 The first version may use a conservative attribute editor rather than trying to infer complex schemas.
 
----
+______________________________________________________________________
 
 # 18. Safety model
 
@@ -1289,7 +1295,7 @@ Show likely affected resources
 Show cost/destructive warning
 ```
 
----
+______________________________________________________________________
 
 # 19. Generated script policy
 
@@ -1329,7 +1335,7 @@ basic error handling
 comments for manual steps
 ```
 
----
+______________________________________________________________________
 
 # 20. CLI application
 
@@ -1431,7 +1437,7 @@ docker
 custom
 ```
 
----
+______________________________________________________________________
 
 # 21. Configuration
 
@@ -1476,7 +1482,7 @@ endpoint_url = "http://localhost:9200"
 
 If TOML writing is too much for the first version, JSON config is acceptable, but TOML is preferred for human editing.
 
----
+______________________________________________________________________
 
 # 22. Local testing and emulation
 
@@ -1542,7 +1548,7 @@ LocalStack may be supported through custom endpoint configuration, but the proje
 
 The spec should avoid relying on LocalStack-only behavior.
 
----
+______________________________________________________________________
 
 # 23. Testing strategy
 
@@ -1614,7 +1620,7 @@ Avoid brittle pixel-level tests.
 
 The GUI should be structured so logic can be tested outside tkinter widgets.
 
----
+______________________________________________________________________
 
 # 24. Threading and responsiveness
 
@@ -1634,7 +1640,7 @@ GUI updates state
 
 The app should support cancellation where practical, but first release may only support “ignore result after cancel.”
 
----
+______________________________________________________________________
 
 # 25. Error handling
 
@@ -1675,7 +1681,7 @@ Unsupported moto operation
 
 The app should never show only “Something went wrong.”
 
----
+______________________________________________________________________
 
 # 26. Permissions model
 
@@ -1695,7 +1701,7 @@ The GUI can show these in the action help panel.
 
 This helps users understand why an action may fail.
 
----
+______________________________________________________________________
 
 # 27. Help system
 
@@ -1735,7 +1741,7 @@ Common next steps:
 4. Validate application behavior.
 ```
 
----
+______________________________________________________________________
 
 # 28. Resource relationships
 
@@ -1759,7 +1765,7 @@ Clicking a related resource should navigate to its view if the service is suppor
 
 If unsupported, show a read-only detail panel.
 
----
+______________________________________________________________________
 
 # 29. Data model normalization
 
@@ -1797,7 +1803,7 @@ class AuroraClusterSummary:
     members: list[str]
 ```
 
----
+______________________________________________________________________
 
 # 30. MVP release
 
@@ -1839,7 +1845,7 @@ Recommended MVP order:
 
 Write operations can come after the read model is stable.
 
----
+______________________________________________________________________
 
 # 31. Milestones
 
@@ -1923,7 +1929,7 @@ delete selected low-risk resources
 high-quality generated scripts
 ```
 
----
+______________________________________________________________________
 
 # 32. Example user workflows
 
@@ -1986,7 +1992,7 @@ App uses endpoint URL in boto3 client or AWS CLI command.
 Generated scripts include endpoint-url.
 ```
 
----
+______________________________________________________________________
 
 # 33. Documentation deliverables
 
@@ -2042,29 +2048,29 @@ destructive actions require confirmation
 local endpoints are user-controlled
 ```
 
----
+______________________________________________________________________
 
 # 34. Acceptance criteria
 
 The project is successful when:
 
 1. A user can launch the GUI with `aws-think-console gui`.
-2. The app can show current AWS identity.
-3. The app can browse at least one supported service through boto3.
-4. The app can browse the same service through AWS CLI mode.
-5. The mode selector is always visible.
-6. A user can copy the current action as AWS CLI.
-7. A user can copy the current action as Python.
-8. Long-running calls do not freeze the GUI.
-9. Errors are understandable.
-10. Moto-backed tests run in CI.
-11. The code uses argparse, not Click.
-12. The code avoids leading underscores as a “private” convention.
-13. VPC, subnet, and security group data is available read-only where needed.
-14. The app avoids raw JSON dumps as the primary UI.
-15. Generated scripts are useful outside the app.
+1. The app can show current AWS identity.
+1. The app can browse at least one supported service through boto3.
+1. The app can browse the same service through AWS CLI mode.
+1. The mode selector is always visible.
+1. A user can copy the current action as AWS CLI.
+1. A user can copy the current action as Python.
+1. Long-running calls do not freeze the GUI.
+1. Errors are understandable.
+1. Moto-backed tests run in CI.
+1. The code uses argparse, not Click.
+1. The code avoids leading underscores as a “private” convention.
+1. VPC, subnet, and security group data is available read-only where needed.
+1. The app avoids raw JSON dumps as the primary UI.
+1. Generated scripts are useful outside the app.
 
----
+______________________________________________________________________
 
 # 35. Design principle
 

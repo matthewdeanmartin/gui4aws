@@ -128,6 +128,21 @@ def save_to_keyring(username: str, conn_dict: dict[str, Any]) -> None:
 # ── AWS Secrets Manager ───────────────────────────────────────────────────────
 
 
+def _try_add_candidate(client: Any, name: str, candidates: list[str]) -> None:
+    """Fetch one secret and append *name* to *candidates* if it looks like a DB connection."""
+    try:
+        value_resp = client.get_secret_value(SecretId=name)
+        text = value_resp.get("SecretString", "")
+        if text:
+            parsed = _try_parse_json(text)
+            if parsed and _is_connection_dict(parsed):
+                candidates.append(name)
+    except Exception:  # pylint: disable=broad-exception-caught
+        # One secret we can't read (e.g. AccessDenied) must not abort the
+        # whole scan — skip it and keep discovering connection strings.
+        logger.debug("skipping secret %r: cannot read value", name)
+
+
 def list_aws_secret_sources(boto3_session: Any) -> list[str]:
     """Return secret names in Secrets Manager that look like DB connection strings."""
     try:
@@ -137,19 +152,8 @@ def list_aws_secret_sources(boto3_session: Any) -> list[str]:
         for page in paginator.paginate():
             for secret in page.get("SecretList", []):
                 name = secret.get("Name", "")
-                if not name:
-                    continue
-                try:
-                    value_resp = client.get_secret_value(SecretId=name)
-                    text = value_resp.get("SecretString", "")
-                    if text:
-                        parsed = _try_parse_json(text)
-                        if parsed and _is_connection_dict(parsed):
-                            candidates.append(name)
-                except Exception:  # pylint: disable=broad-exception-caught  # nosec B112
-                    # One secret we can't read (e.g. AccessDenied) must not abort the
-                    # whole scan — skip it and keep discovering connection strings.
-                    continue
+                if name:
+                    _try_add_candidate(client, name, candidates)
         return candidates
     except Exception:  # pylint: disable=broad-exception-caught
         logger.exception("failed to list AWS secrets for SQL runner")
@@ -187,8 +191,8 @@ def execute_query(conn_info: ConnectionInfo, sql: str, limit: int = 500) -> tupl
 
 def _exec_postgresql(conn_info: ConnectionInfo, sql: str, limit: int) -> tuple[list[str], list[tuple[Any, ...]]]:
     try:
-        import pg8000  # type: ignore[import-not-found]
-        import pg8000.native  # type: ignore[import-not-found]
+        import pg8000  # type: ignore[import-not-found,import-untyped]
+        import pg8000.native  # type: ignore[import-not-found,import-untyped]
     except ImportError as exc:
         raise ImportError(
             "pg8000 is required for PostgreSQL queries.\n" "Install it with:  uv add pg8000  (or  pip install pg8000)"

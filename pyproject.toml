@@ -162,6 +162,13 @@ module = "tests.*"
 disallow_untyped_defs = false
 disallow_untyped_calls = false
 
+[[tool.mypy.overrides]]
+module = "gui4aws.sql_runner.connection"
+# pg8000 has no stubs: on CI it's installed (import-untyped) but absent locally
+# (import-not-found). One of the two error codes is always "unused" depending on
+# the environment, so we silence warn_unused_ignores for this module only.
+warn_unused_ignores = false
+
 [tool.ruff]
 line-length = 120
 target-version = "py310"

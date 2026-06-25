@@ -14,6 +14,7 @@ markdown_extensions:
   - toc:
       permalink: true
 nav:
+  - Index: index.md
   - Overview:
       - Readme.md: overview/README.md
   - Installation: installation.md

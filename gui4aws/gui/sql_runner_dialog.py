@@ -42,7 +42,7 @@ def _size_and_center(win: tk.Toplevel) -> None:
     win.geometry(f"{w}x{h}+{x}+{y}")
 
 
-class _ResultTable(ttk.Frame):
+class _ResultTable(ttk.Frame):  # pylint: disable=too-many-ancestors
     """Scrollable Treeview that shows query results."""
 
     def __init__(self, parent: tk.Misc) -> None:
@@ -62,6 +62,7 @@ class _ResultTable(ttk.Frame):
         self._rows: list[tuple[Any, ...]] = []
 
     def show(self, columns: list[str], rows: list[tuple[Any, ...]]) -> None:
+        """Populate the table with *columns* headers and *rows* data."""
         self._columns = columns
         self._rows = rows
         self._tree.delete(*self._tree.get_children())
@@ -73,12 +74,14 @@ class _ResultTable(ttk.Frame):
             self._tree.insert("", "end", values=[str(v) for v in row])
 
     def clear(self) -> None:
+        """Remove all displayed rows and reset column headers."""
         self._columns = []
         self._rows = []
         self._tree["columns"] = ()
         self._tree.delete(*self._tree.get_children())
 
     def export_csv(self) -> None:
+        """Prompt for a file path and write current results as CSV."""
         if not self._columns:
             messagebox.showinfo("No results", "Run a query first.", parent=self)
             return
@@ -99,7 +102,7 @@ class _ResultTable(ttk.Frame):
         messagebox.showinfo("Saved", f"Results saved to:\n{path}", parent=self)
 
 
-class SqlRunnerDialog(tk.Toplevel):
+class SqlRunnerDialog(tk.Toplevel):  # pylint: disable=too-many-ancestors
     """Query dialog for an Aurora cluster.
 
     The user picks a connection string from keyring or AWS Secrets Manager, writes
@@ -204,9 +207,11 @@ class SqlRunnerDialog(tk.Toplevel):
         self.bind("<Control-Return>", lambda _e: self._run_query())
 
         ttk.Button(opt_bar, text="Clear", command=self._clear_query).pack(side="left", padx=4)
-        ttk.Button(opt_bar, text="Export CSV", command=lambda: self._result_table.export_csv()).pack(
-            side="right", padx=4
-        )
+        ttk.Button(
+            opt_bar,
+            text="Export CSV",
+            command=lambda: self._result_table.export_csv(),  # pylint: disable=unnecessary-lambda
+        ).pack(side="right", padx=4)
         ttk.Button(opt_bar, text="Close", command=self.destroy).pack(side="right", padx=4)
 
         # Status label

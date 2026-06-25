@@ -20,11 +20,11 @@ classifier above "Planning". It is a chicken-and-egg failure.
 ## Steps to reproduce
 
 1. Take any repo that is **not** on PyPI yet.
-2. Declare a reasonable first-release classifier in `pyproject.toml`, e.g.:
+1. Declare a reasonable first-release classifier in `pyproject.toml`, e.g.:
    ```toml
    classifiers = ["Development Status :: 3 - Alpha"]
    ```
-3. Run:
+1. Run:
    ```bash
    troml-dev-status validate .
    ```
@@ -42,18 +42,18 @@ Exit code: `2`.
 `troml-dev-status analyze .` shows the project passing essentially every
 *code-quality* signal the tool measures:
 
-| ID    | Check                | Status |
+| ID | Check | Status |
 |-------|----------------------|--------|
-| C3    | Dependencies Pinned  | OK     |
-| C4    | Reproducible Dev Env | OK     |
-| Cmpl1 | TODO markers         | OK (0 per 1k LOC) |
+| C3 | Dependencies Pinned | OK |
+| C4 | Reproducible Dev Env | OK |
+| Cmpl1 | TODO markers | OK (0 per 1k LOC) |
 | Cmpl2 | NotImplemented usage | OK (0/834) |
-| Cmpl3 | Placeholder `pass`   | OK (0.24%) |
-| Cmpl4 | Stub files           | OK (0/187) |
-| Fail0 | Zero file count      | OK (187 files) |
-| Fail1 | Tiny code base       | OK (21,682 LOC) |
-| Fail10| Bad metadata         | OK     |
-| Fail11| Pointless content    | OK (187/187) |
+| Cmpl3 | Placeholder `pass` | OK (0.24%) |
+| Cmpl4 | Stub files | OK (0/187) |
+| Fail0 | Zero file count | OK (187 files) |
+| Fail1 | Tiny code base | OK (21,682 LOC) |
+| Fail10| Bad metadata | OK |
+| Fail11| Pointless content | OK (187/187) |
 
 …yet the final verdict is:
 
@@ -74,11 +74,11 @@ release gate:
    as *absence of evidence*, not as *evidence of immaturity*. Fall back to the
    classifier inferred from the code-quality signals (which here would be well
    above "Planning").
-2. **Provide an opt-out / tolerance**, e.g.
+1. **Provide an opt-out / tolerance**, e.g.
    `troml-dev-status validate . --allow-first-release` or a
    `[tool.troml-dev-status] require_release_history = false` setting, so the
    no-releases signal is skipped on the first publish.
-3. **Distinguish "validate against declared" from "infer absolute".** Allow the
+1. **Distinguish "validate against declared" from "infer absolute".** Allow the
    declared classifier to be accepted when the only disagreement is driven by
    release-history signals the project cannot satisfy until after it ships.
 

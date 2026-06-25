@@ -65,7 +65,7 @@ def _build_metadata_panel(parent: tk.Misc, metadata: dict[str, Any]) -> None:
     lf.grid_columnconfigure(1, weight=1)
     # Anchor all StringVars on the widget so they survive past this function's scope.
     anchored_vars: list[tk.StringVar] = []
-    lf._vars = anchored_vars  # type: ignore[attr-defined]
+    lf._vars = anchored_vars  # type: ignore[attr-defined]  # pylint: disable=protected-access
 
     row = 0
 

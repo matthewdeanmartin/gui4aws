@@ -1,16 +1,21 @@
 # gui4aws
 
+Is the web console for AWS slow and annoying? Do you have python? You could have a nice GUI for most services.
+
+Design goals
+- minimal dependencies
+- safety guardrails
+- fast
+
+![main screen](https://raw.githubusercontent.com/matthewdeanmartin/gui4aws/main/docs/main_page.png)
+
 <!-- TODO (generated from template — delete this block once done)
   - [ ] Replace this description with a real one-paragraph summary
-  - [ ] Update pyproject.toml [project] keywords with real search terms
-  - [ ] Update pyproject.toml classifiers Development Status (3-Alpha → 4-Beta → 5-Production)
-  - [ ] Update pyproject.toml description (shown on PyPI)
   - [ ] Add a PyPI badge: https://badge.fury.io/py/gui4aws
   - [ ] Add a CI badge from your GitHub Actions build.yml
   - [ ] Fill in docs/overview/README.md with a real project overview
   - [ ] Add real AWS service panels to gui4aws/ and update scripts/basic_checks.sh
   - [ ] Register project on Read the Docs and point it at mkdocs.yml
-  - [ ] Set up PyPI OIDC trusted publishing (no token needed) for publish_to_pypi.yml
   - [ ] Run `make pre-commit-install` to install git hooks
   - [ ] Run `make gha-upgrade` after first push to pin GHA action SHAs
   - [ ] Add project-specific words to private_dictionary.txt

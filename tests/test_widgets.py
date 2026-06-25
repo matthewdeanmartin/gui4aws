@@ -150,26 +150,26 @@ def test_status_bar(tk_root: tk.Tk) -> None:
 def test_filter_bar(tk_root: tk.Tk) -> None:
     on_refresh = MagicMock()
     on_change = MagicMock()
-    bar = FilterBar(tk_root, on_refresh=on_refresh, on_field_change=on_change)
+    filter_bar = FilterBar(tk_root, on_refresh=on_refresh, on_field_change=on_change)
 
     fields = [
         InputField(name="f1", label="L1", kind="text", default="v1"),
         InputField(name="f2", label="L2", kind="choice", choices=("a", "b")),
     ]
-    bar.set_fields(fields)
+    filter_bar.set_fields(fields)
 
-    assert bar.values()["f1"] == "v1"
-    assert bar.values()["f2"] == ""
+    assert filter_bar.values()["f1"] == "v1"
+    assert filter_bar.values()["f2"] == ""
 
     # Simulate change
-    bar.variables["f1"].set("new-v")
+    filter_bar.variables["f1"].set("new-v")
     on_change.assert_called_with("f1", "new-v")
 
     # Simulate choices update
-    bar.set_choices("f2", ["a", "b"], auto_select=True)
-    assert bar.values()["f2"] == "a"
+    filter_bar.set_choices("f2", ["a", "b"], auto_select=True)
+    assert filter_bar.values()["f2"] == "a"
     on_refresh.assert_called_once()
 
     # Client filter (JMESPath)
-    bar.client_var.set("some-expr")
-    assert bar.client_filter() == "some-expr"
+    filter_bar.client_var.set("some-expr")
+    assert filter_bar.client_filter() == "some-expr"

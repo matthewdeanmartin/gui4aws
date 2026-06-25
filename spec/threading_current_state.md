@@ -9,10 +9,12 @@ That is a meaningful improvement over the prior "many daemon threads pile up aga
 ## Current thread model
 
 1. **Tk main thread**
+
    - Owns widgets, `after(...)`, result dispatch, dialogs, status updates, and table rendering.
    - `poll_queue()` drains `results_queue` every 50ms.
 
-2. **`SerialWorker` background thread**
+1. **`SerialWorker` background thread**
+
    - Runs queued API work FIFO.
    - Used for:
      - default sidebar read actions
@@ -23,7 +25,8 @@ That is a meaningful improvement over the prior "many daemon threads pile up aga
      - cache seeding after the demo seed flow
    - This is the main protection against request pileups.
 
-3. **Ad hoc daemon threads**
+1. **Ad hoc daemon threads**
+
    - `seed_demo_resources()` starts one worker thread for the seed operation itself.
    - `on_moto_toggle(start=True)` starts one worker thread to boot Moto.
    - These threads do not touch Tk directly; they post results back through `results_queue`.

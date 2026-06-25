@@ -1,6 +1,6 @@
 """MainWindow: composes toolbar + sidebar + main panel + status bar."""
 
-# pylint: disable=broad-exception-caught
+# pylint: disable=broad-exception-caught,too-many-lines
 
 from __future__ import annotations
 
@@ -210,7 +210,7 @@ class MainWindow(ServerManagerMixin):
 
     def save_script(self) -> None:
         """Delegate to the Script Editor's save dialog."""
-        self.script_editor._save()
+        self.script_editor._save()  # pylint: disable=protected-access
 
     def open_docs(self) -> None:
         """Open the documentation website in the default browser."""

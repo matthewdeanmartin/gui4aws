@@ -14,13 +14,15 @@ __all__ = ["ScriptEditorPanel"]
 
 @dataclass
 class ScriptEntry:
+    """One recorded action entry in the script editor history."""
+
     action_id: str
     display_name: str
     risk_level: RiskLevel
     cli_script: str
 
 
-class ScriptEditorPanel(ttk.Frame):
+class ScriptEditorPanel(ttk.Frame):  # pylint: disable=too-many-ancestors
     """IDE-like panel that accumulates CLI bash script from user actions.
 
     Left sidebar: checkboxes controlling which risk-level actions to include.

@@ -41,7 +41,7 @@ def _load_saved() -> dict[str, str]:
         return {}
     try:
         data = json.loads(p.read_text(encoding="utf-8"))
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return {}
     if not isinstance(data, dict):
         return {}
@@ -435,7 +435,7 @@ class JmespathDesignerDialog(tk.Toplevel):
             new_val = current[:pos] + snippet + current[pos:]
             self._query_var.set(new_val)
             self._query_entry.icursor(pos + len(snippet))
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             self._query_var.set(self._query_var.get() + snippet)
         self._query_entry.focus_set()
 

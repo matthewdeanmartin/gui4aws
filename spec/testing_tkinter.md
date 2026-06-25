@@ -286,8 +286,7 @@ mgr.stop()
   app. If `threading.active_count()` stays low but the queue never drains,
   that's a moto problem, not a gui4aws bug. Confirm by hitting moto
   directly with a fresh boto3 client.
-- **Patch classes, not instances, before construction.** `SerialWorker._loop
-  = traced_loop` works because the construction reads the class attribute.
+- **Patch classes, not instances, before construction.** `SerialWorker._loop = traced_loop` works because the construction reads the class attribute.
   Patching `w._action_queue._loop` after construction does nothing — the
   thread is already running with the unpatched method.
 - **Daemon threads don't show errors.** If a worker raises and you didn't

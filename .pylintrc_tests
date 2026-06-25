@@ -23,11 +23,12 @@ disable=
     missing-module-docstring,
     missing-class-docstring,
     missing-function-docstring,
-    no-self-use,
     attribute-defined-outside-init,
     invalid-name,
     import-outside-toplevel,
-    too-many-ancestors
+    too-many-ancestors,
+    use-implicit-booleaness-not-comparison,
+    unnecessary-lambda
 
 [FORMAT]
 max-line-length=120

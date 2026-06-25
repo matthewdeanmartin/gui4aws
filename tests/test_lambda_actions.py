@@ -32,7 +32,10 @@ def test_create_and_delete_function(mock_aws_env: None) -> None:
     iam = boto3.client("iam", region_name="us-east-1")
     role_arn = iam.create_role(
         RoleName="lambda-role",
-        AssumeRolePolicyDocument='{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}',
+        AssumeRolePolicyDocument=(
+            '{"Version":"2012-10-17","Statement":[{"Effect":"Allow",'
+            '"Principal":{"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
+        ),
     )["Role"]["Arn"]
 
     # Create dummy zip
