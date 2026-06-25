@@ -92,7 +92,7 @@ class FakeContext:
 def test_write_refresh_warms_target_nav_caches() -> None:
     """ECS writes invalidate cached reads and prewarm affected navs."""
     window = object.__new__(MainWindow)
-    window.context = FakeContext(ServiceRegistry((ECS_SERVICE,)))  # type: ignore[assignment]
+    window.context = FakeContext(ServiceRegistry((ECS_SERVICE,)))
     window.main_panel = FakePanel({})  # type: ignore[assignment]
     window.current_service_id = "ecs"
     window.action_queue = FakeQueue()  # type: ignore[assignment]
@@ -102,10 +102,10 @@ def test_write_refresh_warms_target_nav_caches() -> None:
     for job in list(window.action_queue.jobs):  # type: ignore[attr-defined]
         job()
 
-    assert window.context.invalidations == ["ecs"]  # type: ignore[attr-defined]
-    assert (LIST_CLUSTERS.action_id, {}) in window.context.calls  # type: ignore[attr-defined]
-    assert (LIST_SERVICES.action_id, {"cluster": "demo-cluster"}) in window.context.calls  # type: ignore[attr-defined]
-    assert (LIST_TASKS.action_id, {"cluster": "demo-cluster"}) in window.context.calls  # type: ignore[attr-defined]
+    assert window.context.invalidations == ["ecs"]
+    assert (LIST_CLUSTERS.action_id, {}) in window.context.calls
+    assert (LIST_SERVICES.action_id, {"cluster": "demo-cluster"}) in window.context.calls
+    assert (LIST_TASKS.action_id, {"cluster": "demo-cluster"}) in window.context.calls
 
 
 def test_refresh_visible_data_after_write_reloads_current_nav() -> None:
@@ -129,14 +129,14 @@ def test_clear_request_queue_drains_pending_and_ready_work() -> None:
     window.results_queue = queue.Queue()
     window.results_queue.put(("ok", None, None))
     window.results_queue.put(("ok", None, None))
-    window.status_bar = FakeStatusBar()  # type: ignore[assignment]
+    window.status_bar = FakeStatusBar()
     window.moto_output_panel = FakeDiagnosticText()  # type: ignore[assignment]
-    window.robotocore_panel = FakeRobotocorePanel()  # type: ignore[assignment]
+    window.robotocore_panel = FakeRobotocorePanel()
     window.queue_panel = FakeSnapshotPanel()  # type: ignore[assignment]
     window.cache_panel = FakeSnapshotPanel()  # type: ignore[assignment]
-    window.moto_manager = FakeMotoManager()  # type: ignore[assignment]
-    window.robotocore_manager = FakeRobotocoreManager()  # type: ignore[assignment]
-    window.context = FakeContext(  # type: ignore[assignment]
+    window.moto_manager = FakeMotoManager()
+    window.robotocore_manager = FakeRobotocoreManager()
+    window.context = FakeContext(
         ServiceRegistry((ECS_SERVICE,)),
         endpoint_config=FakeEndpointConfig(),
         action_cache=FakeActionCache(),
@@ -149,13 +149,13 @@ def test_clear_request_queue_drains_pending_and_ready_work() -> None:
 
     assert window.action_queue.cleared == 2  # type: ignore[attr-defined]
     assert window.results_queue.qsize() == 0
-    assert window.status_bar.status == "Cleared queue (2 pending, 2 ready)"  # type: ignore[attr-defined]
+    assert window.status_bar.status == "Cleared queue (2 pending, 2 ready)"
 
 
 def test_clear_selected_cache_entry_removes_only_current_selection() -> None:
     """Clearing one cache entry delegates to the action cache with the selected row."""
     window = object.__new__(MainWindow)
-    window.context = FakeContext(  # type: ignore[assignment]
+    window.context = FakeContext(
         ServiceRegistry((ECS_SERVICE,)),
         endpoint_config=FakeEndpointConfig(),
         action_cache=MutableFakeActionCache(),
@@ -168,22 +168,22 @@ def test_clear_selected_cache_entry_removes_only_current_selection() -> None:
             "inputs": {"cluster": "demo-cluster"},
         }
     )
-    window.status_bar = FakeStatusBar()  # type: ignore[assignment]
+    window.status_bar = FakeStatusBar()
     window.moto_output_panel = FakeDiagnosticText()  # type: ignore[assignment]
-    window.robotocore_panel = FakeRobotocorePanel()  # type: ignore[assignment]
+    window.robotocore_panel = FakeRobotocorePanel()
     window.queue_panel = FakeSnapshotPanel()  # type: ignore[assignment]
     window.action_queue = FakeQueue()  # type: ignore[assignment]
     window.results_queue = QueueWithSize(0)  # type: ignore[assignment]
     window.nav_generation = 2
     window.current_service_id = "ecs"
     window.current_nav = type("_Nav", (), {"item_id": "services"})()
-    window.moto_manager = FakeMotoManager()  # type: ignore[assignment]
-    window.robotocore_manager = FakeRobotocoreManager()  # type: ignore[assignment]
+    window.moto_manager = FakeMotoManager()
+    window.robotocore_manager = FakeRobotocoreManager()
 
     window.clear_selected_cache_entry()
 
-    assert window.context.action_cache.removed == [("ecs", "ecs.list_services", "boto3", {"cluster": "demo-cluster"})]  # type: ignore[attr-defined]
-    assert window.status_bar.status == "Cleared cache entry"  # type: ignore[attr-defined]
+    assert window.context.action_cache.removed == [("ecs", "ecs.list_services", "boto3", {"cluster": "demo-cluster"})]
+    assert window.status_bar.status == "Cleared cache entry"
 
 
 def test_open_moto_dashboard_uses_dashboard_endpoint(monkeypatch: Any) -> None:
@@ -192,13 +192,13 @@ def test_open_moto_dashboard_uses_dashboard_endpoint(monkeypatch: Any) -> None:
     monkeypatch.setattr("webbrowser.open", lambda url: opened.append(url))
 
     window = object.__new__(MainWindow)
-    window.moto_manager = FakeMotoManager()  # type: ignore[assignment]
-    window.status_bar = FakeStatusBar()  # type: ignore[assignment]
+    window.moto_manager = FakeMotoManager()
+    window.status_bar = FakeStatusBar()
 
     window.open_moto_dashboard()
 
     assert opened == ["http://127.0.0.1:5001/moto-api/"]
-    assert window.status_bar.status == "Opened Moto dashboard"  # type: ignore[attr-defined]
+    assert window.status_bar.status == "Opened Moto dashboard"
 
 
 def test_diagnostic_snapshots_include_live_state() -> None:
@@ -209,8 +209,8 @@ def test_diagnostic_snapshots_include_live_state() -> None:
     window.current_service_id = "ecs"
     window.current_nav = type("_Nav", (), {"item_id": "services"})()
     window.action_queue = FakeQueue()  # type: ignore[assignment]
-    window.moto_manager = FakeMotoManager()  # type: ignore[assignment]
-    window.context = FakeContext(  # type: ignore[assignment]
+    window.moto_manager = FakeMotoManager()
+    window.context = FakeContext(
         ServiceRegistry((ECS_SERVICE,)),
         endpoint_config=FakeEndpointConfig(),
         action_cache=FakeActionCache(),

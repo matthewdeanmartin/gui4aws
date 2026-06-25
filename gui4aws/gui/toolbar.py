@@ -62,7 +62,7 @@ class Toolbar(ttk.Frame):
         self.profile_var = tk.StringVar(value=context.profile_name or "(none)")
         ttk.Label(self, text="Profile:").grid(row=0, column=col, padx=(16, 4))
         col += 1
-        profile_values = ["(none)"] + list(profiles)
+        profile_values = ["(none)", *list(profiles)]
         self.profile_combo = ttk.Combobox(self, textvariable=self.profile_var, values=profile_values, width=18)
         self.profile_combo.grid(row=0, column=col, padx=4)
         self.profile_combo.bind("<<ComboboxSelected>>", self.on_profile_changed)

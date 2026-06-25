@@ -209,7 +209,11 @@ bandit:
 
 audit:
 	@echo "=== uv audit ==="
-	@$(UV) audit
+	@# GHSA-p4gq-832x-fm9v: path traversal in nltk.data.load(). nltk is a dev-only
+	@# transitive dep (troml-dev-status -> textstat -> nltk); gui4aws never calls
+	@# nltk and it ships in no runtime dependency. No fix is available upstream, so
+	@# ignore it only until one is (auto-re-enables when nltk publishes a fix).
+	@$(UV) audit --ignore-until-fixed GHSA-p4gq-832x-fm9v
 	@echo "=== pip-audit ==="
 	@$(UV) run pip-audit
 
@@ -254,7 +258,12 @@ version-check:
 	@$(UV) run jiggle_version check
 
 dev-status:
-	@$(UV) run troml-dev-status validate .
+	@echo "=== troml-dev-status (advisory until first PyPI release) ==="
+	@# troml-dev-status infers "1 - Planning" for any project with no PyPI
+	@# releases yet, so it can never agree with our declared classifier before
+	@# 0.1.0 ships. Keep it advisory for now; re-enable as a gate post-publish.
+	@# See spec/bug_troml_dev_status.md.
+	@$(UV) run troml-dev-status validate . || true
 
 # ── GitHub Actions maintenance ───────────────────────────────────────────────
 

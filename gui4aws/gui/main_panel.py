@@ -197,8 +197,8 @@ class MainPanel(ttk.Frame):
         has_prev: bool,
         has_next: bool,
         page_num: int,
-        on_prev: "Callable[[], None] | None",
-        on_next: "Callable[[], None] | None",
+        on_prev: Callable[[], None] | None,
+        on_next: Callable[[], None] | None,
     ) -> None:
         """Show the pagination bar with Prev/Next buttons."""
         self.pagination_prev_btn.configure(

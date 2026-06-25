@@ -10,9 +10,11 @@ Layout:
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import tkinter as tk
+from functools import partial
 from pathlib import Path
 from tkinter import messagebox, ttk
 from typing import Any
@@ -26,8 +28,10 @@ _MAX_RECENT = 30
 
 # ── Persistence ───────────────────────────────────────────────────────────────
 
+
 def _queries_path() -> Path:
     from gui4aws.config import config_path
+
     return config_path().parent / "jmespath_queries.json"
 
 
@@ -36,9 +40,12 @@ def _load_saved() -> dict[str, str]:
     if not p.exists():
         return {}
     try:
-        return json.loads(p.read_text(encoding="utf-8"))
+        data = json.loads(p.read_text(encoding="utf-8"))
     except Exception:
         return {}
+    if not isinstance(data, dict):
+        return {}
+    return {str(k): str(v) for k, v in data.items()}
 
 
 def _save_all(queries: dict[str, str]) -> None:
@@ -48,6 +55,7 @@ def _save_all(queries: dict[str, str]) -> None:
 
 
 # ── Tree helpers (shared with JsonViewerDialog pattern) ───────────────────────
+
 
 def _insert_node(tree: ttk.Treeview, parent: str, key: str, value: Any) -> None:
     if isinstance(value, dict):
@@ -233,6 +241,7 @@ _BUILDER: dict[str, list[tuple[str, str]]] = {
 
 # ── Dialog ────────────────────────────────────────────────────────────────────
 
+
 class JmespathDesignerDialog(tk.Toplevel):
     """Interactive JMESPath query designer with tree preview, builder, and saved queries."""
 
@@ -284,9 +293,7 @@ class JmespathDesignerDialog(tk.Toplevel):
 
         ttk.Label(sbar, text="Name:").grid(row=0, column=0, padx=(8, 4), pady=4, sticky="w")
         self._save_name_var = tk.StringVar()
-        ttk.Entry(sbar, textvariable=self._save_name_var, width=30).grid(
-            row=0, column=1, sticky="ew", padx=4, pady=4
-        )
+        ttk.Entry(sbar, textvariable=self._save_name_var, width=30).grid(row=0, column=1, sticky="ew", padx=4, pady=4)
         saved_btns = ttk.Frame(sbar)
         saved_btns.grid(row=0, column=2, padx=(4, 8), pady=4)
         ttk.Button(saved_btns, text="Save", command=self._save_query, width=7).pack(side="left", padx=2)
@@ -384,7 +391,7 @@ class JmespathDesignerDialog(tk.Toplevel):
                     tab,
                     text=label,
                     width=13,
-                    command=lambda s=snippet: self._insert_snippet(s),
+                    command=partial(self._insert_snippet, snippet),
                 )
                 btn.grid(row=row, column=col, padx=2, pady=2, sticky="ew")
                 col += 1
@@ -437,10 +444,8 @@ class JmespathDesignerDialog(tk.Toplevel):
     def _set_payload(self, payload: Any) -> None:
         self._payload = payload
         if isinstance(payload, str):
-            try:
+            with contextlib.suppress(json.JSONDecodeError, TypeError):
                 self._payload = json.loads(payload)
-            except (json.JSONDecodeError, TypeError):
-                pass
         _populate_tree(self._data_tree, self._payload)
 
     # ── Query execution ───────────────────────────────────────────────────────
@@ -547,14 +552,14 @@ class JmespathDesignerDialog(tk.Toplevel):
         prev_entry.pack(fill="x", padx=8, pady=(0, 4))
 
         def on_select(_e: object = None) -> None:
-            sel = lb.curselection()
+            sel = lb.curselection()  # type: ignore[no-untyped-call]
             if sel:
                 preview_var.set(self._saved[names[sel[0]]])
 
         lb.bind("<<ListboxSelect>>", on_select)
 
         def do_load() -> None:
-            sel = lb.curselection()
+            sel = lb.curselection()  # type: ignore[no-untyped-call]
             if not sel:
                 return
             chosen_name = names[sel[0]]
@@ -599,7 +604,7 @@ class JmespathDesignerDialog(tk.Toplevel):
             lb.insert("end", n)
 
         def do_delete() -> None:
-            sel = lb.curselection()
+            sel = lb.curselection()  # type: ignore[no-untyped-call]
             if not sel:
                 return
             chosen = names[sel[0]]
@@ -641,6 +646,7 @@ class JmespathDesignerDialog(tk.Toplevel):
 
 
 # ── Helper ────────────────────────────────────────────────────────────────────
+
 
 def _result_count(result: Any) -> str:
     if result is None:

@@ -9,6 +9,7 @@ When 'ResponseMetadata' is absent the entire payload goes into the tree.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import tkinter as tk
 from tkinter import ttk
@@ -62,8 +63,9 @@ def _build_metadata_panel(parent: tk.Misc, metadata: dict[str, Any]) -> None:
     """
     lf = parent
     lf.grid_columnconfigure(1, weight=1)
-    # Anchor all StringVars here so they survive past this function's scope.
-    lf._vars: list[tk.StringVar] = []  # type: ignore[attr-defined]
+    # Anchor all StringVars on the widget so they survive past this function's scope.
+    anchored_vars: list[tk.StringVar] = []
+    lf._vars = anchored_vars  # type: ignore[attr-defined]
 
     row = 0
 
@@ -73,7 +75,7 @@ def _build_metadata_panel(parent: tk.Misc, metadata: dict[str, Any]) -> None:
             continue
         ttk.Label(lf, text=f"{key}:", anchor="e").grid(row=row, column=0, sticky="e", padx=(8, 4), pady=2)
         var = tk.StringVar(value=str(metadata[key]))
-        lf._vars.append(var)  # type: ignore[attr-defined]
+        anchored_vars.append(var)
         entry = ttk.Entry(lf, textvariable=var, state="readonly", width=60)
         entry.grid(row=row, column=1, sticky="ew", padx=(0, 8), pady=2)
         row += 1
@@ -98,7 +100,7 @@ def _build_metadata_panel(parent: tk.Misc, metadata: dict[str, Any]) -> None:
         ttk.Label(lf, text=f"{key}:", anchor="e").grid(row=row, column=0, sticky="e", padx=(8, 4), pady=2)
         raw_val = str(value) if not isinstance(value, (dict, list)) else json.dumps(value, default=str)
         var2 = tk.StringVar(value=raw_val)
-        lf._vars.append(var2)  # type: ignore[attr-defined]
+        anchored_vars.append(var2)
         entry2 = ttk.Entry(lf, textvariable=var2, state="readonly", width=60)
         entry2.grid(row=row, column=1, sticky="ew", padx=(0, 8), pady=2)
         row += 1
@@ -128,10 +130,8 @@ class JsonViewerDialog(tk.Toplevel):
 
         # ── Normalise payload ────────────────────────────────────────────────
         if isinstance(payload, str):
-            try:
+            with contextlib.suppress(json.JSONDecodeError, TypeError):
                 payload = json.loads(payload)
-            except (json.JSONDecodeError, TypeError):
-                pass
 
         metadata: dict[str, Any] | None = None
         data: Any = payload

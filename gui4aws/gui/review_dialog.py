@@ -11,14 +11,21 @@ from __future__ import annotations
 
 import contextlib
 import tkinter as tk
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from tkinter import ttk
 from typing import Any
 
 from gui4aws.models import ActionDefinition, RiskLevel
 
-__all__ = ["ReviewDecision", "ReviewDialog", "needs_review", "warning_banner"]
+__all__ = [
+    "ReviewDecision",
+    "ReviewDialog",
+    "confirmation_text_for",
+    "needs_review",
+    "needs_typed_confirmation",
+    "warning_banner",
+]
 
 
 def needs_review(action: ActionDefinition) -> bool:
@@ -28,6 +35,31 @@ def needs_review(action: ActionDefinition) -> bool:
     risk levels require the user to read the generated script first.
     """
     return action.risk_level is not RiskLevel.READ_ONLY
+
+
+def needs_typed_confirmation(action: ActionDefinition) -> bool:
+    """Return True if the action requires the user to type a confirmation token.
+
+    Only DESTRUCTIVE actions (deletes/terminates) demand typed confirmation; lighter writes
+    are gated by the review screen alone.
+    """
+    return action.risk_level is RiskLevel.DESTRUCTIVE
+
+
+def confirmation_text_for(action: ActionDefinition, inputs: Mapping[str, str]) -> str:
+    """Pick the token the user must type to confirm a destructive action.
+
+    Uses the value of the first required input field (the resource identifier in every
+    destructive action — e.g. the cluster/instance/key name). Falls back to the action's
+    display name when no required field has a value, so the gate can never be bypassed by
+    matching an empty string.
+    """
+    for field in action.input_fields:
+        if field.required:
+            value = str(inputs.get(field.name, "")).strip()
+            if value:
+                return value
+    return action.display_name
 
 
 def warning_banner(action: ActionDefinition) -> str | None:

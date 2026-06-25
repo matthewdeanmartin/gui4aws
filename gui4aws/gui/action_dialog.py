@@ -10,8 +10,15 @@ from tkinter import ttk
 from typing import Any
 
 from gui4aws.gui.action_form import ActionForm
+from gui4aws.gui.confirmation_dialog import TypedConfirmationDialog
 from gui4aws.gui.json_viewer_dialog import JsonViewerDialog
-from gui4aws.gui.review_dialog import needs_review, warning_banner
+from gui4aws.gui.review_dialog import (
+    ReviewDialog,
+    confirmation_text_for,
+    needs_review,
+    needs_typed_confirmation,
+    warning_banner,
+)
 from gui4aws.models import ActionDefinition
 
 __all__ = ["ActionDialog"]
@@ -256,19 +263,60 @@ class ActionDialog(tk.Toplevel):
     # ── Button actions ───────────────────────────────────────────────────────
 
     def on_run(self) -> None:
-        """Validate the form and trigger the action execution."""
+        """Validate the form, confirm destructive intent, then trigger execution."""
         if self.running:
             return
         errors = self.form.validate()
         if errors:
             self.status_var.set("Required: " + "; ".join(errors))
             return
+
+        inputs = self.form.values()
+        if not self._confirm_before_run(inputs):
+            self.status_var.set("Cancelled — nothing was run.")
+            return
+
         self.running = True
         self.run_btn.configure(state="disabled")
         self.status_var.set("Running…")
         self.set_result_text("(waiting for result…)")
         if self._on_run_cb is not None:
-            self._on_run_cb(self.action, self.form.values())
+            self._on_run_cb(self.action, inputs)
+
+    def _confirm_before_run(self, inputs: dict[str, str]) -> bool:
+        """Gate non-read-only actions behind review and (for deletes) typed confirmation.
+
+        Returns True if the user confirmed and execution should proceed, False if they
+        cancelled at any step (in which case nothing is run).
+        """
+        if not needs_review(self.action):
+            return True
+
+        cli, python = "", ""
+        if self._on_generate_scripts_cb is not None:
+            try:
+                cli, python = self._on_generate_scripts_cb(self.action, inputs)
+            except Exception:  # pylint: disable=broad-exception-caught
+                cli, python = "", ""
+
+        decision = ReviewDialog(self, self.action, cli, python).show_modal()
+        if not decision.confirmed:
+            return False
+
+        if needs_typed_confirmation(self.action):
+            expected = confirmation_text_for(self.action, inputs)
+            confirmation = TypedConfirmationDialog(
+                self,
+                title=f"Confirm — {self.action.display_name}",
+                prompt=(
+                    "This action is destructive and cannot be undone. " "Type the resource identifier below to proceed."
+                ),
+                expected_text=expected,
+            ).show_modal()
+            if not confirmation.confirmed:
+                return False
+
+        return True
 
     def on_cancel(self) -> None:
         """Close the dialog without running the action."""

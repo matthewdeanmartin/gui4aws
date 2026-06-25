@@ -158,7 +158,7 @@ class ActionDefinition:
     # When set, replaces the normal single-operation boto3 call with a custom function
     # that receives (client, inputs) and returns the response dict. Use for multi-step
     # actions (e.g. list → describe). boto3_template.service is still used to build the client.
-    boto3_execute_fn: "Boto3ExecuteFn | None" = field(default=None, compare=False, repr=False)
+    boto3_execute_fn: Boto3ExecuteFn | None = field(default=None, compare=False, repr=False)
 
 
 @dataclass(frozen=True)

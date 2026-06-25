@@ -7,10 +7,17 @@ verify the pure-Python logic that determines confirm/cancel state.
 from __future__ import annotations
 
 from gui4aws.gui.confirmation_dialog import TypedConfirmation, matches
-from gui4aws.gui.review_dialog import ReviewDecision, needs_review, warning_banner
+from gui4aws.gui.review_dialog import (
+    ReviewDecision,
+    confirmation_text_for,
+    needs_review,
+    needs_typed_confirmation,
+    warning_banner,
+)
 from gui4aws.models import RiskLevel
 from gui4aws.services.aurora.actions import (
     CREATE_DB_CLUSTER_SNAPSHOT,
+    DELETE_DB_CLUSTER,
     DESCRIBE_DB_CLUSTERS,
     RESTORE_DB_CLUSTER_FROM_SNAPSHOT,
 )
@@ -29,6 +36,27 @@ def test_needs_review_true_for_safe_write() -> None:
 def test_needs_review_true_for_cost_affecting() -> None:
     """Cost-affecting actions require review."""
     assert needs_review(RESTORE_DB_CLUSTER_FROM_SNAPSHOT) is True
+
+
+def test_needs_typed_confirmation_only_for_destructive() -> None:
+    """Only DESTRUCTIVE actions demand a typed confirmation token."""
+    assert needs_typed_confirmation(DELETE_DB_CLUSTER) is True
+    assert needs_typed_confirmation(RESTORE_DB_CLUSTER_FROM_SNAPSHOT) is False  # cost_affecting
+    assert needs_typed_confirmation(CREATE_DB_CLUSTER_SNAPSHOT) is False  # safe_write
+    assert needs_typed_confirmation(DESCRIBE_DB_CLUSTERS) is False  # read_only
+
+
+def test_confirmation_text_uses_first_required_field_value() -> None:
+    """The confirmation token is the value of the first required field (the identifier)."""
+    token = confirmation_text_for(DELETE_DB_CLUSTER, {"cluster_identifier": "prod-db"})
+    assert token == "prod-db"
+
+
+def test_confirmation_text_falls_back_when_identifier_missing() -> None:
+    """An empty identifier never yields an empty token (which would auto-confirm)."""
+    token = confirmation_text_for(DELETE_DB_CLUSTER, {"cluster_identifier": "  "})
+    assert token == DELETE_DB_CLUSTER.display_name
+    assert token.strip()
 
 
 def test_warning_banner_only_for_cost_or_destructive() -> None:

@@ -417,7 +417,7 @@ class CdkDialog(tk.Toplevel):
     def build_sidebar(self) -> None:
         """Populate the left sidebar with subcommand buttons."""
         ttk.Label(self.left, text="Subcommands", font=("", 9, "bold")).pack(fill="x", padx=4, pady=(4, 2))
-        self.sidebar_buttons: dict[str, ttk.Button] = {}
+        self.sidebar_buttons = {}
         for sub in _CDK_SUBCOMMANDS:
             btn = ttk.Button(
                 self.left,
@@ -747,7 +747,10 @@ class CdkDialog(tk.Toplevel):
             except Exception as exc:  # pylint: disable=broad-exception-caught
                 text = f"Error: {exc}"
             self.help_cache[subcommand] = text
-            self.after(0, lambda: self.set_help(text) if self.current_subcommand["name"] == subcommand else None)
+            # The dialog may have been destroyed while this background thread ran; touching
+            # Tk from a dead/closing root raises TclError/RuntimeError. Swallow it quietly.
+            with contextlib.suppress(tk.TclError, RuntimeError):
+                self.after(0, lambda: self.set_help(text) if self.current_subcommand["name"] == subcommand else None)
 
         threading.Thread(target=fetch, daemon=True).start()
 

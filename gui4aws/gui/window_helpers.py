@@ -215,7 +215,7 @@ def record_history(
     duration = float(getattr(payload, "duration_seconds", 0.0) or 0.0)
     if is_failure:
         error_message = getattr(payload, "message", None) or getattr(payload, "reason", None) or str(payload)
-    context.history.add(  # type: ignore[attr-defined]
+    context.history.add(
         ActionHistoryEntry(
             timestamp=datetime.now(timezone.utc),
             service_id=action.service_id,

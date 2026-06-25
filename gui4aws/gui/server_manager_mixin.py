@@ -3,13 +3,10 @@
 from __future__ import annotations
 
 import threading
-from typing import TYPE_CHECKING, Any
+from collections.abc import Callable
+from typing import Any
 
 from gui4aws.execution.endpoint_config import EndpointMode
-
-if TYPE_CHECKING:
-
-    pass
 
 
 class ServerManagerMixin:
@@ -29,6 +26,8 @@ class ServerManagerMixin:
     robotocore_panel: Any
     results_queue: Any
     context: Any
+    # Provided by MainWindow; redraws panels after a toolbar/context change.
+    on_toolbar_changed: Callable[[], None]
 
     # ── Demo resource seeding ─────────────────────────────────────────────────
 
@@ -37,7 +36,6 @@ class ServerManagerMixin:
         from tkinter import messagebox
 
         from gui4aws.demo_resources import seed_demo_resources
-        from gui4aws.execution.endpoint_config import EndpointMode
 
         # Guard: refuse to seed on live AWS without an explicit double-confirmation.
         if self.context.endpoint_config.mode is EndpointMode.AWS:

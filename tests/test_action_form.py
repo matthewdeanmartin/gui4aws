@@ -8,8 +8,10 @@ from typing import cast
 
 import pytest
 
+import gui4aws.gui.action_dialog as action_dialog_module
 from gui4aws.gui.action_dialog import ActionDialog
 from gui4aws.gui.action_form import ActionForm
+from gui4aws.services.aurora.actions import DELETE_DB_CLUSTER
 from gui4aws.services.secrets.actions import CREATE_SECRET
 from gui4aws.services.ssm.actions import PUT_PARAMETER
 
@@ -75,6 +77,77 @@ def test_action_dialog_refreshes_multiline_scripts(tk_root: tk.Tk) -> None:
         # The result text widget must exist and be scrollable.
         assert hasattr(dialog, "result_text")
         assert dialog.result_text.cget("yscrollcommand")
+    finally:
+        if dialog is not None:
+            dialog.destroy()
+
+
+class _StubDecision:
+    """Minimal stand-in for a dialog decision with a controllable confirmed flag."""
+
+    def __init__(self, confirmed: bool) -> None:
+        self.confirmed = confirmed
+
+
+def _stub_dialog_factory(confirmed: bool) -> type:
+    """Build a stub dialog whose ``show_modal`` returns a decision with ``confirmed``."""
+
+    class _StubDialog:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def show_modal(self) -> _StubDecision:
+            return _StubDecision(confirmed)
+
+    return _StubDialog
+
+
+def test_destructive_action_blocked_when_typed_confirmation_cancelled(
+    tk_root: tk.Tk, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A destructive action must NOT execute if the typed-confirmation step is cancelled."""
+    ran: list[tuple[object, dict[str, str]]] = []
+    dialog: ActionDialog | None = None
+    try:
+        dialog = ActionDialog(
+            tk_root,
+            DELETE_DB_CLUSTER,
+            prefill={"cluster_identifier": "prod-db"},
+            on_run=lambda action, inputs: ran.append((action, inputs)),
+            on_generate_scripts=lambda _action, _inputs: ("cli", "python"),
+        )
+        # Review passes, but the user cancels at the typed-name step.
+        monkeypatch.setattr(action_dialog_module, "ReviewDialog", _stub_dialog_factory(True))
+        monkeypatch.setattr(action_dialog_module, "TypedConfirmationDialog", _stub_dialog_factory(False))
+
+        dialog.on_run()
+
+        assert ran == []  # nothing was executed
+        assert dialog.running is False
+    finally:
+        if dialog is not None:
+            dialog.destroy()
+
+
+def test_destructive_action_runs_when_fully_confirmed(tk_root: tk.Tk, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A destructive action executes only after review AND typed confirmation pass."""
+    ran: list[tuple[object, dict[str, str]]] = []
+    dialog: ActionDialog | None = None
+    try:
+        dialog = ActionDialog(
+            tk_root,
+            DELETE_DB_CLUSTER,
+            prefill={"cluster_identifier": "prod-db"},
+            on_run=lambda action, inputs: ran.append((action, inputs)),
+            on_generate_scripts=lambda _action, _inputs: ("cli", "python"),
+        )
+        monkeypatch.setattr(action_dialog_module, "ReviewDialog", _stub_dialog_factory(True))
+        monkeypatch.setattr(action_dialog_module, "TypedConfirmationDialog", _stub_dialog_factory(True))
+
+        dialog.on_run()
+
+        assert len(ran) == 1
+        assert ran[0][1]["cluster_identifier"] == "prod-db"
     finally:
         if dialog is not None:
             dialog.destroy()

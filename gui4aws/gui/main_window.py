@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import logging
 import queue
@@ -201,15 +202,15 @@ class MainWindow(ServerManagerMixin):
 
     def switch_to_script_editor(self) -> None:
         """Bring the Script Editor tab to the front."""
-        self.content_tabs.select(self.script_editor)
+        self.content_tabs.select(self.script_editor)  # type: ignore[no-untyped-call]
 
     def switch_to_browser(self) -> None:
         """Bring the Browser tab to the front."""
-        self.content_tabs.select(self.main_panel)
+        self.content_tabs.select(self.main_panel)  # type: ignore[no-untyped-call]
 
     def save_script(self) -> None:
         """Delegate to the Script Editor's save dialog."""
-        self.script_editor._save()  # noqa: SLF001
+        self.script_editor._save()
 
     def open_docs(self) -> None:
         """Open the documentation website in the default browser."""
@@ -668,11 +669,7 @@ class MainWindow(ServerManagerMixin):
         if self._page_next_token is None or self.current_action is None:
             return
         self._page_idx += 1
-        token = (
-            self._page_tokens[self._page_idx]
-            if self._page_idx < len(self._page_tokens)
-            else self._page_next_token
-        )
+        token = self._page_tokens[self._page_idx] if self._page_idx < len(self._page_tokens) else self._page_next_token
         inputs = dict(self._page_base_inputs)
         if token and self._page_token_input_key:
             inputs[self._page_token_input_key] = token
@@ -790,7 +787,9 @@ class MainWindow(ServerManagerMixin):
             service = self.context.registry.get(target_service_id)
             action = service.action(row_action.action_id)
         except KeyError:
-            logger.warning("row action %r references unknown action in service %r", row_action.action_id, target_service_id)
+            logger.warning(
+                "row action %r references unknown action in service %r", row_action.action_id, target_service_id
+            )
             return
         prefill: dict[str, str] = {}
         if row is not None:
@@ -970,7 +969,7 @@ class MainWindow(ServerManagerMixin):
 
     def cache_diagnostics_snapshot(self) -> dict[str, Any]:
         """Gather cache and endpoint state for diagnostics."""
-        snapshot = self.context.action_cache.snapshot()
+        snapshot: dict[str, Any] = self.context.action_cache.snapshot()
         snapshot["mode"] = str(self.context.mode)
         snapshot["profile"] = self.context.profile_name or "(environment)"
         snapshot["region"] = self.context.region_name
@@ -1200,7 +1199,7 @@ class MainWindow(ServerManagerMixin):
         if not (cluster_id and username and password):
             return
         engine = inputs.get("engine", "aurora-mysql").strip() or "aurora-mysql"
-        conn_dict = {
+        conn_dict: dict[str, Any] = {
             "username": username,
             "password": password,
             "host": host or cluster_id,
@@ -1208,10 +1207,8 @@ class MainWindow(ServerManagerMixin):
             "engine": engine,
         }
         if port_raw:
-            try:
+            with contextlib.suppress(ValueError):
                 conn_dict["port"] = int(port_raw)
-            except ValueError:
-                pass
         if database:
             conn_dict["dbname"] = database
         try:

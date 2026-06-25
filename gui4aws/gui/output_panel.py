@@ -8,8 +8,8 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Any
 
-from gui4aws.gui.json_viewer_dialog import JsonViewerDialog
 from gui4aws.gui.jmespath_designer_dialog import JmespathDesignerDialog
+from gui4aws.gui.json_viewer_dialog import JsonViewerDialog
 
 __all__ = ["OutputPanel"]
 
@@ -118,10 +118,7 @@ class OutputPanel(ttk.LabelFrame):
             self._combo.current(0)
 
     def _render_active(self) -> None:
-        if 0 <= self._active_index < len(self._history):
-            summary = self._history[self._active_index][1]
-        else:
-            summary = ""
+        summary = self._history[self._active_index][1] if 0 <= self._active_index < len(self._history) else ""
         self.text.configure(state="normal")
         self.text.delete("1.0", "end")
         self.text.insert("1.0", summary)

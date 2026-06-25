@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import contextlib
 import csv
 import io
 import logging
 import threading
 import tkinter as tk
+from collections.abc import Callable
 from tkinter import filedialog, messagebox, ttk
 from typing import Any
 
@@ -17,7 +19,6 @@ from gui4aws.sql_runner.connection import (
     list_keyring_sources,
     load_from_aws_secret,
     load_from_keyring,
-    save_to_keyring,
 )
 
 __all__ = ["SqlRunnerDialog"]
@@ -151,8 +152,16 @@ class SqlRunnerDialog(tk.Toplevel):
         self._source_type = tk.StringVar(value="keyring")
         rb_frame = ttk.Frame(src_lf)
         rb_frame.grid(row=0, column=1, sticky="w")
-        ttk.Radiobutton(rb_frame, text="Keyring", variable=self._source_type, value="keyring", command=self._on_source_type_change).pack(side="left", padx=4)
-        ttk.Radiobutton(rb_frame, text="AWS Secrets Manager", variable=self._source_type, value="aws", command=self._on_source_type_change).pack(side="left", padx=4)
+        ttk.Radiobutton(
+            rb_frame, text="Keyring", variable=self._source_type, value="keyring", command=self._on_source_type_change
+        ).pack(side="left", padx=4)
+        ttk.Radiobutton(
+            rb_frame,
+            text="AWS Secrets Manager",
+            variable=self._source_type,
+            value="aws",
+            command=self._on_source_type_change,
+        ).pack(side="left", padx=4)
 
         ttk.Label(src_lf, text="Secret / key:").grid(row=1, column=0, sticky="w", padx=6, pady=2)
         self._source_var = tk.StringVar()
@@ -195,7 +204,9 @@ class SqlRunnerDialog(tk.Toplevel):
         self.bind("<Control-Return>", lambda _e: self._run_query())
 
         ttk.Button(opt_bar, text="Clear", command=self._clear_query).pack(side="left", padx=4)
-        ttk.Button(opt_bar, text="Export CSV", command=lambda: self._result_table.export_csv()).pack(side="right", padx=4)
+        ttk.Button(opt_bar, text="Export CSV", command=lambda: self._result_table.export_csv()).pack(
+            side="right", padx=4
+        )
         ttk.Button(opt_bar, text="Close", command=self.destroy).pack(side="right", padx=4)
 
         # Status label
@@ -241,7 +252,7 @@ class SqlRunnerDialog(tk.Toplevel):
             return
 
         self._source_combo["values"] = names
-        # Pre-select if cluster_identifier appears in a name
+        # Preselect if cluster_identifier appears in a name
         best = next(
             (n for n in names if self._cluster_id and self._cluster_id in n),
             names[0],
@@ -277,7 +288,7 @@ class SqlRunnerDialog(tk.Toplevel):
         self._conn_status.configure(text="Connecting…", foreground="gray")
         self.update_idletasks()
         try:
-            cols, rows = execute_query(info, "SELECT 1", limit=1)
+            execute_query(info, "SELECT 1", limit=1)
             self._conn_info = info
             self._conn_status.configure(text=f"Connected to {info.host} ({info.engine})", foreground="green")
         except ImportError as exc:
@@ -324,16 +335,22 @@ class SqlRunnerDialog(tk.Toplevel):
         captured_sql = sql
         captured_limit = limit
 
+        def marshal(callback: Callable[[], None]) -> None:
+            # The dialog may be destroyed mid-query; marshalling back to a dead Tk root
+            # raises TclError/RuntimeError. Swallow it so the daemon thread exits cleanly.
+            with contextlib.suppress(tk.TclError, RuntimeError):
+                self.after(0, callback)
+
         def worker() -> None:
             try:
                 cols, rows = execute_query(captured_info, captured_sql, captured_limit)
-                self.after(0, lambda: self._on_success(cols, rows, captured_limit))
+                marshal(lambda: self._on_success(cols, rows, captured_limit))
             except ImportError as exc:
                 msg = str(exc)
-                self.after(0, lambda: self._on_driver_error(msg))
+                marshal(lambda: self._on_driver_error(msg))
             except Exception as exc:  # pylint: disable=broad-exception-caught
                 msg = str(exc)
-                self.after(0, lambda: self._on_error(msg))
+                marshal(lambda: self._on_error(msg))
 
         threading.Thread(target=worker, daemon=True).start()
 

@@ -43,7 +43,7 @@ class FakeContext:
 def test_dispatch_result_updates_sub_tables_for_aurora_cluster() -> None:
     """Aurora clusters have sub-tables (instances). dispatch_result should populate them."""
     window = object.__new__(MainWindow)
-    window.context = FakeContext(ServiceRegistry((AURORA_SERVICE,)))  # type: ignore[assignment]
+    window.context = FakeContext(ServiceRegistry((AURORA_SERVICE,)))
     window.main_panel = FakePanel({})  # type: ignore[assignment]
     window.current_service_id = "aurora"
     window.current_inputs = {}
@@ -94,7 +94,7 @@ def test_dispatch_result_updates_sub_tables_for_aurora_cluster() -> None:
 def test_dispatch_result_for_sub_action_updates_sub_table_content() -> None:
     """Results from sub-actions (like list_instances) update the sub-table UI."""
     window = object.__new__(MainWindow)
-    window.context = FakeContext(ServiceRegistry((AURORA_SERVICE,)))  # type: ignore[assignment]
+    window.context = FakeContext(ServiceRegistry((AURORA_SERVICE,)))
     window.main_panel = FakePanel({})  # type: ignore[assignment]
     window.current_service_id = "aurora"
     window.current_inputs = {}

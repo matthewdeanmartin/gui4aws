@@ -29,15 +29,13 @@ class ConnectionInfo:
     source: str  # "keyring:<key>" or "aws_secret:<name>"
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any], source: str) -> "ConnectionInfo":
+    def from_dict(cls, data: dict[str, Any], source: str) -> ConnectionInfo:
         """Parse a connection-string dict into a ConnectionInfo."""
         host = str(data.get("host") or data.get("hostname") or "")
         username = str(data.get("username") or data.get("user") or "")
         password = str(data.get("password") or "")
         database = str(data.get("dbname") or data.get("database") or "")
-        raw_engine = str(
-            data.get("engine") or data.get("dbEngine") or data.get("db_engine") or ""
-        ).lower()
+        raw_engine = str(data.get("engine") or data.get("dbEngine") or data.get("db_engine") or "").lower()
         port_raw = data.get("port")
         if raw_engine in {"aurora-postgresql", "aurora-postgres", "postgresql", "postgres"}:
             engine = "postgresql"
@@ -86,8 +84,7 @@ def _try_parse_json(text: str) -> dict[str, Any] | None:
 def list_keyring_sources() -> list[str]:
     """Return keyring usernames stored under KEYRING_SERVICE that look like connection strings."""
     try:
-        import keyring  # type: ignore[import-untyped]
-        from keyring.errors import KeyringError  # type: ignore[import-untyped]
+        import keyring
     except ImportError:
         return []
     try:
@@ -105,7 +102,7 @@ def list_keyring_sources() -> list[str]:
 def load_from_keyring(username: str) -> ConnectionInfo | None:
     """Load and parse a connection string stored in keyring."""
     try:
-        import keyring  # type: ignore[import-untyped]
+        import keyring
     except ImportError:
         return None
     pw = keyring.get_password(KEYRING_SERVICE, username)
@@ -120,7 +117,7 @@ def load_from_keyring(username: str) -> ConnectionInfo | None:
 def save_to_keyring(username: str, conn_dict: dict[str, Any]) -> None:
     """Persist a connection-string dict to keyring."""
     try:
-        import keyring  # type: ignore[import-untyped]
+        import keyring
     except ImportError:
         logger.warning("keyring not installed; cannot save connection string")
         return
@@ -149,8 +146,10 @@ def list_aws_secret_sources(boto3_session: Any) -> list[str]:
                         parsed = _try_parse_json(text)
                         if parsed and _is_connection_dict(parsed):
                             candidates.append(name)
-                except Exception:  # pylint: disable=broad-exception-caught
-                    pass
+                except Exception:  # pylint: disable=broad-exception-caught  # nosec B112
+                    # One secret we can't read (e.g. AccessDenied) must not abort the
+                    # whole scan — skip it and keep discovering connection strings.
+                    continue
         return candidates
     except Exception:  # pylint: disable=broad-exception-caught
         logger.exception("failed to list AWS secrets for SQL runner")
@@ -186,16 +185,13 @@ def execute_query(conn_info: ConnectionInfo, sql: str, limit: int = 500) -> tupl
     return _exec_mysql(conn_info, sql, limit)
 
 
-def _exec_postgresql(
-    conn_info: ConnectionInfo, sql: str, limit: int
-) -> tuple[list[str], list[tuple[Any, ...]]]:
+def _exec_postgresql(conn_info: ConnectionInfo, sql: str, limit: int) -> tuple[list[str], list[tuple[Any, ...]]]:
     try:
-        import pg8000  # type: ignore[import-untyped]
-        import pg8000.native  # type: ignore[import-untyped]
+        import pg8000  # type: ignore[import-not-found]
+        import pg8000.native  # type: ignore[import-not-found]
     except ImportError as exc:
         raise ImportError(
-            "pg8000 is required for PostgreSQL queries.\n"
-            "Install it with:  uv add pg8000  (or  pip install pg8000)"
+            "pg8000 is required for PostgreSQL queries.\n" "Install it with:  uv add pg8000  (or  pip install pg8000)"
         ) from exc
     conn = pg8000.dbapi.connect(
         host=conn_info.host,
@@ -215,9 +211,7 @@ def _exec_postgresql(
         conn.close()
 
 
-def _exec_mysql(
-    conn_info: ConnectionInfo, sql: str, limit: int
-) -> tuple[list[str], list[tuple[Any, ...]]]:
+def _exec_mysql(conn_info: ConnectionInfo, sql: str, limit: int) -> tuple[list[str], list[tuple[Any, ...]]]:
     try:
         import pymysql  # type: ignore[import-untyped]
         import pymysql.cursors  # type: ignore[import-untyped]

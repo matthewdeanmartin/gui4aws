@@ -44,9 +44,7 @@ class ScriptEditorPanel(ttk.Frame):
         sidebar.grid(row=0, column=0, sticky="nsw", padx=(4, 0), pady=4)
         sidebar.grid_propagate(False)
 
-        ttk.Label(sidebar, text="Include in script:", font=("", 9, "bold")).pack(
-            anchor="w", padx=8, pady=(10, 4)
-        )
+        ttk.Label(sidebar, text="Include in script:", font=("", 9, "bold")).pack(anchor="w", padx=8, pady=(10, 4))
 
         self._include_vars: dict[RiskLevel, tk.BooleanVar] = {}
         _level_labels = [
@@ -72,12 +70,8 @@ class ScriptEditorPanel(ttk.Frame):
 
         ttk.Separator(sidebar, orient="horizontal").pack(fill="x", padx=8, pady=8)
 
-        ttk.Button(sidebar, text="Select All", command=self._select_all).pack(
-            fill="x", padx=8, pady=2
-        )
-        ttk.Button(sidebar, text="Deselect All", command=self._deselect_all).pack(
-            fill="x", padx=8, pady=2
-        )
+        ttk.Button(sidebar, text="Select All", command=self._select_all).pack(fill="x", padx=8, pady=2)
+        ttk.Button(sidebar, text="Deselect All", command=self._deselect_all).pack(fill="x", padx=8, pady=2)
 
         # ── Right script area ─────────────────────────────────────────────────
         right = ttk.Frame(self)
