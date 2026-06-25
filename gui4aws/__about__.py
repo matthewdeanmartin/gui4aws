@@ -14,7 +14,7 @@ __all__ = [
 ]
 
 __title__ = "gui4aws"
-__version__ = "0.1.0"
+__version__ = "0.0.1"
 __description__ = "Tkinter GUI for AWS"
 __readme__ = "README.md"
 __credits__ = [{"name": "Matthew Martin", "email": "matthewdeanmartin@gmail.com"}]
