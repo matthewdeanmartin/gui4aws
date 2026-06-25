@@ -46,12 +46,12 @@ gui4aws --help
 
 ## Contributing
 
-See [CONTRIBUTING.md](docs/extending/CONTRIBUTING.md).
+See [CONTRIBUTING.md](https://github.com/matthewdeanmartin/gui4aws/blob/main/docs/extending/CONTRIBUTING.md).
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](https://github.com/matthewdeanmartin/gui4aws/blob/main/LICENSE).
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md).
+See [CHANGELOG.md](https://github.com/matthewdeanmartin/gui4aws/blob/main/CHANGELOG.md).
