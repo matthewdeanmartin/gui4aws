@@ -1,6 +1,6 @@
 [project]
 name = "gui4aws"
-version = "0.0.1"
+version = "1.0.0"
 description = "Tkinter GUI for AWS"
 readme = "README.md"
 authors = [{ name = "Matthew Martin", email = "matthewdeanmartin@gmail.com" }]
