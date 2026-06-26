@@ -14,8 +14,22 @@ class EndpointMode(str, Enum):
     AWS = "aws"
     MOTO = "moto"
     ROBOTOCORE = "robotocore"
-    DOCKER = "docker"
     CUSTOM = "custom"
+
+    @property
+    def is_emulator(self) -> bool:
+        """True for modes backed by a managed local emulator (Moto/Robotocore)."""
+        return self in (EndpointMode.MOTO, EndpointMode.ROBOTOCORE)
+
+    @property
+    def display_label(self) -> str:
+        """Human-friendly label for the Target selector."""
+        return {
+            EndpointMode.AWS: "AWS",
+            EndpointMode.MOTO: "Moto",
+            EndpointMode.ROBOTOCORE: "Robotocore",
+            EndpointMode.CUSTOM: "Custom",
+        }[self]
 
 
 @dataclass(frozen=True)

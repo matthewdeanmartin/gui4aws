@@ -117,6 +117,9 @@ def apply(data: dict[str, Any]) -> AppConfig:
     ):
         if key in data:
             setattr(config, key, str(data[key]))
+    # Coerce a legacy/unknown endpoint mode (e.g. the removed "docker") back to AWS.
+    if config.default_endpoint_mode not in {"aws", "moto", "robotocore", "custom"}:
+        config.default_endpoint_mode = "aws"
     window = data.get("window", {})
     if isinstance(window, dict):
         if "width" in window:

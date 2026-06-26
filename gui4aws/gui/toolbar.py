@@ -1,4 +1,10 @@
-"""Global toolbar: mode / profile / region / endpoint selectors + moto/robotocore toggles."""
+"""Global toolbar: mode / profile / region / **target** selectors.
+
+The **Target** selector (AWS / Moto / Robotocore / Custom) is the single source
+of truth for where AWS calls go. Selecting a target is also the start/stop
+gesture for the emulators — there are no separate Start/Stop buttons, so Moto and
+Robotocore can never both be active at once. See ``spec/mutually_exclusive.md``.
+"""
 
 # pylint: disable=too-many-ancestors
 
@@ -16,9 +22,12 @@ from gui4aws.execution.execution_mode import ExecutionMode
 
 __all__ = ["Toolbar"]
 
+# Value shown in the (disabled) Profile box when a target makes credentials moot.
+_PROFILE_NA = "(emulator — n/a)"
+
 
 class Toolbar(ttk.Frame):
-    """Always-visible bar with mode, profile, region, partition, endpoint pickers and moto/robotocore toggles."""
+    """Always-visible bar with mode, profile, region, partition, and Target pickers."""
 
     def __init__(
         self,
@@ -28,8 +37,7 @@ class Toolbar(ttk.Frame):
         profiles: Sequence[str] = (),
         regions: Sequence[str] = (),
         on_change: Callable[[], None] | None = None,
-        on_moto_toggle: Callable[[bool], None] | None = None,
-        on_robotocore_toggle: Callable[[bool], None] | None = None,
+        on_target_changed: Callable[[EndpointMode], None] | None = None,
         on_clear_cache: Callable[[], None] | None = None,
         on_partition_changed: Callable[[str], None] | None = None,
         on_network_settings: Callable[[], None] | None = None,
@@ -38,13 +46,16 @@ class Toolbar(ttk.Frame):
         super().__init__(parent, **kwargs)
         self.context = context
         self.on_change = on_change or (lambda: None)
-        self.on_moto_toggle = on_moto_toggle or (lambda running: None)
-        self.on_robotocore_toggle = on_robotocore_toggle or (lambda running: None)
+        self.on_target_changed_cb = on_target_changed or (lambda mode: None)
         self.on_clear_cache = on_clear_cache or (lambda: None)
         self.on_partition_changed_cb = on_partition_changed or (lambda partition: None)
         self.on_network_settings = on_network_settings or (lambda: None)
+        # Running flags, mirrored from the managers so apply_target_state() can
+        # decide whether the URL box should display a live emulator URL.
         self.moto_running = False
         self.robotocore_running = False
+        # Remembers the last real profile so it can be restored when returning to AWS.
+        self._saved_profile = context.profile_name or "(none)"
 
         col = 0
 
@@ -60,6 +71,23 @@ class Toolbar(ttk.Frame):
         )
         mode_combo.grid(row=0, column=col, padx=4, pady=4)
         mode_combo.bind("<<ComboboxSelected>>", self.on_mode_changed)
+        col += 1
+
+        # ── Target selector — the single source of truth for the endpoint ─────
+        self.target_var = tk.StringVar()
+        ttk.Label(self, text="Target:").grid(row=0, column=col, padx=(16, 4))
+        col += 1
+        self._target_modes = [EndpointMode.AWS, EndpointMode.MOTO, EndpointMode.ROBOTOCORE, EndpointMode.CUSTOM]
+        self.target_combo = ttk.Combobox(
+            self,
+            textvariable=self.target_var,
+            values=[m.display_label for m in self._target_modes],
+            state="readonly",
+            width=11,
+        )
+        self.target_combo.current(self._target_index(context.endpoint_config.mode))
+        self.target_combo.grid(row=0, column=col, padx=4)
+        self.target_combo.bind("<<ComboboxSelected>>", self.on_target_selected)
         col += 1
 
         self.profile_var = tk.StringVar(value=context.profile_name or "(none)")
@@ -101,49 +129,89 @@ class Toolbar(ttk.Frame):
         self.region_combo.bind("<<ComboboxSelected>>", self.on_region_changed)
         self.region_combo.bind("<FocusOut>", self.on_region_changed)
 
-        self.endpoint_mode_var = tk.StringVar(value=str(context.endpoint_config.mode))
-        ttk.Label(self, text="Endpoint:").grid(row=0, column=col, padx=(16, 4))
+        # Endpoint URL — editable only for Custom; read-only display otherwise.
+        ttk.Label(self, text="URL:").grid(row=0, column=col, padx=(16, 4))
         col += 1
-        endpoint_combo = ttk.Combobox(
-            self,
-            textvariable=self.endpoint_mode_var,
-            values=[m.value for m in EndpointMode],
-            state="readonly",
-            width=10,
-        )
-        endpoint_combo.grid(row=0, column=col, padx=4)
-        endpoint_combo.bind("<<ComboboxSelected>>", self.on_endpoint_mode_changed)
-        col += 1
-
         self.endpoint_url_var = tk.StringVar(value=context.endpoint_config.endpoint_url or "")
-        url_entry = ttk.Entry(self, textvariable=self.endpoint_url_var, width=26)
-        url_entry.grid(row=0, column=col, padx=4)
-        url_entry.bind("<FocusOut>", self.on_endpoint_url_changed)
-        col += 1
-
-        self.moto_btn = ttk.Button(self, text="Start Moto", command=self.toggle_moto, width=12)
-        self.moto_btn.grid(row=0, column=col, padx=(16, 4), pady=4)
-        col += 1
-
-        self.robotocore_btn = ttk.Button(self, text="Start Robotocore", command=self.toggle_robotocore, width=17)
-        self.robotocore_btn.grid(row=0, column=col, padx=(4, 4), pady=4)
+        self.url_entry = ttk.Entry(self, textvariable=self.endpoint_url_var, width=26)
+        self.url_entry.grid(row=0, column=col, padx=4)
+        self.url_entry.bind("<FocusOut>", self.on_endpoint_url_changed)
+        self.url_entry.bind("<Return>", self.on_endpoint_url_changed)
         col += 1
 
         clear_cache_btn = ttk.Button(self, text="Clear Cache", command=self.on_clear_cache, width=11)
-        clear_cache_btn.grid(row=0, column=col, padx=(4, 4), pady=4)
+        clear_cache_btn.grid(row=0, column=col, padx=(16, 4), pady=4)
         col += 1
 
         # Proxy / TLS settings — for users behind a corporate proxy or a
         # TLS-inspecting firewall whose cert must be trusted.
         self.network_btn = ttk.Button(self, text="🌐 Network…", command=self.on_network_settings, width=12)
         self.network_btn.grid(row=0, column=col, padx=(4, 8), pady=4)
-        self._refresh_network_button()
 
-    def _refresh_network_button(self) -> None:
-        """Bold the Network button when non-default proxy/TLS settings are active."""
-        active = not self.context.network_config.is_default()
+        # ``endpoint_mode_var`` mirrors the resolved endpoint mode for the rest
+        # of the app (dispatch_result, diagnostics) which reads/writes it.
+        self.endpoint_mode_var = tk.StringVar(value=context.endpoint_config.mode.value)
+
+        self._refresh_network_button()
+        self.apply_target_state()
+
+    # ── Target selector ───────────────────────────────────────────────────────
+
+    def _target_index(self, mode: EndpointMode) -> int:
+        return self._target_modes.index(mode) if mode in self._target_modes else 0
+
+    def selected_target(self) -> EndpointMode:
+        """Return the EndpointMode currently chosen in the Target combobox."""
+        idx = self.target_combo.current()
+        if 0 <= idx < len(self._target_modes):
+            return self._target_modes[idx]
+        return EndpointMode.AWS
+
+    def on_target_selected(self, event: object = None) -> None:
+        """Hand a Target change to MainWindow, which orchestrates start/stop."""
+        del event
+        self.on_target_changed_cb(self.selected_target())
+
+    def set_target(self, mode: EndpointMode) -> None:
+        """Set the Target combobox + mirror var without firing the change callback."""
+        self.target_combo.current(self._target_index(mode))
+        self.endpoint_mode_var.set(mode.value)
+        self.apply_target_state()
+
+    def set_transition_busy(self, busy: bool) -> None:
+        """Disable the Target selector while an emulator start/stop is in flight."""
         with contextlib.suppress(tk.TclError):
-            self.network_btn.configure(text="🌐 Network *" if active else "🌐 Network…")
+            self.target_combo.configure(state="disabled" if busy else "readonly")
+
+    def apply_target_state(self) -> None:
+        """Enable/disable Profile + URL widgets to match the active target.
+
+        This is the heart of the mutual-exclusion UX: the Profile field only
+        matters on live AWS, and the URL field is only editable for Custom.
+        """
+        mode = self.context.endpoint_config.mode
+        # ── Profile: enabled only on AWS ──────────────────────────────────────
+        if mode is EndpointMode.AWS:
+            self.profile_combo.configure(state="normal")
+            if self.profile_var.get() == _PROFILE_NA:
+                self.profile_var.set(self._saved_profile)
+        else:
+            if self.profile_var.get() != _PROFILE_NA:
+                self._saved_profile = self.profile_var.get()
+            self.profile_var.set(_PROFILE_NA)
+            self.profile_combo.configure(state="disabled")
+
+        # ── URL: editable only for Custom; read-only display for emulators ────
+        if mode is EndpointMode.CUSTOM:
+            self.url_entry.configure(state="normal")
+        else:
+            # Show the live emulator URL (if running) read-only; blank for AWS.
+            running = (mode is EndpointMode.MOTO and self.moto_running) or (
+                mode is EndpointMode.ROBOTOCORE and self.robotocore_running
+            )
+            if not running and mode is EndpointMode.AWS:
+                self.endpoint_url_var.set("")
+            self.url_entry.configure(state="readonly")
 
     def on_mode_changed(self, event: object = None) -> None:
         """Push the mode selector value into AppContext."""
@@ -152,19 +220,24 @@ class Toolbar(ttk.Frame):
         self.on_change()
 
     def on_profile_changed(self, event: object = None) -> None:
-        """Push the profile selector value into AppContext."""
+        """Push the profile selector value into AppContext (ignored unless AWS)."""
         del event
+        if self.context.endpoint_config.mode is not EndpointMode.AWS:
+            return
         value = self.profile_var.get().strip()
-        if value in ("(none)", ""):
+        if value in ("(none)", "", _PROFILE_NA):
             self.context.set_profile(None)
             self.profile_var.set("(none)")
         else:
             self.context.set_profile(value)
+        self._saved_profile = self.profile_var.get()
         self.on_change()
 
     def set_profile(self, profile_name: str | None) -> None:
         """Update the profile selector from external code (e.g. when moto starts)."""
-        self.profile_var.set(profile_name or "(none)")
+        self._saved_profile = profile_name or "(none)"
+        if self.context.endpoint_config.mode is EndpointMode.AWS:
+            self.profile_var.set(profile_name or "(none)")
         self.context.set_profile(profile_name)
 
     def on_region_changed(self, event: object = None) -> None:
@@ -193,38 +266,20 @@ class Toolbar(ttk.Frame):
             self.region_var.set(regions[0])
             self.context.set_region(regions[0])
 
-    def on_endpoint_mode_changed(self, event: object = None) -> None:
-        """Push the endpoint mode selector value into AppContext."""
-        del event
-        mode = EndpointMode(self.endpoint_mode_var.get())
-        url = self.endpoint_url_var.get().strip() or None
-        self.context.set_endpoint(mode, url)
-        self.on_change()
-
     def on_endpoint_url_changed(self, event: object = None) -> None:
-        """Push the endpoint URL value into AppContext."""
+        """Push a Custom endpoint URL value into AppContext."""
         del event
-        mode = EndpointMode(self.endpoint_mode_var.get())
-        url = self.endpoint_url_var.get().strip() or None
-        if mode is EndpointMode.CUSTOM and url is None:
+        if self.selected_target() is not EndpointMode.CUSTOM:
             return
-        self.context.set_endpoint(mode, url)
+        url = self.endpoint_url_var.get().strip() or None
+        if url is None:
+            return
+        self.context.set_endpoint(EndpointMode.CUSTOM, url)
+        self.endpoint_mode_var.set(EndpointMode.CUSTOM.value)
         self.on_change()
 
-    def toggle_moto(self) -> None:
-        """Start or stop the moto server and update the button label."""
-        self.moto_running = not self.moto_running
-        if self.moto_running:
-            self.moto_btn.configure(text="Stop Moto")
-        else:
-            self.moto_btn.configure(text="Start Moto")
-        self.on_moto_toggle(self.moto_running)
-
-    def toggle_robotocore(self) -> None:
-        """Start or stop robotocore.
-
-        The button label is NOT flipped here — it is updated only when the
-        result arrives via dispatch_result, so a failed or slow start cannot
-        leave the button in the wrong state.
-        """
-        self.on_robotocore_toggle(self.robotocore_running)
+    def _refresh_network_button(self) -> None:
+        """Bold the Network button when non-default proxy/TLS settings are active."""
+        active = not self.context.network_config.is_default()
+        with contextlib.suppress(tk.TclError):
+            self.network_btn.configure(text="🌐 Network *" if active else "🌐 Network…")

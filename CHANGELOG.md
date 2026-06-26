@@ -1,19 +1,36 @@
 # Changelog
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
 ### Added
+
 - Network & Proxy settings dialog, opened from the new "🌐 Network…" toolbar button, for configuring an HTTP/HTTPS proxy, no-proxy hosts, a trusted CA bundle, and a client certificate. Includes a toggle to ignore the proxy environment variables entirely ("try without the proxy despite the vars") and an option to disable TLS verification as a last-resort diagnostic. Settings are persisted and are reflected in generated AWS CLI and boto3 scripts.
 
+### Changed
+
+- Replaced the separate endpoint dropdown, "Start Moto"/"Start Robotocore" buttons, and "Use Moto instead" checkbox with a single **Target** selector (AWS / Moto / Robotocore / Custom). Selecting a target now both routes calls and manages the emulator lifecycle, so Moto and Robotocore can no longer be active at the same time and impossible combinations can't be expressed. The Profile field is disabled when a target makes credentials irrelevant, and the endpoint URL field is editable only for Custom. See `spec/mutually_exclusive.md`.
+- Demo resource seeding is now restricted to a verified local emulator. The "Seed demo resources" menu item only appears while Moto or Robotocore (started from the Target selector) is the active endpoint, and the seeding code positively probes the endpoint for a Moto/Robotocore signature before writing anything. See `spec/demo_safety.md`.
+
+### Removed
+
+- The unused `docker` endpoint mode, which had no behavior. A persisted `docker` endpoint mode is now loaded as `aws`.
+
 ### Fixed
+
 - AWS calls failed with "certificate verify failed" for users behind a TLS-inspecting enterprise proxy, because there was no way to trust the proxy's (or AWS's) CA certificate — the app appeared broken. Users can now point the app at a CA bundle so certificate verification succeeds.
 - Users behind a corporate HTTP proxy could not configure or override proxy settings from the GUI, and had no way to bypass proxy environment variables when they were set incorrectly.
+- The toolbar let users select nonsensical combinations: a Profile while connected to an emulator (where credentials are ignored), an endpoint mode that conflicted with which server was running, and a meaningless `docker` endpoint option.
+- Demo resources could be created on real AWS (the previous guard was a single, dismissible confirmation dialog, and seeding was allowed against any custom endpoint). It is now impossible: seeding requires a positively-verified Moto or Robotocore emulator that the app itself started.
 
 ## [0.0.1] - 2026-06-25
+
 ### Added
+
 - Tkinter desktop GUI for browsing and managing AWS resources, organized as a sidebar of services with a resource table, detail tree, and result panels.
 - Support for 16 AWS services: Aurora/RDS, Backup, ECS, Secrets Manager, SSM, networking (VPC), KMS, Athena, S3, SQS, Lambda, CloudWatch, CloudFormation, SNS, SES, and IAM.
 - Two execution modes: live boto3 API calls or generated AWS CLI commands.

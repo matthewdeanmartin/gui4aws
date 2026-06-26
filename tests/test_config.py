@@ -60,6 +60,13 @@ def test_network_settings_round_trip(tmp_path: Path) -> None:
     assert net.use_env_proxy is False
 
 
+def test_legacy_docker_endpoint_mode_coerced_to_aws(tmp_path: Path) -> None:
+    # The removed "docker" endpoint mode (or any unknown value) falls back to aws.
+    path = tmp_path / "config.json"
+    path.write_text('{"default_endpoint_mode": "docker"}', encoding="utf-8")
+    assert load_config(path).default_endpoint_mode == "aws"
+
+
 def test_load_json_config(tmp_path: Path) -> None:
     path = tmp_path / "config.json"
     path.write_text('{"default_region": "us-west-2", "window": {"width": 800}}', encoding="utf-8")

@@ -94,8 +94,7 @@ class MainWindow(ServerManagerMixin):
             profiles=profiles or [],
             regions=regions or [],
             on_change=self.on_toolbar_changed,
-            on_moto_toggle=self.on_moto_toggle,
-            on_robotocore_toggle=self.on_robotocore_toggle,
+            on_target_changed=self.on_target_changed,
             on_clear_cache=self.clear_all_cache_entries,
             on_partition_changed=self.on_partition_changed,
             on_network_settings=self.open_network_settings,
@@ -119,12 +118,13 @@ class MainWindow(ServerManagerMixin):
         )
         self.robotocore_panel = RobotocorePanel(
             self.content_tabs,
-            on_start=self.robotocore_start,
-            on_stop=self.robotocore_stop,
+            # Start/Stop route through the Target selector so Moto/Robotocore stay
+            # mutually exclusive; Restart/Reset/Pull manage an already-running one.
+            on_start=lambda: self.on_target_changed(EndpointMode.ROBOTOCORE),
+            on_stop=lambda: self.on_target_changed(EndpointMode.AWS),
             on_restart=self.robotocore_restart,
             on_reset=self.robotocore_reset_state,
             on_pull=self.robotocore_pull,
-            on_use_moto_changed=self.robotocore_use_moto_changed,
         )
         self.queue_panel = QueueDiagnosticsPanel(self.content_tabs, on_clear=self.clear_request_queue)
         self.cache_panel = CacheDiagnosticsPanel(
@@ -180,26 +180,42 @@ class MainWindow(ServerManagerMixin):
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.root.quit)
 
-        demo_menu = tk.Menu(menubar, tearoff=False)
-        menubar.add_cascade(label="Demo", menu=demo_menu)
-        demo_menu.add_command(label="Seed demo resources", command=self.seed_demo_resources)
-        demo_menu.add_separator()
-        demo_menu.add_command(
-            label="About demo resources",
-            command=lambda: messagebox.showinfo(
-                "Demo resources",
-                "Seeding creates Aurora clusters, snapshots, and AWS Backup vaults tagged with\n"
-                "'gui4aws:demo = true' so you can explore the GUI without real AWS access.\n\n"
-                "Start Moto (toolbar button) or connect Robotocore, then select Demo → Seed demo resources.\n\n"
-                "WARNING: Seeding on live AWS will create real billable resources.",
-            ),
-        )
+        # The Demo cascade rebuilds itself each time it is opened (postcommand) so
+        # "Seed demo resources" is only present while a manager-owned Moto or
+        # Robotocore emulator is the active target. It is impossible to invoke on
+        # real AWS or a custom endpoint — see spec/demo_safety.md.
+        self.demo_menu = tk.Menu(menubar, tearoff=False, postcommand=self.refresh_demo_menu)
+        menubar.add_cascade(label="Demo", menu=self.demo_menu)
+        self.refresh_demo_menu()
 
         help_menu = tk.Menu(menubar, tearoff=False)
         menubar.add_cascade(label="Help", menu=help_menu)
         help_menu.add_command(label="Documentation", command=self.open_docs)
         help_menu.add_separator()
         help_menu.add_command(label="About gui4aws", command=self.show_about)
+
+    def refresh_demo_menu(self) -> None:
+        """Rebuild the Demo menu so the seed item appears only for a verified emulator."""
+        menu = self.demo_menu
+        menu.delete(0, "end")
+        if self.demo_seeding_allowed():
+            backend = self.context.endpoint_config.mode.display_label
+            menu.add_command(
+                label=f"Seed demo resources ({backend})",
+                command=self.seed_demo_resources,
+            )
+            menu.add_separator()
+        menu.add_command(
+            label="About demo resources",
+            command=lambda: messagebox.showinfo(
+                "Demo resources",
+                "Seeding creates demo AWS resources tagged 'gui4aws:demo = true' so you can\n"
+                "explore the GUI without touching real infrastructure.\n\n"
+                "For safety, demo seeding is ONLY available when you have started Moto or\n"
+                "Robotocore from the Target selector — it cannot run on real AWS or a custom\n"
+                "endpoint. Select Target → Moto (or Robotocore), then reopen this menu.",
+            ),
+        )
 
     def switch_to_script_editor(self) -> None:
         """Bring the Script Editor tab to the front."""
@@ -262,6 +278,62 @@ class MainWindow(ServerManagerMixin):
 
         regions = available_regions(partition=partition)
         self.toolbar.update_regions(regions)
+
+    def on_target_changed(self, mode: EndpointMode) -> None:
+        """Orchestrate a Target selection: start/stop emulators and set the endpoint.
+
+        The Target selector is the single source of truth (see
+        ``spec/mutually_exclusive.md``). Selecting a target both routes calls and
+        manages the emulator lifecycle so Moto and Robotocore can never both run.
+        """
+        current = self.context.endpoint_config.mode
+        if mode is current and mode is not EndpointMode.CUSTOM:
+            return
+
+        # Leaving an emulator stops it. The async *_stopped result re-syncs the UI.
+        if current is EndpointMode.MOTO and mode is not EndpointMode.MOTO and self.moto_manager.running:
+            self._stop_moto_for_target_switch()
+        if (
+            current is EndpointMode.ROBOTOCORE
+            and mode is not EndpointMode.ROBOTOCORE
+            and self.robotocore_manager.running
+        ):
+            self.robotocore_stop()
+
+        if mode is EndpointMode.AWS:
+            self.context.set_endpoint(EndpointMode.AWS)
+            self.toolbar.set_target(EndpointMode.AWS)
+            self.status_bar.set_status("Target: AWS")
+            self.on_toolbar_changed()
+        elif mode is EndpointMode.CUSTOM:
+            url = self.toolbar.endpoint_url_var.get().strip() or None
+            if url is None:
+                self.status_bar.set_status("Enter a Custom endpoint URL")
+                self.toolbar.url_entry.focus_set()
+                return
+            self.context.set_endpoint(EndpointMode.CUSTOM, url)
+            self.toolbar.set_target(EndpointMode.CUSTOM)
+            self.status_bar.set_status(f"Target: Custom ({url})")
+            self.on_toolbar_changed()
+        elif mode is EndpointMode.MOTO:
+            self.toolbar.set_transition_busy(True)
+            self.on_moto_toggle(True)
+        elif mode is EndpointMode.ROBOTOCORE:
+            self.toolbar.set_transition_busy(True)
+            self.on_robotocore_toggle(False)  # False == "not currently running" -> start
+
+    def _stop_moto_for_target_switch(self) -> None:
+        """Stop the Moto server when switching away from the Moto target."""
+        self.moto_manager.stop()
+        self.toolbar.moto_running = False
+
+    def _revert_target_to_aws(self) -> None:
+        """Reset the endpoint + Target selector to AWS (after a stop or a failed start)."""
+        self.context.set_endpoint(EndpointMode.AWS)
+        self.toolbar.endpoint_url_var.set("")
+        self.toolbar.set_target(EndpointMode.AWS)
+        self.toolbar.set_transition_busy(False)
+        self.on_toolbar_changed()
 
     def open_network_settings(self) -> None:
         """Open the proxy / TLS settings dialog and apply the result on save."""
@@ -1032,10 +1104,10 @@ class MainWindow(ServerManagerMixin):
             self.toolbar.set_profile(None)
             self.context.set_endpoint(EndpointMode.MOTO, endpoint_url)
             self.context.invalidate_read_cache()
-            self.toolbar.endpoint_mode_var.set(EndpointMode.MOTO.value)
-            self.toolbar.endpoint_url_var.set(endpoint_url)
             self.toolbar.moto_running = True
-            self.toolbar.moto_btn.configure(text="Stop Moto")
+            self.toolbar.endpoint_url_var.set(endpoint_url)
+            self.toolbar.set_target(EndpointMode.MOTO)
+            self.toolbar.set_transition_busy(False)
             self.status_bar.set_status(f"Moto running at {endpoint_url} — profile cleared")
             self.on_toolbar_changed()
             return
@@ -1043,28 +1115,27 @@ class MainWindow(ServerManagerMixin):
             self.status_bar.set_status("Moto start failed")
             messagebox.showerror("Moto server error", f"Could not start moto server:\n{payload}")
             self.toolbar.moto_running = False
-            self.toolbar.moto_btn.configure(text="Start Moto")
+            self._revert_target_to_aws()
             return
         if kind == "robotocore_started":
             rc_url: str = payload
             self.context.set_endpoint(EndpointMode.ROBOTOCORE, rc_url)
-            self.toolbar.endpoint_mode_var.set(EndpointMode.ROBOTOCORE.value)
-            self.toolbar.endpoint_url_var.set(rc_url)
             self.toolbar.robotocore_running = True
-            self.toolbar.robotocore_btn.configure(text="Stop Robotocore")
+            self.toolbar.endpoint_url_var.set(rc_url)
+            self.toolbar.set_target(EndpointMode.ROBOTOCORE)
+            self.toolbar.set_transition_busy(False)
             self.robotocore_panel.set_running(True)
             self.status_bar.set_status(f"Robotocore running at {rc_url}")
             self.on_toolbar_changed()
             return
         if kind == "robotocore_stopped":
-            self.context.set_endpoint(EndpointMode.AWS)
-            self.toolbar.endpoint_mode_var.set(EndpointMode.AWS.value)
-            self.toolbar.endpoint_url_var.set("")
             self.toolbar.robotocore_running = False
-            self.toolbar.robotocore_btn.configure(text="Start Robotocore")
             self.robotocore_panel.set_running(False)
+            # If the user switched to another emulator/target, that handler owns
+            # the endpoint; only fall back to AWS if we're still on Robotocore.
+            if self.context.endpoint_config.mode is EndpointMode.ROBOTOCORE:
+                self._revert_target_to_aws()
             self.status_bar.set_status("Robotocore stopped")
-            self.on_toolbar_changed()
             return
         if kind == "robotocore_pulled":
             self.status_bar.set_status("Robotocore image pull complete")
@@ -1082,8 +1153,8 @@ class MainWindow(ServerManagerMixin):
             self.status_bar.set_status("Robotocore error")
             messagebox.showerror("Robotocore error", str(payload))
             self.toolbar.robotocore_running = False
-            self.toolbar.robotocore_btn.configure(text="Start Robotocore")
             self.robotocore_panel.set_running(False)
+            self._revert_target_to_aws()
             return
         if kind == "demo_ok":
             report: dict[str, list[str]] = payload

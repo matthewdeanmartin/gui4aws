@@ -260,7 +260,12 @@ class CacheDiagnosticsPanel(ttk.Frame):
 
 
 class RobotocorePanel(ttk.Frame):
-    """Dedicated panel for robotocore: controls, "use moto" toggle, and live log."""
+    """Dedicated panel for robotocore: management controls and live log.
+
+    Robotocore is selected/deselected from the toolbar's Target picker; this
+    panel only exposes *management* of an already-chosen Robotocore (restart,
+    reset state, pull image) plus the live container log.
+    """
 
     def __init__(
         self,
@@ -271,7 +276,6 @@ class RobotocorePanel(ttk.Frame):
         on_restart: Any | None = None,
         on_reset: Any | None = None,
         on_pull: Any | None = None,
-        on_use_moto_changed: Any | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(parent, **kwargs)
@@ -299,17 +303,6 @@ class RobotocorePanel(ttk.Frame):
         self.pull_btn.pack(side="left", padx=(16, 2))
 
         ttk.Button(controls, text="Copy Log", width=10, command=self.copy).pack(side="left", padx=(16, 2))
-
-        # ── "Use Moto instead" checkbox ───────────────────────────────────────
-        self.use_moto_var = tk.BooleanVar(value=False)
-        cb = ttk.Checkbutton(
-            controls,
-            text="Use Moto instead",
-            variable=self.use_moto_var,
-            command=self.on_use_moto_changed,
-        )
-        cb.pack(side="right", padx=(16, 4))
-        self.on_use_moto_changed_cb = on_use_moto_changed
 
         # ── Status label ──────────────────────────────────────────────────────
         self.status_var = tk.StringVar(value="Not running")
@@ -355,16 +348,6 @@ class RobotocorePanel(ttk.Frame):
             self.restart_btn.configure(state="disabled")
             self.reset_btn.configure(state="disabled")
             self.status_var.set("Not running")
-
-    @property
-    def use_moto(self) -> bool:
-        """Return True if the 'Use Moto instead' checkbox is currently checked."""
-        return self.use_moto_var.get()
-
-    def on_use_moto_changed(self) -> None:
-        """Handle toggle events for the 'Use Moto instead' checkbox."""
-        if self.on_use_moto_changed_cb:
-            self.on_use_moto_changed_cb(self.use_moto_var.get())
 
     def copy(self) -> None:
         """Copy the robotocore log content to the system clipboard."""

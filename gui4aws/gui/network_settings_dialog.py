@@ -75,7 +75,7 @@ class NetworkSettingsDialog(tk.Toplevel):
         row += 1
         ttk.Label(
             outer,
-            text="Uncheck to ignore the proxy env vars — i.e. \"try without the proxy despite the vars\".",
+            text='Uncheck to ignore the proxy env vars — i.e. "try without the proxy despite the vars".',
             foreground="gray",
         ).grid(row=row, column=0, columnspan=3, sticky="w", pady=(0, 6))
         row += 1

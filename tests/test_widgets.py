@@ -50,6 +50,58 @@ def test_toolbar(tk_root: tk.Tk) -> None:
     assert on_change.call_count == 2
 
 
+def test_toolbar_target_selector_values(tk_root: tk.Tk) -> None:
+    from gui4aws.execution.endpoint_config import EndpointMode
+
+    context = AppContext(region_name="us-east-1")
+    toolbar = Toolbar(tk_root, context)
+    # Exactly the four real targets — no dead "docker" option.
+    assert list(toolbar.target_combo.cget("values")) == ["AWS", "Moto", "Robotocore", "Custom"]
+    assert toolbar.selected_target() is EndpointMode.AWS
+    # On AWS the profile field is editable.
+    assert str(toolbar.profile_combo.cget("state")) == "normal"
+
+
+def test_toolbar_profile_disabled_off_aws(tk_root: tk.Tk) -> None:
+    from gui4aws.execution.endpoint_config import EndpointConfig, EndpointMode
+
+    context = AppContext(region_name="us-east-1", profile_name="prod")
+    context.endpoint_config = EndpointConfig(mode=EndpointMode.MOTO, endpoint_url="http://127.0.0.1:5000")
+    toolbar = Toolbar(tk_root, context)
+    # Profile is greyed out and shows the n/a sentinel when not on AWS.
+    assert str(toolbar.profile_combo.cget("state")) == "disabled"
+    assert "n/a" in toolbar.profile_var.get()
+    # Switching the toolbar's view back to AWS restores the saved profile + enables it.
+    context.endpoint_config = EndpointConfig(mode=EndpointMode.AWS)
+    toolbar.apply_target_state()
+    assert str(toolbar.profile_combo.cget("state")) == "normal"
+    assert toolbar.profile_var.get() == "prod"
+
+
+def test_toolbar_url_editable_only_for_custom(tk_root: tk.Tk) -> None:
+    from gui4aws.execution.endpoint_config import EndpointConfig, EndpointMode
+
+    context = AppContext(region_name="us-east-1")
+    toolbar = Toolbar(tk_root, context)
+    # AWS: URL not editable.
+    assert str(toolbar.url_entry.cget("state")) in ("readonly", "disabled")
+    # Custom: URL becomes editable.
+    context.endpoint_config = EndpointConfig.for_mode(EndpointMode.CUSTOM, "http://x:1")
+    toolbar.apply_target_state()
+    assert str(toolbar.url_entry.cget("state")) == "normal"
+
+
+def test_toolbar_target_change_fires_callback(tk_root: tk.Tk) -> None:
+    from gui4aws.execution.endpoint_config import EndpointMode
+
+    context = AppContext(region_name="us-east-1")
+    captured: list[EndpointMode] = []
+    toolbar = Toolbar(tk_root, context, on_target_changed=captured.append)
+    toolbar.target_combo.current(1)  # Moto
+    toolbar.on_target_selected()
+    assert captured == [EndpointMode.MOTO]
+
+
 def test_toolbar_network_button_present(tk_root: tk.Tk) -> None:
     context = AppContext(region_name="us-east-1")
     on_network = MagicMock()

@@ -5,7 +5,8 @@ from __future__ import annotations
 import json
 import logging
 import shutil
-import subprocess  # nosec B404 - launching aws CLI is the whole point
+# launching aws CLI is the whole point
+import subprocess  # nosec B404
 import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass

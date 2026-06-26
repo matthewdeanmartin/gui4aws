@@ -67,13 +67,13 @@ def _cli_proxy_preamble(network_config: NetworkConfig) -> list[str]:
     https = network_config.https_proxy.strip()
     no_proxy = network_config.no_proxy.strip()
     if http:
-        lines.append(f'export HTTP_PROXY={quote_for_shell([http])}')
+        lines.append(f"export HTTP_PROXY={quote_for_shell([http])}")
     if https:
-        lines.append(f'export HTTPS_PROXY={quote_for_shell([https])}')
+        lines.append(f"export HTTPS_PROXY={quote_for_shell([https])}")
     if no_proxy:
-        lines.append(f'export NO_PROXY={quote_for_shell([no_proxy])}')
+        lines.append(f"export NO_PROXY={quote_for_shell([no_proxy])}")
     if network_config.ca_bundle_path.strip():
-        lines.append(f'export AWS_CA_BUNDLE={quote_for_shell([network_config.ca_bundle_path.strip()])}')
+        lines.append(f"export AWS_CA_BUNDLE={quote_for_shell([network_config.ca_bundle_path.strip()])}")
     if lines:
         lines.insert(0, "# Proxy / TLS-trust settings (configured in gui4aws)")
     return lines

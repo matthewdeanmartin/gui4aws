@@ -3,8 +3,13 @@
 All resources are tagged with ``gui4aws:demo = true`` and given descriptive names so
 users can immediately distinguish demo data from real infrastructure.
 
-This package only writes resources; it never deletes. Call :func:`seed_demo_resources`
-with a boto3 session (or endpoint_url for moto server mode) to create the assets.
+This package only writes resources; it never deletes.
+
+**Safety:** demo data must never land on real AWS. :func:`seed_demo_resources`
+requires a :class:`~gui4aws.demo_resources.verification.VerifiedEmulator` proof
+token, which is only obtainable by probing an endpoint and positively confirming
+it is a Moto or Robotocore emulator (see ``verification.py``). There is no code
+path that writes demo resources to an unverified target.
 """
 
 from __future__ import annotations
@@ -23,29 +28,47 @@ from gui4aws.demo_resources.monitoring import seed_cloudformation, seed_cloudwat
 from gui4aws.demo_resources.networking import seed_networking
 from gui4aws.demo_resources.secrets import seed_secrets, seed_ssm
 from gui4aws.demo_resources.storage import seed_s3, seed_sqs
+from gui4aws.demo_resources.verification import (
+    EmulatorVerificationError,
+    VerifiedEmulator,
+    verify_emulator,
+)
 
-__all__ = ["seed_demo_resources"]
+__all__ = [
+    "EmulatorVerificationError",
+    "VerifiedEmulator",
+    "seed_demo_resources",
+    "verify_emulator",
+]
 
 logger = logging.getLogger(__name__)
 
 
 def seed_demo_resources(
+    emulator: VerifiedEmulator,
     *,
     region_name: str = "us-east-1",
-    endpoint_url: str | None = None,
     profile_name: str | None = None,
-    is_robotocore: bool = False,
 ) -> dict[str, list[str]]:
-    """Create demo resources and return a report of what was created.
+    """Create demo resources against a **verified** local emulator.
 
-    ``is_robotocore`` controls whether richer demo data (backup jobs, restore jobs,
-    ECS services with tasks, etc.) is seeded.  Robotocore has broader API coverage
-    than Moto for these resource types.
+    Args:
+        emulator: Proof that the target endpoint was confirmed to be Moto or
+            Robotocore. Obtain via
+            :func:`~gui4aws.demo_resources.verification.verify_emulator`.
+        region_name: AWS region to create resources in.
+        profile_name: Optional AWS profile (credentials are irrelevant against an
+            emulator, but kept for session parity).
 
-    Returns a dict mapping resource type to list of identifiers.
+    Returns:
+        A dict mapping resource type to the list of identifiers created.
+
+    Richer demo data (backup jobs, restore jobs, ECS services with tasks, etc.)
+    is seeded for Robotocore, which has broader API coverage than Moto.
     """
     import boto3
 
+    endpoint_url = emulator.endpoint_url
     session: Any
     if profile_name:
         session = boto3.Session(profile_name=profile_name, region_name=region_name)
@@ -53,10 +76,22 @@ def seed_demo_resources(
         session = boto3.Session(region_name=region_name)
 
     def client(service: str) -> Any:
-        if endpoint_url:
-            return session.client(service, endpoint_url=endpoint_url)
-        return session.client(service)
+        return session.client(service, endpoint_url=endpoint_url)
 
+    return _seed_with_client_factory(client, is_robotocore=emulator.is_robotocore)
+
+
+def _seed_with_client_factory(
+    client: Any,
+    *,
+    is_robotocore: bool,
+) -> dict[str, list[str]]:
+    """Run every seeder using *client* (a ``service -> boto3 client`` factory).
+
+    Split out from :func:`seed_demo_resources` so tests using the in-process
+    ``moto.mock_aws`` patcher (which has no HTTP endpoint to verify) can seed
+    directly without bypassing the verification guard on the public path.
+    """
     created: dict[str, list[str]] = {}
 
     rds_client = client("rds")

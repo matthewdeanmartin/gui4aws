@@ -64,13 +64,13 @@ def test_boto3_executor_client_config_has_proxies() -> None:
         network_config=NetworkConfig(https_proxy="http://s:8443"),
     )
     config = ex._client_config()  # white-box check
-    assert config.proxies == {"https": "http://s:8443"}
+    assert getattr(config, "proxies") == {"https": "http://s:8443"}  # noqa: B009
 
 
 def test_boto3_executor_default_config_unchanged() -> None:
     ex = Boto3Executor(profile_name=None, region_name="us-east-1", endpoint_config=EndpointConfig())
     # No proxy and env honored -> reuse the shared config object untouched.
-    assert ex._client_config().proxies in (None, {})
+    assert getattr(ex._client_config(), "proxies") in (None, {})  # noqa: B009
 
 
 def test_cli_executor_adds_ca_bundle_flag() -> None:
