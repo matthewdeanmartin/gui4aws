@@ -17,6 +17,14 @@ from gui4aws.app import AppContext
 from gui4aws.execution.endpoint_config import EndpointConfig, EndpointMode
 from gui4aws.execution.execution_mode import ExecutionMode
 from gui4aws.logging_config import configure_logging
+from gui4aws.upgrade_integration import (
+    add_commands,
+    exit_report,
+    render_notice,
+    run_command,
+    schedule_tk_notice,
+    startup_report,
+)
 
 __all__ = ["build_parser", "main"]
 
@@ -50,6 +58,7 @@ def build_parser() -> argparse.ArgumentParser:
         choices=list(AWS_PARTITIONS.keys()),
         help="AWS partition to list regions for (default: aws)",
     )
+    add_commands(subparsers)
 
     return parser
 
@@ -87,6 +96,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     configure_logging(args.log_level, args.log_file)
 
+    if (result := run_command(args)) is not None:
+        return result
+
     if args.command in (None, "gui"):
         return run_gui(args)
     if args.command == "doctor":
@@ -103,6 +115,11 @@ def run_gui(args: argparse.Namespace) -> int:
     """Launch the GUI window."""
     from gui4aws.config import load_config, network_config_from_app_config
     from gui4aws.gui.main_window import create_main_window
+
+    initial_report = startup_report()
+    initial_notice = render_notice(initial_report)
+    if initial_notice:
+        print(initial_notice, file=sys.stderr)
 
     saved = load_config()
 
@@ -130,7 +147,13 @@ def run_gui(args: argparse.Namespace) -> int:
     profiles = available_profiles()
     regions = available_regions(partition=partition)
     window = create_main_window(context, profiles=profiles, regions=regions)
-    window.run()
+    schedule_tk_notice(window.root, initial_report)
+    try:
+        window.run()
+    finally:
+        final_notice = render_notice(exit_report())
+        if final_notice and final_notice != initial_notice:
+            print(final_notice, file=sys.stderr)
     return 0
 
 

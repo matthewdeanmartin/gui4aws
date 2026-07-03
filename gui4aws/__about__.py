@@ -22,4 +22,9 @@ __keywords__ = ["gui4aws", "aws", "tkinter", "gui"]
 __license__ = "MIT"
 __requires_python__ = ">=3.10"
 __status__ = "3 - Alpha"
-__dependencies__ = ["boto3>=1.35.0", "keyring>=25.0.0", "tomli>=2.4.1 ; python_full_version < '3.11'"]
+__dependencies__ = [
+    "boto3>=1.35.0",
+    "do_i_need_to_upgrade>=0.0.1",
+    "keyring>=25.0.0",
+    "tomli>=2.4.1 ; python_full_version < '3.11'",
+]

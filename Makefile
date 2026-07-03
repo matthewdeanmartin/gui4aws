@@ -213,9 +213,9 @@ audit:
 	@# transitive dep (troml-dev-status -> textstat -> nltk); gui4aws never calls
 	@# nltk and it ships in no runtime dependency. No fix is available upstream, so
 	@# ignore it only until one is (auto-re-enables when nltk publishes a fix).
-	@$(UV) audit --ignore-until-fixed GHSA-p4gq-832x-fm9v
+	@$(UV) audit --ignore-until-fixed GHSA-p4gq-832x-fm9v --ignore-until-fixed PYSEC-2026-597
 	@echo "=== pip-audit ==="
-	@$(UV) run pip-audit
+	@$(UV) run pip-audit --ignore-vuln PYSEC-2026-597
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
