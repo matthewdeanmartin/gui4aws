@@ -18,7 +18,7 @@ from gui4aws.execution.execution_mode import ExecutionMode
 from gui4aws.execution.network_config import NetworkConfig
 from gui4aws.services.service_registry import ServiceRegistry, default_registry
 
-__all__ = ["AWS_PARTITIONS", "AppContext"]
+__all__ = ["AWS_PARTITIONS", "AccountIdentity", "AppContext"]
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +31,20 @@ AWS_PARTITIONS: dict[str, tuple[str, str]] = {
     "aws-iso": ("us-iso-east-1", "AWS ISO"),
     "aws-iso-b": ("us-isob-east-1", "AWS ISO-B"),
 }
+
+
+@dataclass
+class AccountIdentity:
+    """Caller identity and target details for the active AWS connection."""
+
+    account_id: str
+    arn: str
+    user_id: str
+    partition: str
+    region: str
+    profile: str | None
+    target: str
+    endpoint_url: str | None
 
 
 @dataclass
@@ -100,6 +114,32 @@ class AppContext:
             endpoint_config=self.endpoint_config,
             network_config=self.network_config,
         )
+
+    def get_account_identity(self) -> AccountIdentity:
+        """Read STS caller identity through the current profile, region, endpoint, and network settings."""
+        executor = self.boto3_executor()
+        client = executor.build_client("sts")
+        response = client.get_caller_identity()
+        return AccountIdentity(
+            account_id=str(response.get("Account", "")),
+            arn=str(response.get("Arn", "")),
+            user_id=str(response.get("UserId", "")),
+            partition=self.partition,
+            region=self.region_name,
+            profile=self.profile_name,
+            target=self.endpoint_config.mode.display_label,
+            endpoint_url=self.endpoint_config.resolved_url(),
+        )
+
+    def account_identity_inputs(self) -> dict[str, str]:
+        """Return CDK/account helper inputs derived from the current connection."""
+        identity = self.get_account_identity()
+        inputs = {
+            "account_id": identity.account_id,
+            "region": identity.region,
+            "endpoint_url": identity.endpoint_url or "",
+        }
+        return inputs
 
     def aws_cli_executor(self) -> AwsCliExecutor:
         """Build a fresh AwsCliExecutor that reflects current selections."""

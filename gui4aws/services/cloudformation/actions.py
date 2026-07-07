@@ -165,6 +165,9 @@ def cdk_config_text(inputs: Mapping[str, str]) -> str:
     account = inputs.get("account_id", "").strip() or "000000000000"
     region = inputs.get("region", "").strip() or "us-east-1"
     endpoint = inputs.get("endpoint_url", "").strip()
+    target = inputs.get("target", "").strip()
+    arn = inputs.get("arn", "").strip()
+    user_id = inputs.get("user_id", "").strip()
 
     env_block = f"""# Shell environment variables
 export CDK_DEFAULT_ACCOUNT={account}
@@ -220,8 +223,21 @@ cdk diff           # compare deployed stack with local template
 cdk deploy         # deploy (requires bootstrap if using assets)
 cdk destroy        # tear down"""
 
+    connection_lines = [
+        f"Account:  {account}",
+        f"Region:   {region}",
+        f"Target:   {target or ('Custom endpoint' if endpoint else 'AWS')}",
+        f"Endpoint: {endpoint or '(aws)'}",
+    ]
+    if arn:
+        connection_lines.append(f"ARN:      {arn}")
+    if user_id:
+        connection_lines.append(f"User ID:  {user_id}")
+
     return "\n\n".join(
         [
+            "=== Active Connection ===",
+            "\n".join(connection_lines),
             "=== Shell Environment Variables ===",
             env_block,
             "=== cdk.json snippet ===",
@@ -262,14 +278,31 @@ CDK_CONFIG = ActionDefinition(
             required=False,
             help_text="http://localhost:5000 (moto) or http://localhost:4566 (robotocore). Leave blank for real AWS.",
         ),
+        InputField(
+            name="target",
+            label="Target",
+            required=False,
+            help_text="Filled automatically from the toolbar target.",
+        ),
+        InputField(
+            name="arn",
+            label="Caller ARN",
+            required=False,
+            help_text="Filled automatically from STS caller identity.",
+        ),
+        InputField(
+            name="user_id",
+            label="User ID",
+            required=False,
+            help_text="Filled automatically from STS caller identity.",
+        ),
     ),
     cli_template=CliTemplate(service="cloudformation", command="list-stacks"),
     boto3_template=Boto3Template(service="cloudformation", operation="list_stacks"),
     result_view=ResultViewDefinition(kind=ResultViewKind.TEXT, title="CDK config"),
     iam_permissions=(),
     description=(
-        "Copy-paste CDK configuration for this endpoint. "
-        "Fill in Account ID, Region, and Endpoint URL above, then click Refresh. "
+        "Copy-paste CDK configuration for the active toolbar connection. "
         "The output panel shows shell exports, cdk.json snippet, and workflow commands ready to copy."
     ),
     text_generator=cdk_config_text,

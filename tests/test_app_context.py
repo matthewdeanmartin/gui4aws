@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from gui4aws.app import AppContext
@@ -56,3 +58,37 @@ def test_endpoint_config_resolved_aws_is_none() -> None:
     """EndpointMode.AWS resolves to no URL."""
     config = EndpointConfig()
     assert config.resolved_url() is None
+
+
+class FakeStsClient:
+    """Small STS double for account identity tests."""
+
+    def get_caller_identity(self) -> dict[str, str]:
+        """Return a stable fake caller identity."""
+        return {
+            "Account": "123456789012",
+            "Arn": "arn:aws:sts::123456789012:assumed-role/Admin/gui4aws",
+            "UserId": "AROATEST:gui4aws",
+        }
+
+
+def test_get_account_identity_uses_current_context(monkeypatch: Any) -> None:
+    """STS caller identity is wrapped with the active toolbar connection settings."""
+    requested_services: list[str] = []
+
+    def fake_build_client(_self: Any, service_name: str) -> FakeStsClient:
+        requested_services.append(service_name)
+        return FakeStsClient()
+
+    monkeypatch.setattr("gui4aws.execution.boto3_executor.Boto3Executor.build_client", fake_build_client)
+    context = AppContext(profile_name="dev", region_name="us-west-2")
+    context.set_endpoint(EndpointMode.ROBOTOCORE, "http://localhost:4566")
+
+    identity = context.get_account_identity()
+
+    assert requested_services == ["sts"]
+    assert identity.account_id == "123456789012"
+    assert identity.region == "us-west-2"
+    assert identity.profile == "dev"
+    assert identity.target == "Robotocore"
+    assert identity.endpoint_url == "http://localhost:4566"

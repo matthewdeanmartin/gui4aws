@@ -65,27 +65,7 @@ SERVICE = ServiceDefinition(
             item_id="cdk_config",
             display_name="CDK Config",
             default_action_id=CDK_CONFIG.action_id,
-            filter_fields=(
-                InputField(
-                    name="account_id",
-                    label="Account ID",
-                    required=False,
-                    default="000000000000",
-                    help_text="12-digit AWS account ID. Use 000000000000 for moto/robotocore.",
-                ),
-                InputField(
-                    name="region",
-                    label="Region",
-                    required=False,
-                    default="us-east-1",
-                ),
-                InputField(
-                    name="endpoint_url",
-                    label="Endpoint URL (optional)",
-                    required=False,
-                    help_text="http://localhost:5000 (moto) or http://localhost:4566 (robotocore).",
-                ),
-            ),
+            filter_fields=(),
         ),
     ),
     actions=ALL_ACTIONS,

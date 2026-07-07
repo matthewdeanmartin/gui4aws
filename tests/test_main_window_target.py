@@ -10,9 +10,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from gui4aws.app import AccountIdentity
 from gui4aws.app import AppContext
 from gui4aws.execution.endpoint_config import EndpointMode
 from gui4aws.gui.main_window import MainWindow
+from gui4aws.services.cloudformation.actions import CDK_CONFIG
 
 
 @dataclass
@@ -176,3 +178,26 @@ def test_moto_error_reverts_target_to_aws(monkeypatch: Any) -> None:
     assert window.toolbar.busy is False
     assert window.context.endpoint_config.mode is EndpointMode.AWS
     assert window.toolbar.moto_running is False
+
+
+def test_contextual_action_inputs_fill_cdk_config_from_account_identity() -> None:
+    """CloudFormation CDK config uses the active connection instead of manual duplicate fields."""
+    window = _make_window(EndpointMode.ROBOTOCORE)
+    window.context.get_account_identity = lambda: AccountIdentity(
+        account_id="123456789012",
+        arn="arn:aws:sts::123456789012:assumed-role/Admin/gui4aws",
+        user_id="AROATEST:gui4aws",
+        partition="aws",
+        region="us-west-2",
+        profile=None,
+        target="Robotocore",
+        endpoint_url="http://localhost:4566",
+    )
+
+    inputs = window.contextual_action_inputs(CDK_CONFIG, {})
+
+    assert inputs["account_id"] == "123456789012"
+    assert inputs["region"] == "us-west-2"
+    assert inputs["endpoint_url"] == "http://localhost:4566"
+    assert inputs["target"] == "Robotocore"
+    assert inputs["user_id"] == "AROATEST:gui4aws"

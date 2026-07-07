@@ -16,6 +16,12 @@ Harden pagination:
 - add tests around Prev/Next state;
 - document where first/last page cannot be implemented because AWS only returns forward tokens.
 
+Remove quick-start connection guesswork:
+
+- add an AWS Account Info popup that reads STS caller identity from the active app connection;
+- show account, ARN, user ID, target, region, profile, and endpoint after connecting to local backends;
+- sync the CloudFormation CDK config helper with the active connection so it no longer asks the user to re-pick region/endpoint or type the account ID.
+
 ## Out of scope
 
 New AWS services.
@@ -29,5 +35,7 @@ Release pipeline changes.
 Safety gates are covered by headless tests.
 
 Pagination behavior is covered without requiring live AWS.
+
+Account info and CDK config use the active `AppContext` connection, including Robotocore.
 
 Roadmap items that remain are phrased as future work, not half-done chores.

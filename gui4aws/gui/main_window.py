@@ -27,6 +27,7 @@ from gui4aws.gui.toolbar import Toolbar
 from gui4aws.gui.window_helpers import build_about_text as _build_about_text
 from gui4aws.gui.window_helpers import extract_choices_from_raw as _extract_choices_from_raw
 from gui4aws.gui.window_helpers import filter_rows_by_inputs as _filter_rows_by_inputs
+from gui4aws.gui.window_helpers import format_account_identity as _format_account_identity
 from gui4aws.gui.window_helpers import nav_action_inputs as _nav_action_inputs
 from gui4aws.gui.window_helpers import record_history as _record_history
 from gui4aws.gui.window_helpers import render_moto_output as _render_moto_output
@@ -190,6 +191,7 @@ class MainWindow(ServerManagerMixin):
 
         help_menu = tk.Menu(menubar, tearoff=False)
         menubar.add_cascade(label="Help", menu=help_menu)
+        help_menu.add_command(label="AWS Account Info", command=self.show_account_info)
         help_menu.add_command(label="Documentation", command=self.open_docs)
         help_menu.add_separator()
         help_menu.add_command(label="About gui4aws", command=self.show_about)
@@ -242,6 +244,24 @@ class MainWindow(ServerManagerMixin):
             robotocore_endpoint_url=self.robotocore_manager.endpoint_url,
         )
         messagebox.showinfo("About gui4aws", text)
+
+    def show_account_info(self) -> None:
+        """Fetch and show STS caller identity for the active toolbar connection."""
+        self.status_bar.set_status("Loading AWS account info")
+        self.queue_account_info_popup()
+
+    def queue_account_info_popup(self) -> None:
+        """Fetch account identity off the Tk thread, then display it from dispatch_result."""
+
+        def worker() -> None:
+            try:
+                identity = self.context.get_account_identity()
+            except Exception as exc:  # pylint: disable=broad-exception-caught
+                self.results_queue.put(("account_info_error", None, str(exc)))
+                return
+            self.results_queue.put(("account_info", None, identity))
+
+        self.action_queue.submit(worker, lambda: True, "account info")
 
     # ── Toolbar ───────────────────────────────────────────────────────────────
 
@@ -475,7 +495,7 @@ class MainWindow(ServerManagerMixin):
             self.status_bar.set_status("Pick a value above and click Refresh")
             return
 
-        self.run_action(action, inputs=inputs)
+        self.run_action(action, inputs=self.contextual_action_inputs(action, inputs))
 
     def refresh_current_nav(self, values: dict[str, str]) -> None:
         """Re-run the current nav's default action with the filter-bar values."""
@@ -495,7 +515,7 @@ class MainWindow(ServerManagerMixin):
         # default-action worker is now stale.
         self.nav_generation += 1
         self._reset_pagination()
-        self.run_action(action, inputs=values)
+        self.run_action(action, inputs=self.contextual_action_inputs(action, values))
 
     def on_filter_field_changed(self, field_name: str, value: str) -> None:
         """Handle value changes in the filter bar.
@@ -633,6 +653,32 @@ class MainWindow(ServerManagerMixin):
     def nav_action_inputs(self, nav: Any, values: dict[str, str]) -> dict[str, str]:
         """Extract inputs for the default nav action from resolved filter values."""
         return _nav_action_inputs(nav, values)
+
+    def contextual_action_inputs(self, action: ActionDefinition, inputs: dict[str, str]) -> dict[str, str]:
+        """Add active-connection fields for actions that should never ask for duplicate context."""
+        if action.action_id != "cloudformation.cdk_config":
+            return inputs
+        enriched = dict(inputs)
+        try:
+            identity = self.context.get_account_identity()
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            logger.warning("could not load account identity for CDK config: %s", exc)
+            enriched.setdefault("account_id", "000000000000")
+            enriched.setdefault("region", self.context.region_name)
+            enriched.setdefault("endpoint_url", self.context.endpoint_config.resolved_url() or "")
+            enriched.setdefault("target", self.context.endpoint_config.mode.display_label)
+            return enriched
+        enriched.update(
+            {
+                "account_id": identity.account_id,
+                "region": identity.region,
+                "endpoint_url": identity.endpoint_url or "",
+                "target": identity.target,
+                "arn": identity.arn,
+                "user_id": identity.user_id,
+            }
+        )
+        return enriched
 
     def submit_nav_cache_warm(
         self,
@@ -1111,6 +1157,7 @@ class MainWindow(ServerManagerMixin):
             self.toolbar.set_transition_busy(False)
             self.status_bar.set_status(f"Moto running at {endpoint_url} — profile cleared")
             self.on_toolbar_changed()
+            self.queue_account_info_popup()
             return
         if kind == "moto_error":
             self.status_bar.set_status("Moto start failed")
@@ -1128,6 +1175,7 @@ class MainWindow(ServerManagerMixin):
             self.robotocore_panel.set_running(True)
             self.status_bar.set_status(f"Robotocore running at {rc_url}")
             self.on_toolbar_changed()
+            self.queue_account_info_popup()
             return
         if kind == "robotocore_stopped":
             self.toolbar.robotocore_running = False
@@ -1163,6 +1211,14 @@ class MainWindow(ServerManagerMixin):
             self.status_bar.set_status("Demo resources seeded")
             self.schedule_demo_cache_seed()
             messagebox.showinfo("Demo resources seeded", "\n".join(lines) or "Nothing was created.")
+            return
+        if kind == "account_info":
+            self.status_bar.set_status("AWS account info loaded")
+            messagebox.showinfo("AWS Account Info", _format_account_identity(payload), parent=self.root)
+            return
+        if kind == "account_info_error":
+            self.status_bar.set_status("AWS account info failed")
+            messagebox.showerror("AWS Account Info", f"Could not load account info:\n{payload}", parent=self.root)
             return
         if kind == "demo_error":
             self.status_bar.set_status("Demo seed failed")

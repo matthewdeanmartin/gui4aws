@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 from gui4aws.models import EagerChoiceSource
 
 if TYPE_CHECKING:
-    from gui4aws.app import AppContext
+    from gui4aws.app import AccountIdentity, AppContext
     from gui4aws.models import ActionDefinition
 
 logger = logging.getLogger(__name__)
@@ -277,3 +277,21 @@ def build_about_text(robotocore_running: bool, robotocore_endpoint_url: str) -> 
         "Docs:       https://gui4aws.readthedocs.io/en/latest/",
     ]
     return "\n".join(lines)
+
+
+def format_account_identity(identity: AccountIdentity) -> str:
+    """Format active AWS caller identity for a popup."""
+    profile = identity.profile or "(environment/default)"
+    endpoint = identity.endpoint_url or "(aws)"
+    return "\n".join(
+        [
+            f"Account:  {identity.account_id or '(unknown)'}",
+            f"Region:   {identity.region}",
+            f"Target:   {identity.target}",
+            f"Profile:  {profile}",
+            f"Endpoint: {endpoint}",
+            "",
+            f"ARN:      {identity.arn or '(unknown)'}",
+            f"User ID:  {identity.user_id or '(unknown)'}",
+        ]
+    )
