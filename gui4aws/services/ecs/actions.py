@@ -122,6 +122,24 @@ def run_task_cli_args(inputs: Mapping[str, str]) -> list[str]:
 
 # ── Clusters ─────────────────────────────────────────────────────────────────
 
+
+def _list_and_describe_clusters(client: Any, inputs: Mapping[str, str]) -> dict[str, Any]:
+    """List all ECS clusters, then describe them so rows include live counts/status."""
+    del inputs
+    arns: list[str] = []
+    paginator = client.get_paginator("list_clusters")
+    for page in paginator.paginate():
+        arns.extend(page.get("clusterArns", []))
+    if not arns:
+        return {"clusters": []}
+    described: list[Any] = []
+    for idx in range(0, len(arns), 100):
+        chunk = arns[idx : idx + 100]
+        resp = client.describe_clusters(clusters=chunk)
+        described.extend(resp.get("clusters", []))
+    return {"clusters": described}
+
+
 LIST_CLUSTERS = ActionDefinition(
     action_id="ecs.list_clusters",
     display_name="List clusters",
@@ -135,9 +153,10 @@ LIST_CLUSTERS = ActionDefinition(
         columns=("cluster_name", "status", "running_tasks", "pending_tasks", "active_services"),
         title="ECS Clusters",
     ),
-    iam_permissions=("ecs:ListClusters",),
-    description="List ECS clusters in the current region.",
+    iam_permissions=("ecs:ListClusters", "ecs:DescribeClusters"),
+    description="List ECS clusters in the current region with status and service/task counts.",
     view=to_cluster_summaries,
+    boto3_execute_fn=_list_and_describe_clusters,
 )
 
 

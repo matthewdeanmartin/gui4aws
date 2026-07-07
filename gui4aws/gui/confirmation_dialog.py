@@ -1,6 +1,6 @@
 """Typed-text confirmation dialog for destructive actions.
 
-Used in phase 6, built now so the matching logic can be unit-tested. The user must type the
+The matching logic can be unit-tested without a Tk window. The user must type the
 exact ``expected_text`` (case-sensitive, whitespace-trimmed) before the Confirm button enables.
 """
 

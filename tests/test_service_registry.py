@@ -9,7 +9,7 @@ from gui4aws.services.service_registry import ServiceRegistry, default_registry
 
 
 def test_default_registry_has_aurora_and_backup() -> None:
-    """Both phase-1 services are loaded by default."""
+    """Core services are loaded by default."""
     registry = default_registry()
     service_ids = {service.service_id for service in registry}
     assert "aurora" in service_ids

@@ -23,9 +23,23 @@ def _arn_from_url(url: str) -> str | None:
 
 
 def to_queue_summaries(response: Mapping[str, Any]) -> list[QueueSummary]:
-    """Convert a raw boto3 ListQueues response into a list of QueueSummary objects."""
-    urls = response.get("QueueUrls", []) or []
+    """Convert a raw boto3 SQS queue response into a list of QueueSummary objects."""
+    queues = response.get("Queues", []) or []
     summaries: list[QueueSummary] = []
+    for queue in queues:
+        url = str(queue.get("QueueUrl", ""))
+        attrs = queue.get("Attributes", {}) or {}
+        name = url.rstrip("/").rsplit("/", 1)[-1]
+        summaries.append(
+            QueueSummary(
+                name=name,
+                url=url,
+                approximate_messages=attrs.get("ApproximateNumberOfMessages"),
+                visibility_timeout=attrs.get("VisibilityTimeout"),
+                arn=attrs.get("QueueArn") or _arn_from_url(url),
+            )
+        )
+    urls = response.get("QueueUrls", []) or []
     for url in urls:
         name = url.rstrip("/").rsplit("/", 1)[-1]
         summaries.append(

@@ -183,7 +183,7 @@ class MainWindow(ServerManagerMixin):
         # The Demo cascade rebuilds itself each time it is opened (postcommand) so
         # "Seed demo resources" is only present while a manager-owned Moto or
         # Robotocore emulator is the active target. It is impossible to invoke on
-        # real AWS or a custom endpoint — see spec/demo_safety.md.
+        # real AWS or a custom endpoint.
         self.demo_menu = tk.Menu(menubar, tearoff=False, postcommand=self.refresh_demo_menu)
         menubar.add_cascade(label="Demo", menu=self.demo_menu)
         self.refresh_demo_menu()
@@ -283,8 +283,9 @@ class MainWindow(ServerManagerMixin):
         """Orchestrate a Target selection: start/stop emulators and set the endpoint.
 
         The Target selector is the single source of truth (see
-        ``spec/mutually_exclusive.md``). Selecting a target both routes calls and
-        manages the emulator lifecycle so Moto and Robotocore can never both run.
+        ``spec/ard/0003-target-selector-owns-local-backends.md``). Selecting a
+        target both routes calls and manages the emulator lifecycle so Moto and
+        Robotocore can never both run.
         """
         current = self.context.endpoint_config.mode
         if mode is current and mode is not EndpointMode.CUSTOM:

@@ -114,7 +114,7 @@ SERVICE = ServiceDefinition(
             row_actions=(
                 RowAction(
                     action_id=GET_POLICY.action_id,
-                    button_label="Get Policy",
+                    button_label="Get Policy + Document",
                     prefill={"policy_arn": "arn"},
                 ),
                 RowAction(

@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from typing import Any
+
 from gui4aws.models import (
     ActionDefinition,
     Boto3Template,
@@ -22,6 +25,23 @@ __all__ = [
     "RECEIVE_MESSAGES",
     "SEND_MESSAGE",
 ]
+
+
+def _list_queues_with_attributes(client: Any, inputs: Mapping[str, str]) -> dict[str, Any]:
+    """List queues, then fetch common attributes used by the queue detail view."""
+    params: dict[str, Any] = {}
+    prefix = inputs.get("queue_name_prefix", "").strip()
+    if prefix:
+        params["QueueNamePrefix"] = prefix
+    response = client.list_queues(**params)
+    queues: list[dict[str, Any]] = []
+    for url in response.get("QueueUrls", []) or []:
+        attrs = client.get_queue_attributes(
+            QueueUrl=url,
+            AttributeNames=["QueueArn", "ApproximateNumberOfMessages", "VisibilityTimeout"],
+        ).get("Attributes", {})
+        queues.append({"QueueUrl": url, "Attributes": attrs})
+    return {"Queues": queues}
 
 
 LIST_QUEUES = ActionDefinition(
@@ -52,9 +72,10 @@ LIST_QUEUES = ActionDefinition(
         columns=("name", "url", "approximate_messages", "visibility_timeout", "arn"),
         title="SQS Queues",
     ),
-    iam_permissions=("sqs:ListQueues",),
-    description="List SQS queues, optionally filtered by name prefix.",
+    iam_permissions=("sqs:ListQueues", "sqs:GetQueueAttributes"),
+    description="List SQS queues, optionally filtered by name prefix, with common queue attributes.",
     view=to_queue_summaries,
+    boto3_execute_fn=_list_queues_with_attributes,
 )
 
 

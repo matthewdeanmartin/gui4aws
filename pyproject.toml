@@ -18,6 +18,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
 ]
 dependencies = [
     "boto3>=1.35.0",
@@ -64,7 +65,8 @@ dev = [
     "black>=26.0.0",
     "isort>=6.0.0",
     "jiggle-version>=2.1.0",
-    "keepachangelog-manager-fork[all]>=6.6.0,<7",
+    "keepachangelog-manager-fork[all]>=6.6.0,<7; python_version < '3.15'",
+    "keepachangelog-manager-fork>=6.6.0,<7; python_version >= '3.15'",
     "codespell>=2.4.1",
     "mdformat>=1.0.0",
     "metametameta>=0.1.14",
@@ -106,7 +108,7 @@ dev = [
     "refurb>=2.0.0",
     "crosshair-tool>=0.0.80",
     "deptry>=0.20.0",
-    "import-linter>=2.0",
+    "import-linter>=2.0; python_version < '3.15'",
     "moto[server]>=5.2.1",
     "types-jmespath>=1.1.0.20260508",
 ]

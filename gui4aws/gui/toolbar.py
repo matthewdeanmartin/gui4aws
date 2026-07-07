@@ -2,8 +2,8 @@
 
 The **Target** selector (AWS / Moto / Robotocore / Custom) is the single source
 of truth for where AWS calls go. Selecting a target is also the start/stop
-gesture for the emulators — there are no separate Start/Stop buttons, so Moto and
-Robotocore can never both be active at once. See ``spec/mutually_exclusive.md``.
+gesture for the emulators, so Moto and Robotocore can never both be active at
+once. See ``spec/ard/0003-target-selector-owns-local-backends.md``.
 """
 
 # pylint: disable=too-many-ancestors

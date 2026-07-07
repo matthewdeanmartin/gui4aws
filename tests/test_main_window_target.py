@@ -1,8 +1,8 @@
 """Tests for MainWindow's Target-selector orchestration (mutually-exclusive backends).
 
-See spec/mutually_exclusive.md. These exercise ``on_target_changed`` and the
-emulator result handlers using ``object.__new__(MainWindow)`` so no real Tk
-window is needed.
+See spec/ard/0003-target-selector-owns-local-backends.md. These exercise
+``on_target_changed`` and the emulator result handlers using
+``object.__new__(MainWindow)`` so no real Tk window is needed.
 """
 
 from __future__ import annotations

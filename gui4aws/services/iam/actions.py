@@ -72,6 +72,16 @@ def _get_policy_document(client: Any, inputs: Mapping[str, str]) -> Mapping[str,
     }
 
 
+def _get_policy_with_document(client: Any, inputs: Mapping[str, str]) -> Mapping[str, Any]:
+    """Fetch policy metadata plus the active policy document."""
+    document_resp = _get_policy_document(client, inputs)
+    return {
+        "Policy": document_resp.get("Policy", {}),
+        "DefaultVersionId": document_resp.get("VersionId"),
+        "Document": document_resp.get("Document", {}),
+    }
+
+
 LIST_USERS = ActionDefinition(
     action_id="iam.list_users",
     display_name="List users",
@@ -327,8 +337,9 @@ GET_POLICY = ActionDefinition(
     cli_template=CliTemplate(service="iam", command="get-policy", arg_map={"policy_arn": "policy-arn"}),
     boto3_template=Boto3Template(service="iam", operation="get_policy", param_map={"policy_arn": "PolicyArn"}),
     result_view=ResultViewDefinition(kind=ResultViewKind.RAW_JSON, title="Policy detail"),
-    iam_permissions=("iam:GetPolicy",),
-    description="Get details for a specific IAM policy.",
+    iam_permissions=("iam:GetPolicy", "iam:GetPolicyVersion"),
+    description="Get details for a specific IAM policy, including the active policy document.",
+    boto3_execute_fn=_get_policy_with_document,
 )
 
 GET_POLICY_DOCUMENT = ActionDefinition(

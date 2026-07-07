@@ -61,6 +61,24 @@ def create_key_cli_args(inputs: Mapping[str, str]) -> list[str]:
     return args
 
 
+def _list_and_describe_keys(client: Any, inputs: Mapping[str, str]) -> dict[str, Any]:
+    """List KMS keys, then describe each key so the grid shows useful metadata."""
+    del inputs
+    keys: list[dict[str, Any]] = []
+    paginator = client.get_paginator("list_keys")
+    for page in paginator.paginate():
+        keys.extend(page.get("Keys", []))
+    enriched: list[dict[str, Any]] = []
+    for key in keys:
+        key_id = str(key.get("KeyId", ""))
+        if not key_id:
+            enriched.append(key)
+            continue
+        meta = client.describe_key(KeyId=key_id).get("KeyMetadata", {})
+        enriched.append({**key, "KeyMetadata": meta})
+    return {"Keys": enriched}
+
+
 LIST_KEYS = ActionDefinition(
     action_id="kms.list_keys",
     display_name="List keys",
@@ -74,9 +92,10 @@ LIST_KEYS = ActionDefinition(
         columns=("key_id", "key_arn", "key_state", "key_usage", "enabled", "description"),
         title="KMS Keys",
     ),
-    iam_permissions=("kms:ListKeys",),
-    description="List KMS keys in the current region.",
+    iam_permissions=("kms:ListKeys", "kms:DescribeKey"),
+    description="List KMS keys in the current region with describe-key metadata.",
     view=to_key_summaries,
+    boto3_execute_fn=_list_and_describe_keys,
 )
 
 

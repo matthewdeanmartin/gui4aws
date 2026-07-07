@@ -1481,7 +1481,7 @@ name = "grimp"
 version = "3.14"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions" },
+    { name = "typing-extensions", marker = "python_full_version < '3.15'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/63/46/79764cfb61a3ac80dadae5d94fb10acdb7800e31fecf4113cf3d345e4952/grimp-3.14.tar.gz", hash = "sha256:645fbd835983901042dae4e1b24fde3a89bf7ac152f9272dd17a97e55cb4f871", size = 830882, upload-time = "2025-12-10T17:55:01.287Z" }
 wheels = [
@@ -1632,11 +1632,12 @@ dev = [
     { name = "git2md" },
     { name = "griffe" },
     { name = "hypothesis" },
-    { name = "import-linter" },
+    { name = "import-linter", marker = "python_full_version < '3.15'" },
     { name = "interrogate" },
     { name = "isort" },
     { name = "jiggle-version" },
-    { name = "keepachangelog-manager-fork", extra = ["all"] },
+    { name = "keepachangelog-manager-fork" },
+    { name = "keepachangelog-manager-fork", extra = ["all"], marker = "python_full_version < '3.15'" },
     { name = "linkcheckmd" },
     { name = "mdformat" },
     { name = "metametameta" },
@@ -1698,11 +1699,12 @@ dev = [
     { name = "git2md", specifier = ">=0.1.0" },
     { name = "griffe", specifier = ">=1.0.0" },
     { name = "hypothesis", specifier = ">=6.100.0" },
-    { name = "import-linter", specifier = ">=2.0" },
+    { name = "import-linter", marker = "python_full_version < '3.15'", specifier = ">=2.0" },
     { name = "interrogate", specifier = ">=1.5.0" },
     { name = "isort", specifier = ">=6.0.0" },
     { name = "jiggle-version", specifier = ">=2.1.0" },
-    { name = "keepachangelog-manager-fork", extras = ["all"], specifier = ">=6.6.0,<7" },
+    { name = "keepachangelog-manager-fork", marker = "python_full_version >= '3.15'", specifier = ">=6.6.0,<7" },
+    { name = "keepachangelog-manager-fork", extras = ["all"], marker = "python_full_version < '3.15'", specifier = ">=6.6.0,<7" },
     { name = "linkcheckmd", specifier = ">=1.4.0" },
     { name = "mdformat", specifier = ">=1.0.0" },
     { name = "metametameta", specifier = ">=0.1.14" },
@@ -1844,11 +1846,11 @@ name = "import-linter"
 version = "2.12"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "click" },
-    { name = "grimp" },
-    { name = "rich" },
+    { name = "click", marker = "python_full_version < '3.15'" },
+    { name = "grimp", marker = "python_full_version < '3.15'" },
+    { name = "rich", marker = "python_full_version < '3.15'" },
     { name = "tomli", marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions" },
+    { name = "typing-extensions", marker = "python_full_version < '3.15'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/23/a7/5ae6dc1caf8229f9bcd05b0dd71aba6d5b699b81e5d599fd05bb36046e2a/import_linter-2.12.tar.gz", hash = "sha256:217f0f0f0890b8625389765039d52c215f4c6d4a047f42ea78b6d00ceba1900e", size = 1173831, upload-time = "2026-06-23T08:58:35.313Z" }
 wheels = [
@@ -2246,9 +2248,9 @@ wheels = [
 
 [package.optional-dependencies]
 all = [
-    { name = "google-re2" },
-    { name = "mdformat" },
-    { name = "orjson" },
+    { name = "google-re2", marker = "python_full_version < '3.15'" },
+    { name = "mdformat", marker = "python_full_version < '3.15'" },
+    { name = "orjson", marker = "python_full_version < '3.15'" },
 ]
 
 [[package]]
