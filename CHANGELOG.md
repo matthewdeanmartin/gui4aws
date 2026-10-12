@@ -4,11 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Changed
+- Requires Python 3.11 or newer; Python 3.10 is no longer supported.
+
 ## [1.2.0] - 2026-07-08
 ### Added
 - ECS full info for tasks, KMS metadata, SQS info, IAM get policy button.
-- Route 53 support: hosted zone create/get/list/delete and record set list/upsert/delete,
-  with moto and robotocore parity tests and demo seeding.
+- Route 53 support: hosted zone create/get/list/delete and record set list/upsert/delete, with moto and robotocore parity tests and demo seeding.
 
 ## [1.1.0] - 2026-07-03
 ### Added
