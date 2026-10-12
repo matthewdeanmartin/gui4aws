@@ -23,7 +23,10 @@ def test_seed_demo_resources(mock_aws_env: None) -> None:
     assert "s3_buckets" in report
     assert "iam_users" in report
     assert "ssm_parameters" in report
+    assert "hosted_zones" in report
 
     assert len(report["vpcs"]) > 0
     assert len(report["s3_buckets"]) > 0
     assert len(report["iam_users"]) > 0
+    assert len(report["hosted_zones"]) > 0
+    assert len(report["record_sets"]) > 0

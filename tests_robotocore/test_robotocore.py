@@ -215,6 +215,49 @@ def test_aurora_create_cluster_and_describe(robotocore: RobotocoreManager) -> No
     assert any(s.cluster_identifier == "rc-cluster-1" for s in summaries)
 
 
+# ── Route 53 ──────────────────────────────────────────────────────────────────
+
+
+def test_route53_create_zone_and_list(robotocore: RobotocoreManager) -> None:
+    from gui4aws.services.route53.actions import CREATE_HOSTED_ZONE, LIST_HOSTED_ZONES
+    from gui4aws.services.route53.views import to_hosted_zone_summaries
+
+    context = ctx(robotocore)
+    context.execute(CREATE_HOSTED_ZONE, inputs={"name": "rc-zone.test.", "comment": "rc test"})
+
+    result = context.execute(LIST_HOSTED_ZONES, inputs={})
+    assert isinstance(result, Boto3Result)
+    summaries = to_hosted_zone_summaries(result.response)
+    assert any(s.name == "rc-zone.test." for s in summaries)
+
+
+def test_route53_upsert_and_list_records(robotocore: RobotocoreManager) -> None:
+    from gui4aws.services.route53.actions import LIST_RECORD_SETS, UPSERT_RECORD_SET
+    from gui4aws.services.route53.views import bare_zone_id, to_record_set_summaries
+
+    r53 = client(robotocore, "route53")
+    zone_id = bare_zone_id(
+        r53.create_hosted_zone(Name="rc-records.test.", CallerReference="rc-setup-1")["HostedZone"]["Id"]
+    )
+
+    context = ctx(robotocore)
+    context.execute(
+        UPSERT_RECORD_SET,
+        inputs={
+            "zone_id": zone_id,
+            "record_name": "www.rc-records.test.",
+            "record_type": "A",
+            "ttl": "300",
+            "value": "1.2.3.4",
+        },
+    )
+
+    result = context.execute(LIST_RECORD_SETS, inputs={"zone_id": zone_id})
+    assert isinstance(result, Boto3Result)
+    summaries = to_record_set_summaries(result.response)
+    assert any(s.name == "www.rc-records.test." and s.type == "A" for s in summaries)
+
+
 # ── RobotocoreManager state ───────────────────────────────────────────────────
 
 

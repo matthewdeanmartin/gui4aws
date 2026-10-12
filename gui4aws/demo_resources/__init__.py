@@ -26,6 +26,7 @@ from gui4aws.demo_resources.kms import seed_kms
 from gui4aws.demo_resources.messaging import seed_ses, seed_sns
 from gui4aws.demo_resources.monitoring import seed_cloudformation, seed_cloudwatch
 from gui4aws.demo_resources.networking import seed_networking
+from gui4aws.demo_resources.route53 import seed_route53
 from gui4aws.demo_resources.secrets import seed_secrets, seed_ssm
 from gui4aws.demo_resources.storage import seed_s3, seed_sqs
 from gui4aws.demo_resources.verification import (
@@ -110,5 +111,6 @@ def _seed_with_client_factory(
     created.update(seed_sns(client("sns")))
     created.update(seed_ses(client("ses")))
     created.update(seed_iam_extras(client("iam")))
+    created.update(seed_route53(client("route53")))
 
     return created

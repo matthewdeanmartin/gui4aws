@@ -24,6 +24,14 @@ def test_aurora_has_clusters_navigation() -> None:
     assert clusters.default_action_id == "aurora.describe_db_clusters"
 
 
+def test_route53_registered_with_hosted_zones() -> None:
+    """Route 53 is registered and exposes a Hosted Zones nav item."""
+    registry = default_registry()
+    route53 = registry.get("route53")
+    hosted_zones = next(item for item in route53.navigation_items if item.item_id == "hosted_zones")
+    assert hosted_zones.default_action_id == "route53.list_hosted_zones"
+
+
 def test_double_register_rejected() -> None:
     """Registering the same service_id twice raises."""
     registry = ServiceRegistry()

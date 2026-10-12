@@ -141,4 +141,10 @@ def default_registry() -> ServiceRegistry:
         registry.register(IAM_SERVICE)
     except ImportError:
         pass
+    try:
+        from gui4aws.services.route53.service import SERVICE as ROUTE53_SERVICE
+
+        registry.register(ROUTE53_SERVICE)
+    except ImportError:
+        pass
     return registry
