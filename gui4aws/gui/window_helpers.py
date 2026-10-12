@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from datetime import UTC
 from typing import TYPE_CHECKING, Any
 
 from gui4aws.models import EagerChoiceSource
@@ -190,7 +191,7 @@ def record_history(
     current_inputs: dict[str, str],
 ) -> None:
     """Add an execution entry to the persistent action history."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from gui4aws.execution.action_history import ActionHistoryEntry
     from gui4aws.execution.script_generator import generate_cli_script, generate_python_script
@@ -221,7 +222,7 @@ def record_history(
         error_message = getattr(payload, "message", None) or getattr(payload, "reason", None) or str(payload)
     context.history.add(
         ActionHistoryEntry(
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             service_id=action.service_id,
             action_id=action.action_id,
             mode=context.mode,

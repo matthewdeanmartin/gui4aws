@@ -163,7 +163,6 @@ class MotoServerManager:
         req = urllib.request.Request(url, method="POST", data=b"")
         try:
             with urllib.request.urlopen(req, timeout=10) as resp:  # nosec B310
-
                 body = resp.read()
                 self.append_output(f"=== moto state reset: {resp.status} {body!r} ===")
         except urllib.error.HTTPError as exc:

@@ -94,8 +94,13 @@ def test_record_set_actions(mock_aws_env: None) -> None:
     # Upsert an A record.
     upsert = context.execute(
         UPSERT_RECORD_SET,
-        inputs={"zone_id": zone_id, "record_name": "www.records.test.", "record_type": "A", "ttl": "300",
-                "value": "1.2.3.4"},
+        inputs={
+            "zone_id": zone_id,
+            "record_name": "www.records.test.",
+            "record_type": "A",
+            "ttl": "300",
+            "value": "1.2.3.4",
+        },
     )
     assert isinstance(upsert, Boto3Result)
 
@@ -108,8 +113,13 @@ def test_record_set_actions(mock_aws_env: None) -> None:
     # Delete it.
     delete = context.execute(
         DELETE_RECORD_SET,
-        inputs={"zone_id": zone_id, "record_name": "www.records.test.", "record_type": "A", "ttl": "300",
-                "value": "1.2.3.4"},
+        inputs={
+            "zone_id": zone_id,
+            "record_name": "www.records.test.",
+            "record_type": "A",
+            "ttl": "300",
+            "value": "1.2.3.4",
+        },
     )
     assert isinstance(delete, Boto3Result)
 

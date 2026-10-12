@@ -181,8 +181,7 @@ LIST_RECOVERY_POINTS_BY_BACKUP_VAULT = ActionDefinition(
     ),
     iam_permissions=("backup:ListRecoveryPointsByBackupVault",),
     description=(
-        "List recovery points inside a backup vault. (Moto: not implemented; needs real AWS or "
-        "a different emulator.)"
+        "List recovery points inside a backup vault. (Moto: not implemented; needs real AWS or a different emulator.)"
     ),
     view=to_recovery_point_summaries,
 )

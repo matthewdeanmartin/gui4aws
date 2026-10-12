@@ -11,12 +11,13 @@ Run locally::
 
 from __future__ import annotations
 
+import contextlib
 import os
 from collections.abc import Iterator
 
 import pytest
 
-from gui4aws.robotocore_server import ROBOTOCORE_DEFAULT_URL, RobotocoreManager
+from gui4aws.robotocore_server import RobotocoreManager
 
 os.environ.setdefault("AWS_ACCESS_KEY_ID", "testing")
 os.environ.setdefault("AWS_SECRET_ACCESS_KEY", "testing")
@@ -41,7 +42,5 @@ def robotocore() -> Iterator[RobotocoreManager]:
 def reset_robotocore(robotocore: RobotocoreManager) -> Iterator[None]:
     """Wipe robotocore state between tests."""
     yield
-    try:
+    with contextlib.suppress(Exception):
         robotocore.reset_state()
-    except Exception:
-        pass

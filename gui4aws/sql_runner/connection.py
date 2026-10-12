@@ -195,7 +195,7 @@ def _exec_postgresql(conn_info: ConnectionInfo, sql: str, limit: int) -> tuple[l
         import pg8000.native  # type: ignore[import-not-found,import-untyped]
     except ImportError as exc:
         raise ImportError(
-            "pg8000 is required for PostgreSQL queries.\n" "Install it with:  uv add pg8000  (or  pip install pg8000)"
+            "pg8000 is required for PostgreSQL queries.\nInstall it with:  uv add pg8000  (or  pip install pg8000)"
         ) from exc
     conn = pg8000.dbapi.connect(
         host=conn_info.host,

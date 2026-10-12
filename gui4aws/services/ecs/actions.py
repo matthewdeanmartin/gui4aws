@@ -711,8 +711,7 @@ REGISTER_TASK_DEFINITION = ActionDefinition(
             kind="multiline",
             required=True,
             help_text=(
-                "Full task definition JSON (family, containerDefinitions, etc.). "
-                "See AWS docs for the complete schema."
+                "Full task definition JSON (family, containerDefinitions, etc.). See AWS docs for the complete schema."
             ),
         ),
     ),

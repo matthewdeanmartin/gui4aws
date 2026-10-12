@@ -70,10 +70,7 @@ def load_config(path: Path | None = None) -> AppConfig:
         data = json.loads(raw)
     else:
         try:
-            if sys.version_info >= (3, 11):
-                import tomllib
-            else:
-                import tomli as tomllib
+            import tomllib
 
             data = tomllib.loads(raw)
         except ImportError:  # pragma: no cover

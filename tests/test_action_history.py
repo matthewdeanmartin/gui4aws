@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from gui4aws.execution.action_history import ActionHistory, ActionHistoryEntry
 from gui4aws.execution.execution_mode import ExecutionMode
@@ -12,7 +12,7 @@ from gui4aws.execution.execution_mode import ExecutionMode
 def make_entry(action_id: str = "aurora.describe_db_clusters") -> ActionHistoryEntry:
     """Build a synthetic entry."""
     return ActionHistoryEntry(
-        timestamp=datetime(2026, 5, 20, 12, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2026, 5, 20, 12, 0, tzinfo=UTC),
         service_id="aurora",
         action_id=action_id,
         mode=ExecutionMode.BOTO3,

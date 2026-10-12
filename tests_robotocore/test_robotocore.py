@@ -14,7 +14,6 @@ confident that the service layer behaves the same against both emulators.
 from __future__ import annotations
 
 import boto3
-import pytest
 
 from gui4aws.app import AppContext
 from gui4aws.execution.boto3_executor import Boto3Result
@@ -48,8 +47,7 @@ def test_sqs_create_and_list_queues(robotocore: RobotocoreManager) -> None:
 
 
 def test_sqs_send_and_receive_message(robotocore: RobotocoreManager) -> None:
-    from gui4aws.services.sqs.actions import LIST_QUEUES, RECEIVE_MESSAGES, SEND_MESSAGE
-    from gui4aws.services.sqs.views import to_queue_summaries
+    from gui4aws.services.sqs.actions import RECEIVE_MESSAGES, SEND_MESSAGE
 
     sqs = client(robotocore, "sqs")
     url = sqs.create_queue(QueueName="rc-msg-queue")["QueueUrl"]

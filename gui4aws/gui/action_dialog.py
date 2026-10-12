@@ -309,7 +309,7 @@ class ActionDialog(tk.Toplevel):
                 self,
                 title=f"Confirm — {self.action.display_name}",
                 prompt=(
-                    "This action is destructive and cannot be undone. " "Type the resource identifier below to proceed."
+                    "This action is destructive and cannot be undone. Type the resource identifier below to proceed."
                 ),
                 expected_text=expected,
             ).show_modal()

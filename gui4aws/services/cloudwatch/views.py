@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import UTC
 from typing import Any
 
 from gui4aws.services.cloudwatch.models import AlarmSummary, LogEventSummary, LogGroupSummary, LogStreamSummary
@@ -62,9 +63,9 @@ def fmt_ts(ms: Any) -> str | None:
     if ms is None:
         return None
     try:
-        from datetime import datetime, timezone
+        from datetime import datetime
 
-        return datetime.fromtimestamp(int(ms) / 1000, timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        return datetime.fromtimestamp(int(ms) / 1000, UTC).strftime("%Y-%m-%d %H:%M:%S")
     except Exception:  # pylint: disable=broad-exception-caught
         return str(ms)
 
