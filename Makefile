@@ -209,13 +209,14 @@ bandit:
 
 audit:
 	@echo "=== uv audit ==="
+	@# PYSEC-2026-3740 (nltk model-artifact path bypass, no fix yet) has the same dev-only exposure.
 	@# GHSA-p4gq-832x-fm9v: path traversal in nltk.data.load(). nltk is a dev-only
 	@# transitive dep (troml-dev-status -> textstat -> nltk); gui4aws never calls
 	@# nltk and it ships in no runtime dependency. No fix is available upstream, so
 	@# ignore it only until one is (auto-re-enables when nltk publishes a fix).
-	@$(UV) audit --ignore-until-fixed GHSA-p4gq-832x-fm9v --ignore-until-fixed PYSEC-2026-597
+	@$(UV) audit --ignore-until-fixed GHSA-p4gq-832x-fm9v --ignore-until-fixed PYSEC-2026-597 --ignore-until-fixed PYSEC-2026-3740
 	@echo "=== pip-audit ==="
-	@$(UV) run pip-audit --ignore-vuln PYSEC-2026-597
+	@$(UV) run pip-audit --ignore-vuln PYSEC-2026-597 --ignore-vuln PYSEC-2026-3740
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
