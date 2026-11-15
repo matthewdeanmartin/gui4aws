@@ -1,0 +1,11 @@
+baseURL = 'https://matthewdeanmartin.github.io/gui4aws/'
+locale = 'en-US'
+title = 'gui4aws'
+enableRobotsTXT = true
+disableKinds = ['taxonomy', 'term', 'RSS']
+
+[params]
+  description = 'A Tkinter desktop console for selected AWS services, with visible targets, reviewable actions, and script export.'
+
+[outputs]
+  home = ['HTML', 'Sitemap']

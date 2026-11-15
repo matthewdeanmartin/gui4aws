@@ -36,7 +36,8 @@ all = ["pymysql>=1.1.0", "pg8000>=1.31.0", "moto[all]>=5.2.2"]
 Repository = "https://github.com/matthewdeanmartin/gui4aws"
 Documentation = "https://gui4aws.readthedocs.io/en/latest/"
 Changelog = "https://github.com/matthewdeanmartin/gui4aws/blob/main/CHANGELOG.md"
-homepage = "https://github.com/matthewdeanmartin/gui4aws"
+Homepage = "https://matthewdeanmartin.github.io/gui4aws/"
+Source = "https://github.com/matthewdeanmartin/gui4aws"
 issues = "https://github.com/matthewdeanmartin/gui4aws/issues/"
 
 [project.scripts]
